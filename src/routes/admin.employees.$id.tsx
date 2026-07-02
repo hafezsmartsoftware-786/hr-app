@@ -15,6 +15,7 @@ import {
 } from "@/backend/functions/employees.functions";
 import { getEmployeeWorkingDays } from "@/backend/functions/employee-working-days.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
+import { staffDecideLeave } from "@/backend/functions/staff.functions";
 import { getMe } from "@/backend/functions/auth.functions";
 import {
   listEmployeeDevices,
@@ -54,6 +55,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Info as InfoIcon } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -956,6 +958,9 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   const wdFn = useServerFn(getEmployeeWorkingDays);
   const holFn = useServerFn(listHolidays);
   const leavesFn = useServerFn(getEmployeeLeavesHistory);
+  const decideLeaveFn = useServerFn(staffDecideLeave);
+  const qc = useQueryClient();
+  const [pendingLeaveId, setPendingLeaveId] = useState<string | null>(null);
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
   const daysInMonth = new Date(cursor.year, cursor.month, 0).getDate();
@@ -997,18 +1002,23 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     return m;
   }, [holidaysData, cursor.year]);
 
-  // Approved leave days → date -> { type, paid }
+  // Leave days (all statuses that matter) → date -> { id, type, paid, status }
   const leaveByDate = useMemo(() => {
-    const m = new Map<string, { type: string; paid: boolean | null }>();
+    const m = new Map<string, { id: string; type: string; paid: boolean | null; status: string }>();
+    // Priority: approved > pending > rejected/cancelled (last write wins so iterate in reverse priority)
+    const priority: Record<string, number> = { approved: 3, pending: 2, rejected: 1, cancelled: 1 };
     (leavesData ?? []).forEach((l: any) => {
       if (!l?.start_date || !l?.end_date) return;
       const status = String(l.status ?? "").toLowerCase();
-      if (status !== "approved") return;
+      if (!priority[status]) return;
       const start = new Date(l.start_date + "T00:00:00");
       const end = new Date(l.end_date + "T00:00:00");
       for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
         const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        m.set(iso, { type: l.leave_type_name ?? "Leave", paid: l.paid });
+        const existing = m.get(iso);
+        if (!existing || (priority[status] ?? 0) > (priority[existing.status] ?? 0)) {
+          m.set(iso, { id: l.id, type: l.leave_type_name ?? "Leave", paid: l.paid, status });
+        }
       }
     });
     return m;
@@ -1023,7 +1033,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   const isFuture = (d: Date) => d.getTime() > new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
 
   const rows = useMemo(() => {
-    const list: Array<{ date: string; dayLabel: string; dow: number; rec: any; isWorking: boolean; future: boolean; holiday: { name: string; type: string } | null; leave: { type: string; paid: boolean | null } | null }> = [];
+    const list: Array<{ date: string; dayLabel: string; dow: number; rec: any; isWorking: boolean; future: boolean; holiday: { name: string; type: string } | null; leave: { id: string; type: string; paid: boolean | null; status: string } | null }> = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dt = new Date(cursor.year, cursor.month - 1, d);
       const iso = `${cursor.year}-${String(cursor.month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -1034,7 +1044,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
         dayLabel: dt.toLocaleDateString(undefined, { weekday: "short" }),
         dow: dt.getDay(),
         rec: attByDate.get(iso),
-        isWorking: workingDayIdx.includes(dt.getDay()) && !holiday,
+        isWorking: workingDayIdx.includes(dt.getDay()) && !holiday && !(leave && leave.status === "approved"),
         future: isFuture(dt),
         holiday,
         leave,
@@ -1049,7 +1059,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
       if (!r.isWorking) return;
       working++;
       if (r.future) return;
-      if (r.leave) { leave++; return; }
+      if (r.leave && r.leave.status === "approved") { leave++; return; }
       const s = String(r.rec?.status ?? "").toLowerCase();
       if (r.rec && (s === "late" || (r.rec.in_time && s.includes("late")))) late++;
       else if (r.rec && r.rec.in_time) present++;
@@ -1080,7 +1090,8 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     // Precedence: HOLIDAY > LEAVE > OFF > attendance status. Both labels are
     // also rendered alongside when the day is simultaneously a holiday and leave.
     if (r.holiday) return { label: "HOLIDAY", cls: "bg-violet-500/15 text-violet-600" };
-    if (r.leave) return { label: "LEAVE", cls: "bg-sky-500/15 text-sky-600" };
+    if (r.leave && r.leave.status === "approved") return { label: "LEAVE", cls: "bg-sky-500/15 text-sky-600" };
+    if (r.leave && r.leave.status === "pending") return { label: "PENDING", cls: "bg-amber-500/15 text-amber-600" };
     if (!r.isWorking) return { label: "OFF", cls: "bg-muted text-muted-foreground" };
     if (r.future) return { label: "—", cls: "bg-transparent text-muted-foreground" };
     const rec = r.rec;
@@ -1088,6 +1099,34 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     if (s === "late" || (rec && s.includes("late"))) return { label: "LATE", cls: "bg-amber-500/15 text-amber-600" };
     if (rec?.in_time) return { label: "PRESENT", cls: "bg-emerald-500/15 text-emerald-600" };
     return { label: "ABSENT", cls: "bg-destructive/10 text-destructive" };
+  }
+
+  function explainFor(r: typeof rows[number], label: string): string {
+    const parts: string[] = [];
+    if (r.holiday) parts.push(`Holiday: ${r.holiday.name}${r.holiday.type ? ` (${r.holiday.type})` : ""}`);
+    if (r.leave) {
+      const paidTxt = r.leave.paid === false ? " · unpaid" : r.leave.paid ? " · paid" : "";
+      parts.push(`Leave request: ${r.leave.type} — ${r.leave.status}${paidTxt}`);
+    }
+    if (label === "OFF" && !r.holiday) parts.push("Non-working day per weekly schedule");
+    if (label === "PRESENT") parts.push(`Checked in${r.rec?.in_time ? ` at ${new Date(r.rec.in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`);
+    if (label === "LATE") parts.push("Check-in flagged as late");
+    if (label === "ABSENT") parts.push("No check-in recorded on a working day");
+    if (label === "—") parts.push("Future date");
+    return parts.join(" • ") || label;
+  }
+
+  async function decideLeave(id: string, status: "approved" | "rejected" | "cancelled") {
+    setPendingLeaveId(id);
+    try {
+      await decideLeaveFn({ data: { id, status } });
+      toast.success(status === "approved" ? "Leave approved" : status === "rejected" ? "Leave rejected" : "Leave cancelled");
+      await qc.invalidateQueries({ queryKey: ["employee", "leaves", employeeId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Action failed");
+    } finally {
+      setPendingLeaveId(null);
+    }
   }
 
   return (
@@ -1127,27 +1166,82 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
               <th className="px-3 py-3 text-start font-semibold">Check In</th>
               <th className="px-3 py-3 text-start font-semibold">Check Out</th>
               <th className="px-3 py-3 text-start font-semibold">Hours</th>
-              <th className="px-5 py-3 text-end font-semibold">Status</th>
+              <th className="px-3 py-3 text-end font-semibold">Status</th>
+              <th className="px-5 py-3 text-end font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</td></tr>
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</td></tr>
             ) : rows.map((r) => {
               const st = statusFor(r);
+              const explain = explainFor(r, st.label);
+              const busy = r.leave ? pendingLeaveId === r.leave.id : false;
               return (
                 <tr key={r.date} className="border-b border-border last:border-b-0 hover:bg-muted/30">
                   <td className="px-5 py-3 font-mono text-[13px] tabular-nums">{r.date}</td>
                   <td className="px-3 py-3 text-muted-foreground">
                     {r.dayLabel}
                     {r.holiday && <span className="ms-2 text-[11px] font-medium text-violet-600">· {r.holiday.name}</span>}
-                    {r.leave && <span className="ms-2 inline-flex items-center rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-600">Leave{r.leave.paid === false ? " (unpaid)" : ""}</span>}
+                    {r.leave && (
+                      <span className={`ms-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                        r.leave.status === "approved" ? "bg-sky-500/15 text-sky-600"
+                        : r.leave.status === "pending" ? "bg-amber-500/15 text-amber-600"
+                        : "bg-muted text-muted-foreground"
+                      }`}>
+                        {r.leave.status === "pending" ? "Pending" : r.leave.status === "approved" ? "Leave" : r.leave.status}
+                        {r.leave.paid === false ? " · unpaid" : ""}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3 font-mono tabular-nums">{r.rec?.in_time ? new Date(r.rec.in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                   <td className="px-3 py-3 font-mono tabular-nums">{r.rec?.out_time ? new Date(r.rec.out_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                   <td className="px-3 py-3 font-mono tabular-nums">{hours(r.rec)}</td>
+                  <td className="px-3 py-3 text-end">
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${st.cls}`}>{st.label}</span>
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" aria-label="Why this status?" className="grid h-5 w-5 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
+                              <InfoIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-[260px] text-[11px] leading-relaxed">
+                            {explain}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </td>
                   <td className="px-5 py-3 text-end">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${st.cls}`}>{st.label}</span>
+                    {r.leave ? (
+                      <div className="inline-flex items-center gap-1.5">
+                        {r.leave.status !== "approved" ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => decideLeave(r.leave!.id, "approved")}
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25 disabled:opacity-50"
+                            title={r.leave.status === "pending" ? "Approve pending leave" : "Re-open and approve leave"}
+                          >
+                            <Check className="h-3 w-3" /> {r.leave.status === "pending" ? "Approve" : "Re-open"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => decideLeave(r.leave!.id, "cancelled")}
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted/80 disabled:opacity-50"
+                            title="Revoke leave for this range"
+                          >
+                            <X className="h-3 w-3" /> Revoke
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground/50">—</span>
+                    )}
                   </td>
                 </tr>
               );
