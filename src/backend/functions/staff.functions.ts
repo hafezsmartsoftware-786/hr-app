@@ -144,7 +144,7 @@ export const staffDecideLeave = createServerFn({ method: "POST" })
     // Fetch leave row for notification details
     const { data: leave, error: leaveErr } = await context.supabase
       .from("leaves")
-      .select("id, employee_id, leave_type_id, leave_type_name, start_date, end_date, proof_url, proof_mime")
+      .select("id, employee_id, leave_type_id, leave_type_name, start_date, end_date, days, paid, status, proof_url, proof_mime")
       .eq("id", data.id)
       .maybeSingle();
     if (leaveErr) throw new Error(leaveErr.message);
@@ -184,35 +184,31 @@ export const staffDecideLeave = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
 
-    // Send in-app notification via admin client (bypass RLS for notif insert)
+    // Fan out in-app + email + push notifications to the employee.
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("email, full_name")
-        .eq("id", leave.employee_id)
-        .maybeSingle();
-      const label = leave.leave_type_name ?? "Leave";
-      const subject =
+      const { dispatchLeaveDecision } = await import("@/backend/server/leave-decision-dispatch.server");
+      const prevStatus = (leave as any).status as string | null;
+      const kind =
         data.status === "approved"
-          ? `${label} request approved`
+          ? prevStatus === "cancelled" || prevStatus === "rejected"
+            ? "reopened"
+            : "approved"
           : data.status === "rejected"
-          ? `${label} request rejected`
-          : `${label} request cancelled`;
-      await supabaseAdmin.from("notif_deliveries").insert({
-        user_id: leave.employee_id,
-        recipient: profile?.email ?? "",
-        channel: "inapp",
-        status: "delivered",
-        subject,
-        payload: {
-          kind: "leave_decision",
-          leave_id: leave.id,
-          status: data.status,
-          start_date: leave.start_date,
-          end_date: leave.end_date,
-          leave_type_name: leave.leave_type_name,
-        },
+          ? "rejected"
+          : "revoked";
+      const { data: decider } = await supabaseAdmin
+        .from("profiles").select("full_name").eq("id", context.userId).maybeSingle();
+      await dispatchLeaveDecision({
+        employeeId: leave.employee_id as string,
+        leaveId: leave.id as string,
+        kind: kind as any,
+        leaveTypeName: (leave as any).leave_type_name ?? null,
+        startDate: leave.start_date as string,
+        endDate: leave.end_date as string,
+        days: (leave as any).days ?? null,
+        paid: (leave as any).paid ?? null,
+        decidedByName: decider?.full_name ?? null,
       });
     } catch (e) {
       console.error("[staffDecideLeave] notification insert failed", e);
