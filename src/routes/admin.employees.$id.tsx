@@ -961,6 +961,18 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   const decideLeaveFn = useServerFn(staffDecideLeave);
   const qc = useQueryClient();
   const [pendingLeaveId, setPendingLeaveId] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirm, setConfirm] = useState<
+    | null
+    | {
+        kind: "single" | "bulk";
+        title: string;
+        description: string;
+        conflicts: string[];
+        onConfirm: () => Promise<void> | void;
+      }
+  >(null);
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
   const daysInMonth = new Date(cursor.year, cursor.month, 0).getDate();
@@ -1024,6 +1036,23 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     return m;
   }, [leavesData]);
 
+  // Leave by id (full range) so we can compute conflicts across the entire request, not just visible days.
+  const leaveById = useMemo(() => {
+    const m = new Map<string, { id: string; type: string; paid: boolean | null; status: string; start: string; end: string }>();
+    (leavesData ?? []).forEach((l: any) => {
+      if (!l?.id || !l?.start_date || !l?.end_date) return;
+      m.set(l.id, {
+        id: l.id,
+        type: l.leave_type_name ?? "Leave",
+        paid: l.paid,
+        status: String(l.status ?? "").toLowerCase(),
+        start: l.start_date,
+        end: l.end_date,
+      });
+    });
+    return m;
+  }, [leavesData]);
+
   const attByDate = useMemo(() => {
     const m = new Map<string, any>();
     (attData ?? []).forEach((r: any) => { if (r.date) m.set(r.date, r); });
@@ -1031,6 +1060,49 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   }, [attData]);
 
   const isFuture = (d: Date) => d.getTime() > new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  // Iterate every ISO date in a leave's full range (may span outside the visible month).
+  function eachDateInLeave(id: string): string[] {
+    const l = leaveById.get(id);
+    if (!l) return [];
+    const out: string[] = [];
+    const start = new Date(l.start + "T00:00:00");
+    const end = new Date(l.end + "T00:00:00");
+    for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
+      out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    return out;
+  }
+
+  // Compute conflicts if the given leave were approved: overlapping holidays,
+  // weekend/OFF days per the working schedule, and other approved leaves.
+  function conflictsForLeave(id: string): { holidays: string[]; weekendOff: string[]; overlaps: Array<{ id: string; type: string; date: string }> } {
+    const dates = eachDateInLeave(id);
+    const holidays: string[] = [];
+    const weekendOff: string[] = [];
+    const overlaps: Array<{ id: string; type: string; date: string }> = [];
+    for (const iso of dates) {
+      if (holidayByDate.has(iso)) holidays.push(iso);
+      const dt = new Date(iso + "T00:00:00");
+      if (!workingDayIdx.includes(dt.getDay())) weekendOff.push(iso);
+      const other = leaveByDate.get(iso);
+      if (other && other.id !== id && other.status === "approved") {
+        overlaps.push({ id: other.id, type: other.type, date: iso });
+      }
+    }
+    return { holidays, weekendOff, overlaps };
+  }
+
+  function summarizeConflicts(c: ReturnType<typeof conflictsForLeave>): string[] {
+    const lines: string[] = [];
+    if (c.holidays.length) lines.push(`${c.holidays.length} holiday day${c.holidays.length === 1 ? "" : "s"} (${c.holidays.slice(0, 3).join(", ")}${c.holidays.length > 3 ? "…" : ""})`);
+    if (c.weekendOff.length) lines.push(`${c.weekendOff.length} weekend/OFF day${c.weekendOff.length === 1 ? "" : "s"}`);
+    if (c.overlaps.length) {
+      const types = Array.from(new Set(c.overlaps.map((o) => o.type))).slice(0, 3).join(", ");
+      lines.push(`${c.overlaps.length} overlap${c.overlaps.length === 1 ? "" : "s"} with existing approved leave (${types})`);
+    }
+    return lines;
+  }
 
   const rows = useMemo(() => {
     const list: Array<{ date: string; dayLabel: string; dow: number; rec: any; isWorking: boolean; future: boolean; holiday: { name: string; type: string } | null; leave: { id: string; type: string; paid: boolean | null; status: string } | null }> = [];
@@ -1129,6 +1201,97 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     }
   }
 
+  function requestApprove(id: string) {
+    const l = leaveById.get(id);
+    if (!l) return;
+    const c = conflictsForLeave(id);
+    const lines = summarizeConflicts(c);
+    if (lines.length === 0) {
+      void decideLeave(id, "approved");
+      return;
+    }
+    setConfirm({
+      kind: "single",
+      title: `${l.status === "pending" ? "Approve" : "Re-open"} leave with conflicts?`,
+      description: `${l.type} (${l.start} → ${l.end}) has scheduling conflicts:`,
+      conflicts: lines,
+      onConfirm: () => decideLeave(id, "approved"),
+    });
+  }
+
+  // ── Bulk selection helpers ─────────────────────────
+  function toggleDate(iso: string) {
+    setSelectedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(iso)) next.delete(iso); else next.add(iso);
+      return next;
+    });
+  }
+  function clearSelection() { setSelectedDates(new Set()); }
+
+  // Distinct leave requests touched by the selection.
+  const selectedLeaves = useMemo(() => {
+    const ids = new Set<string>();
+    selectedDates.forEach((iso) => {
+      const l = leaveByDate.get(iso);
+      if (l) ids.add(l.id);
+    });
+    return Array.from(ids)
+      .map((id) => leaveById.get(id))
+      .filter(Boolean) as Array<{ id: string; type: string; paid: boolean | null; status: string; start: string; end: string }>;
+  }, [selectedDates, leaveByDate, leaveById]);
+
+  const bulkCounts = useMemo(() => {
+    const c = { pending: 0, approved: 0, rejected: 0, cancelled: 0 };
+    selectedLeaves.forEach((l) => { if (l.status in c) (c as any)[l.status]++; });
+    return c;
+  }, [selectedLeaves]);
+
+  async function runBulk(
+    filter: (l: (typeof selectedLeaves)[number]) => boolean,
+    status: "approved" | "rejected" | "cancelled",
+    verb: string,
+  ) {
+    const targets = selectedLeaves.filter(filter);
+    if (targets.length === 0) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    for (const l of targets) {
+      try {
+        await decideLeaveFn({ data: { id: l.id, status } });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkBusy(false);
+    await qc.invalidateQueries({ queryKey: ["employee", "leaves", employeeId] });
+    clearSelection();
+    if (fail === 0) toast.success(`${verb} ${ok} leave${ok === 1 ? "" : "s"}`);
+    else toast.error(`${verb} ${ok} · ${fail} failed`);
+  }
+
+  function requestBulkApprove() {
+    const targets = selectedLeaves.filter((l) => l.status !== "approved");
+    if (targets.length === 0) return;
+    // Aggregate conflicts across all targets.
+    const allLines: string[] = [];
+    for (const l of targets) {
+      const c = conflictsForLeave(l.id);
+      const lines = summarizeConflicts(c);
+      if (lines.length) allLines.push(`${l.type} (${l.start} → ${l.end}): ${lines.join("; ")}`);
+    }
+    const doIt = () => runBulk((l) => l.status !== "approved", "approved", "Approved");
+    if (allLines.length === 0) { void doIt(); return; }
+    setConfirm({
+      kind: "bulk",
+      title: `Approve / re-open ${targets.length} leave${targets.length === 1 ? "" : "s"}?`,
+      description: "Some requests have scheduling conflicts:",
+      conflicts: allLines,
+      onConfirm: doIt,
+    });
+  }
+
   return (
     <div className="rounded-3xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -1157,11 +1320,65 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
           <span className="text-muted-foreground">/ <span className="font-semibold text-foreground tabular-nums">{stats.working}</span> working days</span>
         </div>
       </div>
+      {selectedDates.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-5 py-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+            <span className="font-semibold text-foreground">{selectedDates.size} day{selectedDates.size === 1 ? "" : "s"} selected</span>
+            <span>·</span>
+            <span>{selectedLeaves.length} leave request{selectedLeaves.length === 1 ? "" : "s"}</span>
+            {bulkCounts.pending > 0 && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-700">{bulkCounts.pending} pending</span>}
+            {bulkCounts.approved > 0 && <span className="rounded-full bg-sky-500/15 px-2 py-0.5 font-semibold text-sky-700">{bulkCounts.approved} approved</span>}
+            {(bulkCounts.rejected + bulkCounts.cancelled) > 0 && <span className="rounded-full bg-muted px-2 py-0.5 font-semibold">{bulkCounts.rejected + bulkCounts.cancelled} closed</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              disabled={bulkBusy || selectedLeaves.every((l) => l.status === "approved")}
+              onClick={requestBulkApprove}
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25 disabled:opacity-40"
+            >
+              <Check className="h-3 w-3" /> Approve / Re-open
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy || bulkCounts.approved === 0}
+              onClick={() => runBulk((l) => l.status === "approved", "cancelled", "Revoked")}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-[11px] font-semibold hover:bg-muted/80 disabled:opacity-40"
+            >
+              <X className="h-3 w-3" /> Revoke approved
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy || bulkCounts.pending === 0}
+              onClick={() => runBulk((l) => l.status === "pending", "rejected", "Rejected")}
+              className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/25 disabled:opacity-40"
+            >
+              <X className="h-3 w-3" /> Revoke pending
+            </button>
+            <button type="button" onClick={clearSelection} className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">Clear</button>
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-5 py-3 text-start font-semibold">Date</th>
+              <th className="px-4 py-3 text-start font-semibold w-8">
+                <input
+                  type="checkbox"
+                  aria-label="Select all leave days"
+                  checked={(() => {
+                    const leaveRows = rows.filter((r) => r.leave);
+                    return leaveRows.length > 0 && leaveRows.every((r) => selectedDates.has(r.date));
+                  })()}
+                  onChange={(e) => {
+                    const leaveRows = rows.filter((r) => r.leave);
+                    if (e.target.checked) setSelectedDates(new Set(leaveRows.map((r) => r.date)));
+                    else clearSelection();
+                  }}
+                />
+              </th>
+              <th className="px-3 py-3 text-start font-semibold">Date</th>
               <th className="px-3 py-3 text-start font-semibold">Day</th>
               <th className="px-3 py-3 text-start font-semibold">Check In</th>
               <th className="px-3 py-3 text-start font-semibold">Check Out</th>
@@ -1172,14 +1389,27 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</td></tr>
+              <tr><td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</td></tr>
             ) : rows.map((r) => {
               const st = statusFor(r);
               const explain = explainFor(r, st.label);
               const busy = r.leave ? pendingLeaveId === r.leave.id : false;
+              const rowConflicts = r.leave ? conflictsForLeave(r.leave.id) : null;
+              const conflictLines = rowConflicts ? summarizeConflicts(rowConflicts) : [];
+              const paidLabel = r.leave ? (r.leave.paid === false ? "unpaid" : r.leave.paid ? "paid" : "n/a") : "";
               return (
                 <tr key={r.date} className="border-b border-border last:border-b-0 hover:bg-muted/30">
-                  <td className="px-5 py-3 font-mono text-[13px] tabular-nums">{r.date}</td>
+                  <td className="px-4 py-3">
+                    {r.leave ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${r.date}`}
+                        checked={selectedDates.has(r.date)}
+                        onChange={() => toggleDate(r.date)}
+                      />
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-3 font-mono text-[13px] tabular-nums">{r.date}</td>
                   <td className="px-3 py-3 text-muted-foreground">
                     {r.dayLabel}
                     {r.holiday && <span className="ms-2 text-[11px] font-medium text-violet-600">· {r.holiday.name}</span>}
@@ -1190,7 +1420,13 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
                         : "bg-muted text-muted-foreground"
                       }`}>
                         {r.leave.status === "pending" ? "Pending" : r.leave.status === "approved" ? "Leave" : r.leave.status}
-                        {r.leave.paid === false ? " · unpaid" : ""}
+                        {" · "}{r.leave.type}
+                        {r.leave.paid === false ? " · unpaid" : r.leave.paid ? " · paid" : ""}
+                      </span>
+                    )}
+                    {conflictLines.length > 0 && (
+                      <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive" title={conflictLines.join(" · ")}>
+                        <AlertTriangle className="h-3 w-3" /> conflict
                       </span>
                     )}
                   </td>
@@ -1207,8 +1443,23 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
                               <InfoIcon className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-[260px] text-[11px] leading-relaxed">
-                            {explain}
+                          <TooltipContent side="left" className="max-w-[300px] text-[11px] leading-relaxed">
+                            <div>{explain}</div>
+                            {r.leave && (
+                              <div className="mt-1 border-t border-primary-foreground/20 pt-1">
+                                <div><span className="font-semibold">Type:</span> {r.leave.type}</div>
+                                <div><span className="font-semibold">Compensation:</span> {paidLabel}</div>
+                                <div><span className="font-semibold">Status:</span> {r.leave.status}</div>
+                              </div>
+                            )}
+                            {conflictLines.length > 0 && (
+                              <div className="mt-1 border-t border-primary-foreground/20 pt-1">
+                                <div className="font-semibold">Conflicts:</div>
+                                <ul className="list-disc ps-4">
+                                  {conflictLines.map((l, i) => <li key={i}>{l}</li>)}
+                                </ul>
+                              </div>
+                            )}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1221,7 +1472,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
                           <button
                             type="button"
                             disabled={busy}
-                            onClick={() => decideLeave(r.leave!.id, "approved")}
+                            onClick={() => requestApprove(r.leave!.id)}
                             className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25 disabled:opacity-50"
                             title={r.leave.status === "pending" ? "Approve pending leave" : "Re-open and approve leave"}
                           >
@@ -1249,6 +1500,34 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
           </tbody>
         </table>
       </div>
+      <AlertDialog open={!!confirm} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              {confirm?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{confirm?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {confirm?.conflicts && confirm.conflicts.length > 0 && (
+            <ul className="max-h-56 list-disc space-y-1 overflow-auto rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 ps-6 text-xs text-amber-900">
+              {confirm.conflicts.map((l, i) => <li key={i}>{l}</li>)}
+            </ul>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const c = confirm;
+                setConfirm(null);
+                if (c) await c.onConfirm();
+              }}
+            >
+              Proceed anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
