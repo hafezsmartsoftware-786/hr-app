@@ -318,19 +318,21 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
                   month: "long",
                 }) + (allowed ? " — allowed" : " — not allowed");
               return (
-                <div
+                <button
                   key={i}
-                  title={title}
+                  type="button"
+                  title={title + " — click to toggle " + WEEKDAYS[c.weekday].label}
+                  onClick={() => setMonthDays((p) => toggle(p, c.weekday))}
                   className={
-                    "flex aspect-square items-center justify-center rounded-md border text-[11px] font-medium transition " +
+                    "flex aspect-square items-center justify-center rounded-md border text-[11px] font-medium transition hover:scale-[1.04] hover:shadow-sm active:scale-95 " +
                     (allowed
                       ? "border-transparent bg-gradient-brand text-brand-foreground shadow-brand"
-                      : "border-border bg-muted/40 text-muted-foreground line-through opacity-70") +
+                      : "border-border bg-muted/40 text-muted-foreground line-through opacity-70 hover:opacity-100") +
                     (c.isToday ? " ring-2 ring-ring ring-offset-1 ring-offset-background" : "")
                   }
                 >
                   {c.day}
-                </div>
+                </button>
               );
             })}
           </div>
