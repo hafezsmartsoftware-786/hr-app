@@ -116,7 +116,7 @@ export const clearEmployeeWorkingDaysMonth = createServerFn({ method: "POST" })
       .from("employee_working_days")
       .delete()
       .eq("employee_id", data.employee_id)
-      .eq("scope", "month")
+      .in("scope", ["month", "date_on", "date_off"])
       .eq("year", data.year)
       .eq("month", data.month);
     if (error) throw new Error(error.message);
