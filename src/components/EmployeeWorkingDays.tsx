@@ -8,6 +8,7 @@ import {
   setEmployeeWorkingDaysWeekly,
   setEmployeeWorkingDaysMonth,
   clearEmployeeWorkingDaysMonth,
+  setEmployeeWorkingDaysDates,
 } from "@/backend/functions/employee-working-days.functions";
 
 const WEEKDAYS = [
@@ -35,6 +36,7 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
   const saveWeeklyFn = useServerFn(setEmployeeWorkingDaysWeekly);
   const saveMonthFn = useServerFn(setEmployeeWorkingDaysMonth);
   const clearMonthFn = useServerFn(clearEmployeeWorkingDaysMonth);
+  const saveDatesFn = useServerFn(setEmployeeWorkingDaysDates);
 
   const { data, refetch, isLoading } = useQuery({
     queryKey: ["employee-working-days", employeeId],
@@ -50,6 +52,9 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
   const [ym, setYm] = useState<string>(ymKey(today.getFullYear(), today.getMonth() + 1));
   const [monthDays, setMonthDays] = useState<number[]>([]);
   const [monthExists, setMonthExists] = useState(false);
+  // Per-date overrides (day-of-month numbers 1..31) for the currently selected ym.
+  const [dateOn, setDateOn] = useState<number[]>([]);
+  const [dateOff, setDateOff] = useState<number[]>([]);
 
   useEffect(() => {
     if (!data) return;
@@ -68,6 +73,10 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
       setMonthDays(data.weekly);
       setMonthExists(false);
     }
+    const on = (data as any).dateOn?.find((o: any) => o.year === y && o.month === m)?.days ?? [];
+    const off = (data as any).dateOff?.find((o: any) => o.year === y && o.month === m)?.days ?? [];
+    setDateOn(on);
+    setDateOff(off);
   }, [ym, data]);
 
   async function saveWeekly() {
@@ -88,6 +97,9 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
     try {
       const [y, m] = ym.split("-").map(Number);
       await saveMonthFn({ data: { employee_id: employeeId, year: y, month: m, days: monthDays } });
+      await saveDatesFn({
+        data: { employee_id: employeeId, year: y, month: m, on_days: dateOn, off_days: dateOff },
+      });
       toast.success("Month override saved");
       refetch();
     } catch (e: any) {
@@ -134,8 +146,14 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
   }, [ym]);
 
   const allowedCount = useMemo(
-    () => calendar.filter((c) => c.day !== null && monthDays.includes(c.weekday)).length,
-    [calendar, monthDays],
+    () =>
+      calendar.filter((c) => {
+        if (c.day === null) return false;
+        if (dateOn.includes(c.day)) return true;
+        if (dateOff.includes(c.day)) return false;
+        return monthDays.includes(c.weekday);
+      }).length,
+    [calendar, monthDays, dateOn, dateOff],
   );
   const totalDays = useMemo(() => calendar.filter((c) => c.day !== null).length, [calendar]);
 
@@ -309,26 +327,46 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
           <div className="mt-1 grid grid-cols-7 gap-1">
             {calendar.map((c, i) => {
               if (c.day === null) return <div key={i} className="aspect-square" />;
-              const allowed = monthDays.includes(c.weekday);
+              const forcedOn = dateOn.includes(c.day);
+              const forcedOff = dateOff.includes(c.day);
+              const baseAllowed = monthDays.includes(c.weekday);
+              const allowed = forcedOn ? true : forcedOff ? false : baseAllowed;
+              const overridden = forcedOn || forcedOff;
               const [yy, mm] = ym.split("-").map(Number);
               const title =
                 new Date(yy, mm - 1, c.day).toLocaleDateString(undefined, {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
-                }) + (allowed ? " — allowed" : " — not allowed");
+                }) +
+                (allowed ? " — allowed" : " — not allowed") +
+                (overridden ? " (per-date override — click to reset)" : " — click to toggle this date");
               return (
                 <button
                   key={i}
                   type="button"
-                  title={title + " — click to toggle " + WEEKDAYS[c.weekday].label}
-                  onClick={() => setMonthDays((p) => toggle(p, c.weekday))}
+                  title={title}
+                  onClick={() => {
+                    // Tri-state cycle for this SPECIFIC date only:
+                    //  overridden → clear override (back to weekday pattern)
+                    //  base allowed → force OFF just this day
+                    //  base not allowed → force ON just this day
+                    if (overridden) {
+                      setDateOn((p) => p.filter((d) => d !== c.day));
+                      setDateOff((p) => p.filter((d) => d !== c.day));
+                    } else if (baseAllowed) {
+                      setDateOff((p) => [...p.filter((d) => d !== c.day), c.day!].sort((a, b) => a - b));
+                    } else {
+                      setDateOn((p) => [...p.filter((d) => d !== c.day), c.day!].sort((a, b) => a - b));
+                    }
+                  }}
                   className={
                     "flex aspect-square items-center justify-center rounded-md border text-[11px] font-medium transition hover:scale-[1.04] hover:shadow-sm active:scale-95 " +
                     (allowed
                       ? "border-transparent bg-gradient-brand text-brand-foreground shadow-brand"
                       : "border-border bg-muted/40 text-muted-foreground line-through opacity-70 hover:opacity-100") +
-                    (c.isToday ? " ring-2 ring-ring ring-offset-1 ring-offset-background" : "")
+                    (c.isToday ? " ring-2 ring-ring ring-offset-1 ring-offset-background" : "") +
+                    (overridden ? " outline outline-2 outline-offset-[-2px] outline-amber-400" : "")
                   }
                 >
                   {c.day}
@@ -336,6 +374,13 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
               );
             })}
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Tap a specific date to force it ON or OFF for just that day.
+            <span className="ml-1 inline-flex items-center gap-1">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm outline outline-2 outline-offset-[-2px] outline-amber-400" />
+              amber outline = per-date override; tap again to clear.
+            </span>
+          </p>
         </div>
       </div>
     </section>
