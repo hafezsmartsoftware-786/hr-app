@@ -43,7 +43,7 @@ function ManagerDashboard() {
         {me && <p className="text-sm text-muted-foreground">{me.role} • {me.dept}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {cards.map((c) => (
           <Link
             key={c.label + c.to}
