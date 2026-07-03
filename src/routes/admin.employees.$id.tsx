@@ -998,6 +998,16 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   const weeklyDays: number[] = wdData?.weekly ?? [0, 1, 2, 3, 4];
   const monthOverride = wdData?.months.find((m: any) => m.year === cursor.year && m.month === cursor.month);
   const workingDayIdx: number[] = monthOverride?.days ?? weeklyDays;
+  const dateOnDays: number[] =
+    (wdData as any)?.dateOn?.find((o: any) => o.year === cursor.year && o.month === cursor.month)?.days ?? [];
+  const dateOffDays: number[] =
+    (wdData as any)?.dateOff?.find((o: any) => o.year === cursor.year && o.month === cursor.month)?.days ?? [];
+  const isWorkingDate = (dt: Date): boolean => {
+    const dom = dt.getDate();
+    if (dateOnDays.includes(dom)) return true;
+    if (dateOffDays.includes(dom)) return false;
+    return workingDayIdx.includes(dt.getDay());
+  };
 
   const holidayByDate = useMemo(() => {
     const m = new Map<string, { name: string; type: string }>();
@@ -1084,7 +1094,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
     for (const iso of dates) {
       if (holidayByDate.has(iso)) holidays.push(iso);
       const dt = new Date(iso + "T00:00:00");
-      if (!workingDayIdx.includes(dt.getDay())) weekendOff.push(iso);
+      if (!isWorkingDate(dt)) weekendOff.push(iso);
       const other = leaveByDate.get(iso);
       if (other && other.id !== id && other.status === "approved") {
         overlaps.push({ id: other.id, type: other.type, date: iso });
@@ -1116,14 +1126,14 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
         dayLabel: dt.toLocaleDateString(undefined, { weekday: "short" }),
         dow: dt.getDay(),
         rec: attByDate.get(iso),
-        isWorking: workingDayIdx.includes(dt.getDay()) && !holiday && !(leave && leave.status === "approved"),
+        isWorking: isWorkingDate(dt) && !holiday && !(leave && leave.status === "approved"),
         future: isFuture(dt),
         holiday,
         leave,
       });
     }
     return list;
-  }, [daysInMonth, cursor.year, cursor.month, attByDate, workingDayIdx, holidayByDate, leaveByDate]);
+  }, [daysInMonth, cursor.year, cursor.month, attByDate, workingDayIdx, dateOnDays, dateOffDays, holidayByDate, leaveByDate]);
 
   const stats = useMemo(() => {
     let present = 0, late = 0, absent = 0, leave = 0, working = 0;
