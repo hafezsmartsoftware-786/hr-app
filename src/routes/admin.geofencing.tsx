@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
+import { LeafletMap } from "@/components/LeafletMap";
 
 import {
   listGeofencesAdmin,
@@ -173,6 +174,8 @@ function GeoPage() {
 function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onClose: () => void; onCreated: () => void; initialLat?: number; initialLng?: number }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
+  const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
   const [lat, setLat] = useState(initialLat != null ? initialLat.toFixed(6) : "24.7136");
   const [lng, setLng] = useState(initialLng != null ? initialLng.toFixed(6) : "46.6753");
   const [radius, setRadius] = useState(100);
@@ -189,12 +192,17 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
     if (!name.trim()) return toast.error("Name required");
     const la = parseFloat(lat), lo = parseFloat(lng);
     if (!isFinite(la) || !isFinite(lo)) return toast.error("Valid coordinates required");
-    mut.mutate({ name: name.trim(), lat: la, lng: lo, radius_m: radius });
+    const parts = [name.trim(), district.trim(), city.trim()].filter(Boolean);
+    mut.mutate({ name: parts.join(" · ").slice(0, 60), lat: la, lng: lo, radius_m: radius });
   }
+
+  const latNum = parseFloat(lat);
+  const lngNum = parseFloat(lng);
+  const validCoords = isFinite(latNum) && isFinite(lngNum);
 
   return (
     <div className="fixed inset-0 z-[1000] grid place-items-center bg-foreground/40 p-4" onClick={onClose}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md space-y-3 rounded-3xl bg-background p-6 shadow-soft">
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-3xl bg-background p-6 shadow-soft">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">{t("addLocation")}</h2>
           <button type="button" onClick={onClose} className="rounded-full p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
@@ -203,6 +211,31 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
           <span className="mb-1 block text-xs font-medium text-muted-foreground">{t("name")}</span>
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
         </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">City</span>
+            <input value={city} onChange={(e) => setCity(e.target.value)} maxLength={40} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">District</span>
+            <input value={district} onChange={(e) => setDistrict(e.target.value)} maxLength={40} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+          </label>
+        </div>
+        {validCoords && (
+          <div className="overflow-hidden rounded-2xl border border-border">
+            <LeafletMap
+              height={280}
+              markers={[{ id: "new", name: name || "New location", lat: latNum, lng: lngNum, radius, active: true }]}
+              selectedId="new"
+              editableId="new"
+              onMapClick={(la, lo) => { setLat(la.toFixed(6)); setLng(lo.toFixed(6)); }}
+              onRadiusChange={(_id, r) => setRadius(r)}
+            />
+            <p className="border-t border-border bg-muted/30 px-3 py-1.5 text-[11px] text-muted-foreground">
+              Tap the map to move the pin · drag the orange handle to resize
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <label className="block"><span className="mb-1 block text-xs font-medium text-muted-foreground">Lat</span>
             <input value={lat} onChange={(e) => setLat(e.target.value)} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 font-mono text-sm" /></label>
