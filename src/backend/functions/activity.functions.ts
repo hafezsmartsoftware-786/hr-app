@@ -58,5 +58,25 @@ export const listActivityRange = createServerFn({ method: "POST" })
     if (data.employeeIds && data.employeeIds.length > 0) q = q.in("employee_id", data.employeeIds);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const list = rows ?? [];
+    // Enrich with the task's manager-assigned city/district so admins see
+    // where the task was supposed to happen, not just what the device sent.
+    const taskIds = Array.from(new Set(list.map((r: any) => r.task_id).filter(Boolean)));
+    if (taskIds.length > 0) {
+      const { data: taskRows } = await supabase
+        .from("tasks")
+        .select("id, city, district, address")
+        .in("id", taskIds);
+      const byId = new Map((taskRows ?? []).map((t: any) => [t.id, t]));
+      return list.map((r: any) => {
+        const t = r.task_id ? byId.get(r.task_id) : null;
+        return {
+          ...r,
+          city: r.city ?? t?.city ?? null,
+          district: r.district ?? t?.district ?? null,
+          task_address: t?.address ?? null,
+        };
+      });
+    }
+    return list;
   });
