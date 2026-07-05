@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAllGeofences } from "@/backend/functions/network-assignments.functions";
+import { listActivityRange } from "@/backend/functions/activity.functions";
 
 const LeafletMap = lazy(() => import("@/components/LeafletMap").then((mod) => ({ default: mod.LeafletMap })));
 const EgyptMap = lazy(() => import("@/components/admin/EgyptMap").then((mod) => ({ default: mod.EgyptMap })));
