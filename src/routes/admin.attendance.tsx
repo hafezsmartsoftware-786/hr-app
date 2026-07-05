@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAllGeofences } from "@/backend/functions/network-assignments.functions";
+import { listActivityRange } from "@/backend/functions/activity.functions";
 
 const LeafletMap = lazy(() => import("@/components/LeafletMap").then((mod) => ({ default: mod.LeafletMap })));
 const EgyptMap = lazy(() => import("@/components/admin/EgyptMap").then((mod) => ({ default: mod.EgyptMap })));
@@ -461,26 +462,64 @@ function AdminAttendance() {
     }
   }
 
-  // ── Task activity (still from local store) ──
-  const allActivity = useMemo(
-    () => tasks.flatMap((tk: any) =>
+  // ── Task activity (DB-backed) ──
+  const activityFn = useServerFn(listActivityRange);
+  const activityQ = useQuery({
+    queryKey: ["admin", "task-activity", { from: fromDate, to: toDate, emp: empFilter }],
+    queryFn: () =>
+      activityFn({
+        data: {
+          from: fromDate,
+          to: toDate,
+          employeeIds: empFilter === "all" ? undefined : [empFilter],
+        },
+      }),
+    refetchInterval: liveOn ? refreshSec * 1000 : false,
+  });
+  const actionLabel = (kind: string) => {
+    if (kind === "start_task") return t("taskCheckIn");
+    if (kind === "complete_task") return t("taskCheckOut");
+    if (kind === "start_trip") return "Trip start";
+    if (kind === "complete_trip") return "Trip end";
+    return kind;
+  };
+  const taskActivity: TaskActivityRow[] = useMemo(() => {
+    const rows = (activityQ.data ?? []) as any[];
+    // Merge local-store history so any legacy/offline records remain visible.
+    const local = tasks.flatMap((tk: any) =>
       (tk.history ?? []).map((h: any) => ({
-        ts: h.ts, employeeId: h.by,
+        ts: h.ts,
+        employeeId: h.by,
         name: empName[h.by] ?? h.by,
-        taskTitle: tk.title, city: tk.city ?? "", district: tk.district ?? "",
+        taskTitle: tk.title,
+        city: tk.city ?? "",
+        district: tk.district ?? "",
         where: [tk.district, tk.address].filter(Boolean).join(" — ") || tk.address || "—",
         action: h.to === "in_progress" ? t("taskCheckIn") : h.to === "done" ? t("taskCheckOut") : h.to,
-        note: h.note, estimatedHours: tk.estimatedHours,
+        note: h.note,
+        estimatedHours: tk.estimatedHours,
       })),
-    ).sort((a: any, b: any) => b.ts - a.ts) as TaskActivityRow[],
-    [tasks, empName, t],
-  );
-  const taskActivity = useMemo(() => allActivity.filter((r) => {
-    const iso = new Date(r.ts).toISOString().slice(0, 10);
-    if (iso < fromDate || iso > toDate) return false;
-    if (empFilter !== "all" && r.employeeId !== empFilter) return false;
-    return true;
-  }), [allActivity, fromDate, toDate, empFilter]);
+    ) as TaskActivityRow[];
+    const remote: TaskActivityRow[] = rows.map((r) => ({
+      ts: new Date(r.occurred_at).getTime(),
+      employeeId: r.employee_id,
+      name: empName[r.employee_id] ?? r.employee_id,
+      taskTitle: r.task_name ?? "",
+      city: r.city ?? "",
+      district: r.district ?? "",
+      where: [r.district, r.city].filter(Boolean).join(" — ") || "—",
+      action: actionLabel(r.kind),
+      note: r.note ?? undefined,
+    }));
+    return [...remote, ...local]
+      .filter((r) => {
+        const iso = new Date(r.ts).toISOString().slice(0, 10);
+        if (iso < fromDate || iso > toDate) return false;
+        if (empFilter !== "all" && r.employeeId !== empFilter) return false;
+        return true;
+      })
+      .sort((a, b) => b.ts - a.ts);
+  }, [activityQ.data, tasks, empName, t, fromDate, toDate, empFilter]);
 
   return (
     <div className="space-y-5">
