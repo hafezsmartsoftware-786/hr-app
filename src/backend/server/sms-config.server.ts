@@ -16,7 +16,7 @@ export type LoadedSms = {
 };
 
 export async function loadSmsConfig(): Promise<LoadedSms | null> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await (supabaseAdmin as any)
     .from("sms_config")
     .select("environment, username, password, sender, language, enabled")
     .eq("id", 1)
@@ -55,6 +55,6 @@ export async function writeSmsConfig(input: {
   if (typeof input.password === "string" && input.password.length > 0) {
     patch.password = input.password;
   }
-  const { error } = await supabaseAdmin.from("sms_config").upsert(patch, { onConflict: "id" });
+  const { error } = await (supabaseAdmin as any).from("sms_config").upsert(patch, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }
