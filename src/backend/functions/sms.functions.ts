@@ -1,0 +1,74 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireAdminAccess } from "@/integrations/supabase/admin-auth-middleware";
+import { SmsConfigSchema, SmsSendSchema } from "../schemas";
+
+export const getSmsConfig = createServerFn({ method: "GET" })
+  .middleware([requireAdminAccess])
+  .handler(async () => {
+    const { loadSmsConfig } = await import("../server/sms-config.server");
+    const cfg = await loadSmsConfig();
+    if (!cfg) {
+      return { environment: "2" as const, username: "", sender: "", language: "1" as const, enabled: false, has_password: false };
+    }
+    // Never return the password itself; UI shows whether one is stored.
+    return {
+      environment: cfg.environment,
+      username: cfg.username,
+      sender: cfg.sender,
+      language: cfg.language,
+      enabled: cfg.enabled,
+      has_password: cfg.password.length > 0,
+    };
+  });
+
+export const saveSmsConfig = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => SmsConfigSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { writeSmsConfig } = await import("../server/sms-config.server");
+    await writeSmsConfig({ ...data, updated_by: context.userId });
+    return { ok: true };
+  });
+
+export const sendSms = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => SmsSendSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { loadSmsConfig } = await import("../server/sms-config.server");
+    const { sendSmsMisr } = await import("../server/sms-client.server");
+    const cfg = await loadSmsConfig();
+    if (!cfg || !cfg.enabled) return { ok: false, error: "SMS is disabled or not configured" };
+    return sendSmsMisr(
+      { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
+      { mobile: data.mobile, message: data.message, language: data.language ?? cfg.language, delayUntil: data.delayUntil },
+    );
+  });
+
+/**
+ * Convenience: send a 4-6 digit OTP. Caller controls where the code is stored.
+ * Returns the generated code so the caller can persist / hash it.
+ */
+export const sendOtpSms = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => {
+    const o = (input ?? {}) as { mobile?: unknown; digits?: unknown; template?: unknown };
+    const mobile = typeof o.mobile === "string" ? o.mobile.trim() : "";
+    if (!/^\+?\d{6,15}(,\s*\+?\d{6,15})*$/.test(mobile)) throw new Error("Invalid mobile");
+    const digits = typeof o.digits === "number" ? Math.min(8, Math.max(4, o.digits)) : 6;
+    const template = typeof o.template === "string" && o.template.includes("{code}")
+      ? o.template
+      : "Your verification code is {code}";
+    return { mobile, digits, template };
+  })
+  .handler(async ({ data }) => {
+    const code = Array.from({ length: data.digits }, () => Math.floor(Math.random() * 10)).join("");
+    const { loadSmsConfig } = await import("../server/sms-config.server");
+    const { sendSmsMisr } = await import("../server/sms-client.server");
+    const cfg = await loadSmsConfig();
+    if (!cfg || !cfg.enabled) return { ok: false, error: "SMS is disabled or not configured", code: null };
+    const res = await sendSmsMisr(
+      { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
+      { mobile: data.mobile, message: data.template.replace("{code}", code), language: cfg.language },
+    );
+    return { ...res, code: res.ok ? code : null };
+  });
