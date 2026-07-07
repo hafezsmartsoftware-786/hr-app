@@ -11,6 +11,24 @@ export const SmtpConfigSchema = z.object({
 });
 export type SmtpConfigInput = z.infer<typeof SmtpConfigSchema>;
 
+export const SmsConfigSchema = z.object({
+  environment: z.enum(["1", "2"]),
+  username: z.string().max(255),
+  password: z.string().max(255).optional(),
+  sender: z.string().max(64),
+  language: z.enum(["1", "2", "3"]).default("1"),
+  enabled: z.boolean().default(false),
+});
+export type SmsConfigInput = z.infer<typeof SmsConfigSchema>;
+
+export const SmsSendSchema = z.object({
+  mobile: z.string().min(5).max(500), // comma-separated numbers
+  message: z.string().min(1).max(1000),
+  language: z.enum(["1", "2", "3"]).optional(),
+  delayUntil: z.string().regex(/^\d{12}$/).optional(),
+});
+export type SmsSendInput = z.infer<typeof SmsSendSchema>;
+
 export const NotificationPrefsSchema = z.object({
   push_enabled: z.boolean(),
   email_enabled: z.boolean(),

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Download, Upload, FileDown, FileText, Printer, Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Download, Upload, FileDown, FileText, Printer, Plus, Pencil, Trash2, Loader2, MapPin, History } from "lucide-react";
 import { lazy, Suspense, useRef, useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -739,6 +739,7 @@ function AdminAttendance() {
                     <th className="px-4 py-3 text-start font-medium">{t("taskLocation")}</th>
                     <th className="px-4 py-3 text-start font-medium">{t("status")}</th>
                     <th className="px-4 py-3 text-start font-medium">{t("notes")}</th>
+                    <th className="px-4 py-3 text-end font-medium sr-only">Timeline</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -750,6 +751,17 @@ function AdminAttendance() {
                       <td className="px-4 py-3"><span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-muted-foreground" />{row.where}</span></td>
                       <td className="px-4 py-3"><span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">{row.action}</span></td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{row.note ?? "—"}</td>
+                      <td className="px-4 py-3 text-right">
+                        {row.employeeId && (
+                          <Link
+                            to="/admin/activity-timeline/$id"
+                            params={{ id: row.employeeId }}
+                            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-semibold hover:border-brand/60 hover:text-brand"
+                          >
+                            <History className="h-3 w-3" /> Timeline
+                          </Link>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

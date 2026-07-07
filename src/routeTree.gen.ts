@@ -62,6 +62,7 @@ import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAllowancesRouteImport } from './routes/admin.allowances'
 import { Route as AdminEmployeesIndexRouteImport } from './routes/admin.employees.index'
 import { Route as AdminEmployeesIdRouteImport } from './routes/admin.employees.$id'
+import { Route as AdminActivityTimelineIdRouteImport } from './routes/admin.activity-timeline.$id'
 import { Route as ApiPublicCronRunSchedulesRouteImport } from './routes/api/public/cron/run-schedules'
 
 const StaffRoute = StaffRouteImport.update({
@@ -330,6 +331,11 @@ const AdminEmployeesIdRoute = AdminEmployeesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminEmployeesRoute,
 } as any)
+const AdminActivityTimelineIdRoute = AdminActivityTimelineIdRouteImport.update({
+  id: '/activity-timeline/$id',
+  path: '/activity-timeline/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiPublicCronRunSchedulesRoute =
   ApiPublicCronRunSchedulesRouteImport.update({
     id: '/api/public/cron/run-schedules',
@@ -389,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/employee/': typeof EmployeeIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/employees/': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/employee': typeof EmployeeIndexRoute
   '/manager': typeof ManagerIndexRoute
   '/staff': typeof StaffIndexRoute
+  '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/employees': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
@@ -497,6 +505,7 @@ export interface FileRoutesById {
   '/employee/': typeof EmployeeIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/employees/': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/employee/'
     | '/manager/'
     | '/staff/'
+    | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/employees/'
     | '/api/public/cron/run-schedules'
@@ -606,6 +616,7 @@ export interface FileRouteTypes {
     | '/employee'
     | '/manager'
     | '/staff'
+    | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/employees'
     | '/api/public/cron/run-schedules'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/employee/'
     | '/manager/'
     | '/staff/'
+    | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/employees/'
     | '/api/public/cron/run-schedules'
@@ -1050,6 +1062,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmployeesIdRouteImport
       parentRoute: typeof AdminEmployeesRoute
     }
+    '/admin/activity-timeline/$id': {
+      id: '/admin/activity-timeline/$id'
+      path: '/activity-timeline/$id'
+      fullPath: '/admin/activity-timeline/$id'
+      preLoaderRoute: typeof AdminActivityTimelineIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/public/cron/run-schedules': {
       id: '/api/public/cron/run-schedules'
       path: '/api/public/cron/run-schedules'
@@ -1101,6 +1120,7 @@ interface AdminRouteChildren {
   AdminShiftsRoute: typeof AdminShiftsRoute
   AdminTargetsOvertimeRoute: typeof AdminTargetsOvertimeRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminActivityTimelineIdRoute: typeof AdminActivityTimelineIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1130,6 +1150,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminShiftsRoute: AdminShiftsRoute,
   AdminTargetsOvertimeRoute: AdminTargetsOvertimeRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminActivityTimelineIdRoute: AdminActivityTimelineIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
