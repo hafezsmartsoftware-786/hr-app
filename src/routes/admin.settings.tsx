@@ -337,6 +337,7 @@ function AdminSettings() {
 
   const tabs: { id: Section; label: string; icon: typeof Clock }[] = [
     { id: "smtp", label: t("tabSmtp"), icon: Mail },
+    { id: "sms", label: "SMS / OTP", icon: MessageSquare },
     { id: "notifPrefs", label: t("tabNotifPrefs"), icon: Bell },
     { id: "push", label: "Push Notifications", icon: BellRing },
     { id: "autoExports", label: t("tabAutoExports"), icon: CalendarClock },
