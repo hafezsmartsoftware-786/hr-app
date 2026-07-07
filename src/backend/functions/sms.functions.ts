@@ -38,10 +38,11 @@ export const sendSms = createServerFn({ method: "POST" })
     const { sendSmsMisr } = await import("../server/sms-client.server");
     const cfg = await loadSmsConfig();
     if (!cfg || !cfg.enabled) return { ok: false, error: "SMS is disabled or not configured" };
-    return sendSmsMisr(
+    const r = await sendSmsMisr(
       { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
       { mobile: data.mobile, message: data.message, language: data.language ?? cfg.language, delayUntil: data.delayUntil },
     );
+    return { ok: r.ok, code: r.code ?? null, smsId: r.smsId ?? null, cost: r.cost ?? null, error: r.error ?? null };
   });
 
 /**
@@ -70,5 +71,12 @@ export const sendOtpSms = createServerFn({ method: "POST" })
       { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
       { mobile: data.mobile, message: data.template.replace("{code}", code), language: cfg.language },
     );
-    return { ...res, code: res.ok ? code : null };
+    return {
+      ok: res.ok,
+      providerCode: res.code ?? null,
+      smsId: res.smsId ?? null,
+      cost: res.cost ?? null,
+      error: res.error ?? null,
+      code: res.ok ? code : null,
+    };
   });
