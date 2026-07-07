@@ -93,6 +93,88 @@ function AdminSettings() {
   const saveSmtpFn = useServerFn(saveSmtpConfig);
   const testSmtpFn = useServerFn(sendTestEmail);
 
+  // ── SMS Misr configuration ──────────────────────────────────
+  type SmsDraft = {
+    environment: "1" | "2";
+    username: string;
+    password: string; // draft only; blank means "keep stored value"
+    sender: string;
+    language: "1" | "2" | "3";
+    enabled: boolean;
+  };
+  const [smsDraft, setSmsDraft] = useState<SmsDraft>({
+    environment: "2", username: "", password: "", sender: "", language: "1", enabled: false,
+  });
+  const [smsHasPassword, setSmsHasPassword] = useState(false);
+  const [showSmsPassword, setShowSmsPassword] = useState(false);
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsTestMobile, setSmsTestMobile] = useState("");
+  const [smsTestMessage, setSmsTestMessage] = useState("Test message from HR");
+  const loadSmsFn = useServerFn(getSmsConfig);
+  const saveSmsFn = useServerFn(saveSmsConfig);
+  const sendSmsFn = useServerFn(sendSms);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote: any = await loadSmsFn();
+        if (cancelled || !remote) return;
+        setSmsDraft({
+          environment: remote.environment ?? "2",
+          username: remote.username ?? "",
+          password: "",
+          sender: remote.sender ?? "",
+          language: remote.language ?? "1",
+          enabled: !!remote.enabled,
+        });
+        setSmsHasPassword(!!remote.has_password);
+      } catch (e) {
+        console.warn("Failed to load SMS config", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loadSmsFn]);
+
+  async function persistSms() {
+    setSmsSaving(true);
+    try {
+      await saveSmsFn({
+        data: {
+          environment: smsDraft.environment,
+          username: smsDraft.username.trim(),
+          password: smsDraft.password ? smsDraft.password : undefined,
+          sender: smsDraft.sender.trim(),
+          language: smsDraft.language,
+          enabled: !!smsDraft.enabled,
+        },
+      });
+      if (smsDraft.password) setSmsHasPassword(true);
+      setSmsDraft((d) => ({ ...d, password: "" }));
+      toast.success("SMS settings saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save SMS settings");
+    } finally {
+      setSmsSaving(false);
+    }
+  }
+
+  async function sendTestSms() {
+    const mobile = smsTestMobile.trim();
+    if (!mobile) { toast.error("Enter a mobile number (e.g. 2011XXXXXXX)"); return; }
+    setSmsSending(true);
+    try {
+      const res: any = await sendSmsFn({ data: { mobile, message: smsTestMessage } });
+      if (res?.ok) toast.success(`SMS sent (id ${res.smsId ?? "—"}, cost ${res.cost ?? "—"})`);
+      else toast.error(res?.error ?? `Send failed${res?.code ? ` (code ${res.code})` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Send failed");
+    } finally {
+      setSmsSending(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
