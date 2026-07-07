@@ -739,6 +739,7 @@ function AdminAttendance() {
                     <th className="px-4 py-3 text-start font-medium">{t("taskLocation")}</th>
                     <th className="px-4 py-3 text-start font-medium">{t("status")}</th>
                     <th className="px-4 py-3 text-start font-medium">{t("notes")}</th>
+                    <th className="px-4 py-3 text-end font-medium sr-only">Timeline</th>
                   </tr>
                 </thead>
                 <tbody>
