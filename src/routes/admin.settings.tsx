@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
@@ -120,7 +120,7 @@ function AdminSettings() {
     provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
   } | null;
   const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
-  const refreshLastSms = React.useCallback(async () => {
+  const refreshLastSms = useCallback(async () => {
     try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
     catch (e) { console.warn("Failed to load last SMS audit", e); }
   }, [loadLastSmsFn]);
