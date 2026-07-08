@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
-import { getSmsConfig, saveSmsConfig, sendSms } from "@/backend/functions/sms.functions";
+import { getSmsConfig, saveSmsConfig, sendSms, getLastSmsAudit } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -114,6 +114,17 @@ function AdminSettings() {
   const loadSmsFn = useServerFn(getSmsConfig);
   const saveSmsFn = useServerFn(saveSmsConfig);
   const sendSmsFn = useServerFn(sendSms);
+  const loadLastSmsFn = useServerFn(getLastSmsAudit);
+  type LastSmsAudit = {
+    id: string; created_at: string; mobile: string; message: string; ok: boolean;
+    provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
+  } | null;
+  const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
+  const refreshLastSms = React.useCallback(async () => {
+    try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
+    catch (e) { console.warn("Failed to load last SMS audit", e); }
+  }, [loadLastSmsFn]);
+  useEffect(() => { refreshLastSms(); }, [refreshLastSms]);
 
   useEffect(() => {
     let cancelled = false;
