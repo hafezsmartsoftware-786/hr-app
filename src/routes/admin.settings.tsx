@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
-import { getSmsConfig, saveSmsConfig, sendSms } from "@/backend/functions/sms.functions";
+import { getSmsConfig, saveSmsConfig, sendSms, getLastSmsAudit } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -114,6 +114,17 @@ function AdminSettings() {
   const loadSmsFn = useServerFn(getSmsConfig);
   const saveSmsFn = useServerFn(saveSmsConfig);
   const sendSmsFn = useServerFn(sendSms);
+  const loadLastSmsFn = useServerFn(getLastSmsAudit);
+  type LastSmsAudit = {
+    id: string; created_at: string; mobile: string; message: string; ok: boolean;
+    provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
+  } | null;
+  const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
+  const refreshLastSms = useCallback(async () => {
+    try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
+    catch (e) { console.warn("Failed to load last SMS audit", e); }
+  }, [loadLastSmsFn]);
+  useEffect(() => { refreshLastSms(); }, [refreshLastSms]);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +179,7 @@ function AdminSettings() {
       const res: any = await sendSmsFn({ data: { mobile, message: smsTestMessage } });
       if (res?.ok) toast.success(`SMS sent (id ${res.smsId ?? "—"}, cost ${res.cost ?? "—"})`);
       else toast.error(res?.error ?? `Send failed${res?.code ? ` (code ${res.code})` : ""}`);
+      refreshLastSms();
     } catch (e: any) {
       toast.error(e?.message ?? "Send failed");
     } finally {
@@ -928,6 +940,55 @@ function AdminSettings() {
               </button>
               {!smsDraft.enabled && (
                 <p className="text-[11px] text-muted-foreground">Enable SMS sending above to unlock the test button.</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last test SMS</h3>
+                <button
+                  onClick={refreshLastSms}
+                  className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium"
+                >
+                  Refresh
+                </button>
+              </div>
+              {!lastSms ? (
+                <p className="text-[12px] text-muted-foreground">No SMS has been sent yet, or the audit table has not been created. Run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.</p>
+              ) : (
+                <div className="grid gap-2 text-[12px] md:grid-cols-2">
+                  <div>
+                    <div className="text-muted-foreground">Status</div>
+                    <div className={`font-semibold ${lastSms.ok ? "text-success" : "text-destructive"}`}>
+                      {lastSms.ok ? "Delivered to provider" : "Failed"}
+                      {lastSms.error ? ` — ${lastSms.error}` : ""}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Timestamp</div>
+                    <div className="font-mono">{new Date(lastSms.created_at).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Provider code</div>
+                    <div className="font-mono">{lastSms.provider_code ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">SMSID</div>
+                    <div className="font-mono break-all">{lastSms.sms_id ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Cost</div>
+                    <div className="font-mono">{lastSms.cost ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Mobile</div>
+                    <div className="font-mono break-all" dir="ltr">{lastSms.mobile}</div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-muted-foreground">Message</div>
+                    <div className="whitespace-pre-wrap break-words">{lastSms.message}</div>
+                  </div>
+                </div>
               )}
             </div>
           </div>

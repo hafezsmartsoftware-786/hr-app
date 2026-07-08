@@ -33,16 +33,34 @@ export const saveSmsConfig = createServerFn({ method: "POST" })
 export const sendSms = createServerFn({ method: "POST" })
   .middleware([requireAdminAccess])
   .inputValidator((input) => SmsSendSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { loadSmsConfig } = await import("../server/sms-config.server");
     const { sendSmsMisr } = await import("../server/sms-client.server");
+    const { logSmsAudit } = await import("../server/sms-audit.server");
     const cfg = await loadSmsConfig();
-    if (!cfg || !cfg.enabled) return { ok: false, error: "SMS is disabled or not configured" };
+    if (!cfg || !cfg.enabled) {
+      await logSmsAudit({
+        sent_by: context.userId, mobile: data.mobile, message: data.message,
+        kind: "test", ok: false, error: "SMS is disabled or not configured",
+      });
+      return { ok: false, error: "SMS is disabled or not configured" };
+    }
     const r = await sendSmsMisr(
       { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
       { mobile: data.mobile, message: data.message, language: data.language ?? cfg.language, delayUntil: data.delayUntil },
     );
+    await logSmsAudit({
+      sent_by: context.userId, mobile: data.mobile, message: data.message, kind: "test",
+      ok: r.ok, provider_code: r.code ?? null, sms_id: r.smsId ?? null, cost: r.cost ?? null, error: r.error ?? null,
+    });
     return { ok: r.ok, code: r.code ?? null, smsId: r.smsId ?? null, cost: r.cost ?? null, error: r.error ?? null };
+  });
+
+export const getLastSmsAudit = createServerFn({ method: "GET" })
+  .middleware([requireAdminAccess])
+  .handler(async () => {
+    const { loadLastSmsAudit } = await import("../server/sms-audit.server");
+    return await loadLastSmsAudit();
   });
 
 /**
