@@ -179,6 +179,7 @@ function AdminSettings() {
       const res: any = await sendSmsFn({ data: { mobile, message: smsTestMessage } });
       if (res?.ok) toast.success(`SMS sent (id ${res.smsId ?? "—"}, cost ${res.cost ?? "—"})`);
       else toast.error(res?.error ?? `Send failed${res?.code ? ` (code ${res.code})` : ""}`);
+      refreshLastSms();
     } catch (e: any) {
       toast.error(e?.message ?? "Send failed");
     } finally {
