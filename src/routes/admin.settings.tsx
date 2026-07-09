@@ -981,6 +981,65 @@ function AdminSettings() {
               )}
             </div>
 
+            <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">OTP test</h3>
+                <span className="text-[11px] text-muted-foreground">Every attempt logs to <span className="font-mono">sms_audit</span></span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <Field label="Mobile (e.g. 2011XXXXXXX)">
+                  <input
+                    value={otpMobile}
+                    onChange={(e) => setOtpMobile(e.target.value)}
+                    className={inputCls}
+                    dir="ltr"
+                    placeholder="20 followed by 10 digits"
+                  />
+                </Field>
+                <button
+                  onClick={sendOtpTest}
+                  disabled={otpSending || otpCooldown > 0 || !smsDraft.enabled}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  {otpSending
+                    ? "Sending…"
+                    : otpCooldown > 0
+                      ? `Resend in ${otpCooldown}s`
+                      : otpLastResult ? "Resend OTP" : "Send OTP"}
+                </button>
+              </div>
+              {otpCooldown > 0 && (
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${((OTP_COOLDOWN_S - otpCooldown) / OTP_COOLDOWN_S) * 100}%` }}
+                  />
+                </div>
+              )}
+              {otpLastResult && (
+                <div className="grid gap-2 text-[12px] md:grid-cols-3 rounded-xl border border-border/60 bg-background/50 p-3">
+                  <div>
+                    <div className="text-muted-foreground">Status</div>
+                    <div className={`font-semibold ${otpLastResult.ok ? "text-success" : "text-destructive"}`}>
+                      {otpLastResult.ok ? "Delivered" : `Failed${otpLastResult.error ? ` — ${otpLastResult.error}` : ""}`}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">SMSID</div>
+                    <div className="font-mono break-all">{otpLastResult.smsId ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">At</div>
+                    <div className="font-mono">{new Date(otpLastResult.at).toLocaleTimeString()}</div>
+                  </div>
+                </div>
+              )}
+              {!smsDraft.enabled && (
+                <p className="text-[11px] text-muted-foreground">Enable SMS sending above to unlock OTP.</p>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last test SMS</h3>
