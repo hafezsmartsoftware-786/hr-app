@@ -1950,6 +1950,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_audit: {
+        Row: {
+          cost: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          message: string
+          mobile: string
+          ok: boolean
+          provider_code: string | null
+          sent_by: string | null
+          sms_id: string | null
+        }
+        Insert: {
+          cost?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          message: string
+          mobile: string
+          ok?: boolean
+          provider_code?: string | null
+          sent_by?: string | null
+          sms_id?: string | null
+        }
+        Update: {
+          cost?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          mobile?: string
+          ok?: boolean
+          provider_code?: string | null
+          sent_by?: string | null
+          sms_id?: string | null
+        }
+        Relationships: []
+      }
       smtp_config: {
         Row: {
           from_email: string
