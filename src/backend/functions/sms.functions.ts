@@ -79,16 +79,29 @@ export const sendOtpSms = createServerFn({ method: "POST" })
       : "Your verification code is {code}";
     return { mobile, digits, template };
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const code = Array.from({ length: data.digits }, () => Math.floor(Math.random() * 10)).join("");
     const { loadSmsConfig } = await import("../server/sms-config.server");
     const { sendSmsMisr } = await import("../server/sms-client.server");
+    const { logSmsAudit } = await import("../server/sms-audit.server");
     const cfg = await loadSmsConfig();
-    if (!cfg || !cfg.enabled) return { ok: false, error: "SMS is disabled or not configured", code: null };
+    const message = data.template.replace("{code}", code);
+    if (!cfg || !cfg.enabled) {
+      await logSmsAudit({
+        sent_by: context.userId, mobile: data.mobile, message, kind: "otp",
+        ok: false, error: "SMS is disabled or not configured",
+      });
+      return { ok: false, error: "SMS is disabled or not configured", code: null };
+    }
     const res = await sendSmsMisr(
       { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
-      { mobile: data.mobile, message: data.template.replace("{code}", code), language: cfg.language },
+      { mobile: data.mobile, message, language: cfg.language },
     );
+    await logSmsAudit({
+      sent_by: context.userId, mobile: data.mobile, message, kind: "otp",
+      ok: res.ok, provider_code: res.code ?? null, sms_id: res.smsId ?? null,
+      cost: res.cost ?? null, error: res.error ?? null,
+    });
     return {
       ok: res.ok,
       providerCode: res.code ?? null,

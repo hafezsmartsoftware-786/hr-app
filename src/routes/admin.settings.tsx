@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState, useRef, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
-import { getSmsConfig, saveSmsConfig, sendSms, getLastSmsAudit } from "@/backend/functions/sms.functions";
+import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -114,6 +114,7 @@ function AdminSettings() {
   const loadSmsFn = useServerFn(getSmsConfig);
   const saveSmsFn = useServerFn(saveSmsConfig);
   const sendSmsFn = useServerFn(sendSms);
+  const sendOtpFn = useServerFn(sendOtpSms);
   const loadLastSmsFn = useServerFn(getLastSmsAudit);
   type LastSmsAudit = {
     id: string; created_at: string; mobile: string; message: string; ok: boolean;
@@ -125,6 +126,43 @@ function AdminSettings() {
     catch (e) { console.warn("Failed to load last SMS audit", e); }
   }, [loadLastSmsFn]);
   useEffect(() => { refreshLastSms(); }, [refreshLastSms]);
+
+  // ── OTP test flow: countdown + rapid-resend guard ──
+  const OTP_COOLDOWN_S = 60;
+  const [otpMobile, setOtpMobile] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [otpLastResult, setOtpLastResult] = useState<null | { ok: boolean; smsId: string | null; cost: string | null; error: string | null; at: string }>(null);
+  const otpTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    otpTimerRef.current = setInterval(() => {
+      setOtpCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => { if (otpTimerRef.current) clearInterval(otpTimerRef.current); };
+  }, [otpCooldown]);
+  const sendOtpTest = useCallback(async () => {
+    const mobile = otpMobile.trim();
+    if (!mobile) { toast.error("Enter a mobile number"); return; }
+    if (otpCooldown > 0) { toast.error(`Wait ${otpCooldown}s before resending`); return; }
+    setOtpSending(true);
+    setOtpCooldown(OTP_COOLDOWN_S);
+    try {
+      const res: any = await sendOtpFn({ data: { mobile, digits: 6, template: "Your verification code is {code}" } });
+      setOtpLastResult({
+        ok: !!res?.ok, smsId: res?.smsId ?? null, cost: res?.cost ?? null,
+        error: res?.error ?? null, at: new Date().toISOString(),
+      });
+      if (res?.ok) toast.success(`OTP sent (id ${res.smsId ?? "—"})`);
+      else toast.error(res?.error ?? "OTP send failed");
+      refreshLastSms();
+    } catch (e: any) {
+      setOtpLastResult({ ok: false, smsId: null, cost: null, error: e?.message ?? "Failed", at: new Date().toISOString() });
+      toast.error(e?.message ?? "OTP send failed");
+    } finally {
+      setOtpSending(false);
+    }
+  }, [otpMobile, otpCooldown, sendOtpFn, refreshLastSms]);
 
   useEffect(() => {
     let cancelled = false;
@@ -943,6 +981,65 @@ function AdminSettings() {
               )}
             </div>
 
+            <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">OTP test</h3>
+                <span className="text-[11px] text-muted-foreground">Every attempt logs to <span className="font-mono">sms_audit</span></span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <Field label="Mobile (e.g. 2011XXXXXXX)">
+                  <input
+                    value={otpMobile}
+                    onChange={(e) => setOtpMobile(e.target.value)}
+                    className={inputCls}
+                    dir="ltr"
+                    placeholder="20 followed by 10 digits"
+                  />
+                </Field>
+                <button
+                  onClick={sendOtpTest}
+                  disabled={otpSending || otpCooldown > 0 || !smsDraft.enabled}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  {otpSending
+                    ? "Sending…"
+                    : otpCooldown > 0
+                      ? `Resend in ${otpCooldown}s`
+                      : otpLastResult ? "Resend OTP" : "Send OTP"}
+                </button>
+              </div>
+              {otpCooldown > 0 && (
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${((OTP_COOLDOWN_S - otpCooldown) / OTP_COOLDOWN_S) * 100}%` }}
+                  />
+                </div>
+              )}
+              {otpLastResult && (
+                <div className="grid gap-2 text-[12px] md:grid-cols-3 rounded-xl border border-border/60 bg-background/50 p-3">
+                  <div>
+                    <div className="text-muted-foreground">Status</div>
+                    <div className={`font-semibold ${otpLastResult.ok ? "text-success" : "text-destructive"}`}>
+                      {otpLastResult.ok ? "Delivered" : `Failed${otpLastResult.error ? ` — ${otpLastResult.error}` : ""}`}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">SMSID</div>
+                    <div className="font-mono break-all">{otpLastResult.smsId ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">At</div>
+                    <div className="font-mono">{new Date(otpLastResult.at).toLocaleTimeString()}</div>
+                  </div>
+                </div>
+              )}
+              {!smsDraft.enabled && (
+                <p className="text-[11px] text-muted-foreground">Enable SMS sending above to unlock OTP.</p>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last test SMS</h3>
@@ -1261,7 +1358,7 @@ function BilingualList<T extends BilItem>({
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
