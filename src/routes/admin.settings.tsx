@@ -121,6 +121,11 @@ function AdminSettings() {
     provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
   } | null;
   const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
+  const refreshLastSms = useCallback(async () => {
+    try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
+    catch (e) { console.warn("Failed to load last SMS audit", e); }
+  }, [loadLastSmsFn]);
+  useEffect(() => { refreshLastSms(); }, [refreshLastSms]);
 
   // ── OTP test flow: countdown + rapid-resend guard ──
   const OTP_COOLDOWN_S = 60;
@@ -141,7 +146,7 @@ function AdminSettings() {
     if (!mobile) { toast.error("Enter a mobile number"); return; }
     if (otpCooldown > 0) { toast.error(`Wait ${otpCooldown}s before resending`); return; }
     setOtpSending(true);
-    setOtpCooldown(OTP_COOLDOWN_S); // start cooldown immediately to block rapid clicks
+    setOtpCooldown(OTP_COOLDOWN_S);
     try {
       const res: any = await sendOtpFn({ data: { mobile, digits: 6, template: "Your verification code is {code}" } });
       setOtpLastResult({
@@ -158,12 +163,6 @@ function AdminSettings() {
       setOtpSending(false);
     }
   }, [otpMobile, otpCooldown, sendOtpFn, refreshLastSms]);
-
-  const refreshLastSms = useCallback(async () => {
-    try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
-    catch (e) { console.warn("Failed to load last SMS audit", e); }
-  }, [loadLastSmsFn]);
-  useEffect(() => { refreshLastSms(); }, [refreshLastSms]);
 
   useEffect(() => {
     let cancelled = false;
