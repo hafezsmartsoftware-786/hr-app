@@ -6,6 +6,31 @@
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+type SmsConfigRow = {
+  environment: "1" | "2" | null;
+  username: string | null;
+  password: string | null;
+  sender: string | null;
+  language: "1" | "2" | "3" | null;
+  enabled: boolean | null;
+};
+
+// The `sms_config` table isn't in the generated Supabase types yet, so we
+// cast the client to a permissive shape locally instead of sprinkling `any`.
+const admin = supabaseAdmin as unknown as {
+  from: (table: string) => {
+    select: (cols: string) => {
+      eq: (col: string, val: unknown) => {
+        maybeSingle: () => Promise<{ data: SmsConfigRow | null; error: { message: string } | null }>;
+      };
+    };
+    upsert: (
+      values: Record<string, unknown>,
+      opts?: { onConflict?: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  };
+};
+
 export type LoadedSms = {
   environment: "1" | "2";
   username: string;
@@ -16,7 +41,7 @@ export type LoadedSms = {
 };
 
 export async function loadSmsConfig(): Promise<LoadedSms | null> {
-  const { data, error } = await (supabaseAdmin as any)
+  const { data, error } = await admin
     .from("sms_config")
     .select("environment, username, password, sender, language, enabled")
     .eq("id", 1)
@@ -24,11 +49,11 @@ export async function loadSmsConfig(): Promise<LoadedSms | null> {
   if (error) throw new Error(error.message);
   if (!data) return null;
   return {
-    environment: (data.environment as "1" | "2") ?? "2",
+    environment: data.environment ?? "2",
     username: data.username ?? "",
     password: data.password ?? "",
     sender: data.sender ?? "",
-    language: (data.language as "1" | "2" | "3") ?? "1",
+    language: data.language ?? "1",
     enabled: !!data.enabled,
   };
 }
@@ -55,6 +80,6 @@ export async function writeSmsConfig(input: {
   if (typeof input.password === "string" && input.password.length > 0) {
     patch.password = input.password;
   }
-  const { error } = await (supabaseAdmin as any).from("sms_config").upsert(patch, { onConflict: "id" });
+  const { error } = await admin.from("sms_config").upsert(patch, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }

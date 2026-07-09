@@ -27,6 +27,7 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerProfileRouteImport } from './routes/manager.profile'
 import { Route as ManagerCheckRouteImport } from './routes/manager.check'
+import { Route as EmployeeVerifyOtpRouteImport } from './routes/employee.verify-otp'
 import { Route as EmployeeTasksRouteImport } from './routes/employee.tasks'
 import { Route as EmployeeSettingsRouteImport } from './routes/employee.settings'
 import { Route as EmployeeNotificationsRouteImport } from './routes/employee.notifications'
@@ -154,6 +155,11 @@ const ManagerCheckRoute = ManagerCheckRouteImport.update({
   id: '/check',
   path: '/check',
   getParentRoute: () => ManagerRoute,
+} as any)
+const EmployeeVerifyOtpRoute = EmployeeVerifyOtpRouteImport.update({
+  id: '/verify-otp',
+  path: '/verify-otp',
+  getParentRoute: () => EmployeeRoute,
 } as any)
 const EmployeeTasksRoute = EmployeeTasksRouteImport.update({
   id: '/tasks',
@@ -383,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/employee/notifications': typeof EmployeeNotificationsRoute
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
+  '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByTo {
   '/employee/notifications': typeof EmployeeNotificationsRoute
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
+  '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -493,6 +501,7 @@ export interface FileRoutesById {
   '/employee/notifications': typeof EmployeeNotificationsRoute
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
+  '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -552,6 +561,7 @@ export interface FileRouteTypes {
     | '/employee/notifications'
     | '/employee/settings'
     | '/employee/tasks'
+    | '/employee/verify-otp'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -604,6 +614,7 @@ export interface FileRouteTypes {
     | '/employee/notifications'
     | '/employee/settings'
     | '/employee/tasks'
+    | '/employee/verify-otp'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -661,6 +672,7 @@ export interface FileRouteTypes {
     | '/employee/notifications'
     | '/employee/settings'
     | '/employee/tasks'
+    | '/employee/verify-otp'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -816,6 +828,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manager/check'
       preLoaderRoute: typeof ManagerCheckRouteImport
       parentRoute: typeof ManagerRoute
+    }
+    '/employee/verify-otp': {
+      id: '/employee/verify-otp'
+      path: '/verify-otp'
+      fullPath: '/employee/verify-otp'
+      preLoaderRoute: typeof EmployeeVerifyOtpRouteImport
+      parentRoute: typeof EmployeeRoute
     }
     '/employee/tasks': {
       id: '/employee/tasks'
@@ -1164,6 +1183,7 @@ interface EmployeeRouteChildren {
   EmployeeNotificationsRoute: typeof EmployeeNotificationsRoute
   EmployeeSettingsRoute: typeof EmployeeSettingsRoute
   EmployeeTasksRoute: typeof EmployeeTasksRoute
+  EmployeeVerifyOtpRoute: typeof EmployeeVerifyOtpRoute
   EmployeeIndexRoute: typeof EmployeeIndexRoute
 }
 
@@ -1176,6 +1196,7 @@ const EmployeeRouteChildren: EmployeeRouteChildren = {
   EmployeeNotificationsRoute: EmployeeNotificationsRoute,
   EmployeeSettingsRoute: EmployeeSettingsRoute,
   EmployeeTasksRoute: EmployeeTasksRoute,
+  EmployeeVerifyOtpRoute: EmployeeVerifyOtpRoute,
   EmployeeIndexRoute: EmployeeIndexRoute,
 }
 
