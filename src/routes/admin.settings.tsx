@@ -114,12 +114,51 @@ function AdminSettings() {
   const loadSmsFn = useServerFn(getSmsConfig);
   const saveSmsFn = useServerFn(saveSmsConfig);
   const sendSmsFn = useServerFn(sendSms);
+  const sendOtpFn = useServerFn(sendOtpSms);
   const loadLastSmsFn = useServerFn(getLastSmsAudit);
   type LastSmsAudit = {
     id: string; created_at: string; mobile: string; message: string; ok: boolean;
     provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
   } | null;
   const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
+
+  // ── OTP test flow: countdown + rapid-resend guard ──
+  const OTP_COOLDOWN_S = 60;
+  const [otpMobile, setOtpMobile] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [otpLastResult, setOtpLastResult] = useState<null | { ok: boolean; smsId: string | null; cost: string | null; error: string | null; at: string }>(null);
+  const otpTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    otpTimerRef.current = setInterval(() => {
+      setOtpCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => { if (otpTimerRef.current) clearInterval(otpTimerRef.current); };
+  }, [otpCooldown]);
+  const sendOtpTest = useCallback(async () => {
+    const mobile = otpMobile.trim();
+    if (!mobile) { toast.error("Enter a mobile number"); return; }
+    if (otpCooldown > 0) { toast.error(`Wait ${otpCooldown}s before resending`); return; }
+    setOtpSending(true);
+    setOtpCooldown(OTP_COOLDOWN_S); // start cooldown immediately to block rapid clicks
+    try {
+      const res: any = await sendOtpFn({ data: { mobile, digits: 6, template: "Your verification code is {code}" } });
+      setOtpLastResult({
+        ok: !!res?.ok, smsId: res?.smsId ?? null, cost: res?.cost ?? null,
+        error: res?.error ?? null, at: new Date().toISOString(),
+      });
+      if (res?.ok) toast.success(`OTP sent (id ${res.smsId ?? "—"})`);
+      else toast.error(res?.error ?? "OTP send failed");
+      refreshLastSms();
+    } catch (e: any) {
+      setOtpLastResult({ ok: false, smsId: null, cost: null, error: e?.message ?? "Failed", at: new Date().toISOString() });
+      toast.error(e?.message ?? "OTP send failed");
+    } finally {
+      setOtpSending(false);
+    }
+  }, [otpMobile, otpCooldown, sendOtpFn, refreshLastSms]);
+
   const refreshLastSms = useCallback(async () => {
     try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
     catch (e) { console.warn("Failed to load last SMS audit", e); }
