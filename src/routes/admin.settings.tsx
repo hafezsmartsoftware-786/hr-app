@@ -1261,7 +1261,7 @@ function BilingualList<T extends BilItem>({
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
