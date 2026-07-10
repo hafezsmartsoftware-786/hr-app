@@ -140,6 +140,11 @@ export const TripCreateSchema = z.object({
   trip_time: z.string().max(8).optional().nullable(),
   purpose: z.string().max(500).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
+  city: z.string().uuid().optional().nullable(),
+  district: z.string().max(100).optional().nullable(),
+  lat: z.number().min(-90).max(90).optional().nullable(),
+  lng: z.number().min(-180).max(180).optional().nullable(),
+  radius_m: z.number().min(10).max(100000).optional().nullable(),
   assignee: z.string().uuid(),
 });
 export const TransitionSchema = z.object({

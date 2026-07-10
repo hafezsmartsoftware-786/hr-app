@@ -101,12 +101,17 @@ export type ManagerTrip = {
   id: string;
   destination: string;
   address: string;
+  cityId?: string;
+  district?: string;
   date: string;
   time?: string;
   purpose: string;
   assignee: string;    // employeeId
   status: TaskStatus;
   notes?: string;
+  lat?: number;
+  lng?: number;
+  radius_m?: number;
   createdBy: string;
   createdAt: number;
   startedAt?: number;

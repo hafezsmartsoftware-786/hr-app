@@ -249,12 +249,22 @@ function EmployeeTasksPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {tr.status === "pending" && (
-                    <button onClick={() => setPrompt({ kind: "trip", id: tr.id, to: "in_progress", label: t("markInProgress") })} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold">
+                    <button 
+                      onClick={() => setPrompt({ kind: "trip", id: tr.id, to: "in_progress", label: t("markInProgress") })} 
+                      disabled={!isLocationValid(tr)}
+                      title={!isLocationValid(tr) ? t("locationRequiredStart") : ""}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       <Play className="h-3 w-3" /> {t("markInProgress")}
                     </button>
                   )}
                   {tr.status !== "done" && tr.status !== "cancelled" && (
-                    <button onClick={() => setPrompt({ kind: "trip", id: tr.id, to: "done", label: t("markDone") })} className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+                    <button 
+                      onClick={() => setPrompt({ kind: "trip", id: tr.id, to: "done", label: t("markDone") })} 
+                      disabled={tr.status !== "in_progress" || !isLocationValid(tr)}
+                      title={!isLocationValid(tr) ? t("locationRequiredComplete") : ""}
+                      className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       <Check className="h-3 w-3" /> {t("markDone")}
                     </button>
                   )}

@@ -2220,11 +2220,16 @@ export type Database = {
         Row: {
           address: string | null
           assignee: string
+          city: string | null
           completed_at: string | null
           created_at: string
           created_by: string
           destination: string
+          district: string | null
           id: string
+          lat: number | null
+          lng: number | null
+          radius_m: number | null
           notes: string | null
           purpose: string | null
           started_at: string | null
@@ -2236,11 +2241,16 @@ export type Database = {
         Insert: {
           address?: string | null
           assignee: string
+          city?: string | null
           completed_at?: string | null
           created_at?: string
           created_by: string
           destination: string
+          district?: string | null
           id?: string
+          lat?: number | null
+          lng?: number | null
+          radius_m?: number | null
           notes?: string | null
           purpose?: string | null
           started_at?: string | null
@@ -2252,11 +2262,16 @@ export type Database = {
         Update: {
           address?: string | null
           assignee?: string
+          city?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string
           destination?: string
+          district?: string | null
           id?: string
+          lat?: number | null
+          lng?: number | null
+          radius_m?: number | null
           notes?: string | null
           purpose?: string | null
           started_at?: string | null
@@ -2278,6 +2293,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_city_fkey"
+            columns: ["city"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]

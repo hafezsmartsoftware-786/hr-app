@@ -199,9 +199,9 @@ function TeamPage() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {filtered.map((e) => {
-            const open = tasks.filter(
-              (tt) => tt.assignees.includes(e.id) && tt.status !== "done" && tt.status !== "cancelled",
-            ).length;
+            const empTasks = tasks.filter((tt) => tt.assignees.includes(e.id));
+            const pending = empTasks.filter((tt) => tt.status !== "done" && tt.status !== "cancelled").length;
+            const done = empTasks.filter((tt) => tt.status === "done").length;
             const present = presenceByEmp.get(e.id) ?? false;
             return (
               <li key={e.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -226,7 +226,13 @@ function TeamPage() {
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs">
                   <span className="text-muted-foreground">{t("tasks")}</span>
-                  <span className="font-semibold">{open}</span>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <span className="text-muted-foreground" title="Total">{empTasks.length}</span>
+                    <span className="text-border/50">•</span>
+                    <span className="text-warning" title="Pending">{pending} pending</span>
+                    <span className="text-border/50">•</span>
+                    <span className="text-success" title="Done">{done} done</span>
+                  </div>
                 </div>
                 <div className="mt-2">
                   <Button

@@ -8,6 +8,8 @@ import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyTeam } from "@/lib/team.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { TaskLocationPicker } from "@/components/admin/TaskLocationPicker";
 
 export const Route = createFileRoute("/manager/trips")({
   component: ManagerTripsPage,
@@ -184,40 +186,100 @@ function TripHistoryList({ history, nameOf }: { history?: ManagerTrip["history"]
 
 function AddTripModal({ me, team, onClose }: { me: string; team: Array<{ id: string; name: string }>; onClose: () => void }) {
   const { t } = useI18n();
+  const { data: cityData } = useQuery({
+    queryKey: ["geo", "cities-districts"],
+    queryFn: async () => {
+      const [{ data: cities }, { data: districts }] = await Promise.all([
+        supabase.from("cities").select("id, name_en").order("name_en"),
+        supabase.from("districts").select("id, city_id, name_en").order("name_en"),
+      ]);
+      return { cities: cities ?? [], districts: districts ?? [] };
+    },
+    staleTime: 5 * 60_000,
+  });
+  const cities = cityData?.cities ?? [];
+  const districts = cityData?.districts ?? [];
+
   const [destination, setDestination] = useState("");
   const [address, setAddress] = useState("");
+  const [cityId, setCityId] = useState("");
+  const [district, setDistrict] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState("");
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
   const [assignee, setAssignee] = useState(team[0]?.id ?? "");
+  const [lat, setLat] = useState<number>();
+  const [lng, setLng] = useState<number>();
+  const [radius_m, setRadiusM] = useState<number>(500);
+  const [showMap, setShowMap] = useState(false);
 
   const submit = () => {
     if (!destination.trim()) return toast.error(t("destination"));
     if (!address.trim()) return toast.error(t("tripAddress"));
     if (!assignee) return toast.error(t("assignedTo"));
-    addTrip({ destination: destination.trim(), address: address.trim(), date, time: time || undefined, purpose: purpose.trim(), notes: notes.trim() || undefined, assignee, status: "pending", createdBy: me });
+    addTrip({ destination: destination.trim(), address: address.trim(), date, time: time || undefined, purpose: purpose.trim(), notes: notes.trim() || undefined, assignee, status: "pending", createdBy: me, lat, lng, radius_m, cityId: cityId || undefined, district: district || undefined });
     toast.success(t("addTrip"));
     onClose();
   };
 
+  const cityName = cities.find((c: any) => c.id === cityId)?.name_en || destination;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-foreground/40 p-4 md:items-center" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="my-auto w-full max-w-md rounded-3xl bg-background p-5 shadow-soft">
+      <div onClick={(e) => e.stopPropagation()} className="my-auto w-full max-w-xl rounded-3xl bg-background p-5 shadow-soft">
         <h2 className="mb-4 font-display text-lg font-semibold">{t("addTrip")}</h2>
         <div className="space-y-3">
-          <Field label={t("destination")}><input value={destination} onChange={(e) => setDestination(e.target.value)} className="input" /></Field>
-          <Field label={t("tripAddress")}><input value={address} onChange={(e) => setAddress(e.target.value)} className="input" /></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label={t("destination")}><input value={destination} onChange={(e) => setDestination(e.target.value)} className="input" /></Field>
+            <Field label={t("taskCity") ?? "City"}>
+              <select value={cityId} onChange={(e) => { setCityId(e.target.value); setDistrict(""); }} className="input">
+                <option value="">—</option>
+                {cities.map((c: any) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
+              </select>
+            </Field>
+            <Field label={t("rowSiteDistrict")}>
+              <select value={district} onChange={(e) => setDistrict(e.target.value)} className="input" disabled={!cityId}>
+                <option value="">—</option>
+                {districts.filter((d: any) => d.city_id === cityId).map((d: any) => (
+                  <option key={d.id} value={d.name_en}>{d.name_en}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Field label={t("tripAddress")}><input value={address} onChange={(e) => setAddress(e.target.value)} className="input" /></Field>
+              </div>
+              <button type="button" title="Map location" onClick={() => setShowMap(!showMap)} className={`rounded-lg border p-2.5 mb-[1px] ${showMap || lat ? "border-brand bg-brand/10 text-brand" : "border-border bg-card text-muted-foreground"}`}>
+                <MapPin className="h-4 w-4" />
+              </button>
+            </div>
             <Field label={t("taskDate")}><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field>
             <Field label={t("tripTime")}><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="input" /></Field>
           </div>
-          <Field label={t("tripPurpose")}><input value={purpose} onChange={(e) => setPurpose(e.target.value)} className="input" /></Field>
-          <Field label={t("assignedTo")}>
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="input">
-              {team.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </Field>
+          {showMap && (
+            <div className="col-span-12 mt-1">
+              <TaskLocationPicker
+                lat={lat}
+                lng={lng}
+                radius_m={radius_m}
+                cityName={cityName}
+                districtName={district}
+                onChange={(l, g, r) => { setLat(l); setLng(g); setRadiusM(r ?? 500); }}
+              />
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label={t("tripPurpose")}><input value={purpose} onChange={(e) => setPurpose(e.target.value)} className="input" /></Field>
+            <Field label={t("assignedTo")}>
+              <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="input">
+                {team.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </Field>
+          </div>
           <Field label={t("tripNotes")}><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="input" /></Field>
         </div>
         <div className="mt-5 flex justify-end gap-2">
