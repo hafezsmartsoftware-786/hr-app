@@ -449,6 +449,8 @@ export const ui = {
   hoursShort: "h",
   taskCheckIn: "Task check-in",
   taskCheckOut: "Task check-out",
+  locationRequiredStart: "You must be in the related area of task to start",
+  locationRequiredComplete: "You must be in the related area of task to complete",
   taskActivityToday: "Today's task activity",
   taskActivitySubtitle: "Field tasks acting as check-in/check-out proof",
   noTaskActivity: "No task activity today",

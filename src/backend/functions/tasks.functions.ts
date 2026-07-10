@@ -9,7 +9,30 @@ export const listTasks = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.from("tasks")
       .select("*").order("created_at", { ascending: false }).limit(500);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    
+    const tasks = data ?? [];
+    if (tasks.length > 0) {
+      const taskIds = tasks.map((t: any) => t.id);
+      const { data: acts } = await context.supabase
+        .from("task_activity")
+        .select("id, task_id, kind, occurred_at, note, employee_id")
+        .in("task_id", taskIds);
+      
+      if (acts && acts.length > 0) {
+        const byTask = new Map<string, any[]>();
+        for (const a of acts) {
+          if (!a.task_id) continue;
+          const arr = byTask.get(a.task_id) ?? [];
+          arr.push(a);
+          byTask.set(a.task_id, arr);
+        }
+        for (const t of tasks) {
+          (t as any).task_activity = byTask.get(t.id) ?? [];
+        }
+      }
+    }
+    
+    return tasks;
   });
 
 export const getProfileNames = createServerFn({ method: "POST" })
@@ -36,6 +59,9 @@ export const createTask = createServerFn({ method: "POST" })
       city: data.city ?? null,
       district: data.district ?? null,
       address: data.address ?? null,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
+      radius_m: data.radius_m ?? null,
       estimated_hours: data.estimated_hours ?? null,
       assignees: data.assignees,
       created_by: context.userId,

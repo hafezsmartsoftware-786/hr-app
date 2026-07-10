@@ -1,10 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import flower1 from "@/assets/flower-1.png.asset.json";
-import flower2 from "@/assets/flower-2.png.asset.json";
-import flower3 from "@/assets/flower-3.png.asset.json";
 
-const DEFAULT_AVATARS = [flower1.url, flower2.url, flower3.url];
+const DEFAULT_AVATARS = ["/avatar-1.png", "/avatar-2.png", "/avatar-3.png"];
 
 function hashIndex(id: string, mod: number) {
   let h = 0;

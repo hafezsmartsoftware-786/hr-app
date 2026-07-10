@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAllGeofences } from "@/backend/functions/network-assignments.functions";
 import { listActivityRange } from "@/backend/functions/activity.functions";
+import { EmployeeAvatar } from "@/components/EmployeeAvatar";
 
 const LeafletMap = lazy(() => import("@/components/LeafletMap").then((mod) => ({ default: mod.LeafletMap })));
 const EgyptMap = lazy(() => import("@/components/admin/EgyptMap").then((mod) => ({ default: mod.EgyptMap })));
@@ -597,7 +598,12 @@ function AdminAttendance() {
                   const checkOutPlace = storedPlaceName(row.out_street, row.out_district, row.out_city);
                   return (
                   <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-muted/40">
-                    <td className="px-4 py-3 font-medium">{row.employee_name}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        <EmployeeAvatar id={row.employee_id} name={row.employee_name} className="h-6 w-6" />
+                        {row.employee_name}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 font-mono tabular-nums">{row.date}</td>
                     <td className="px-4 py-3 font-mono tabular-nums align-top">
                       <div className="flex flex-col">
@@ -745,7 +751,12 @@ function AdminAttendance() {
                 <tbody>
                   {taskActivity.map((row, i) => (
                     <tr key={i} className="border-b border-border last:border-b-0 hover:bg-muted/40">
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex items-center gap-2">
+                          <EmployeeAvatar id={row.employeeId} name={row.name} className="h-6 w-6" />
+                          {row.name}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 font-mono tabular-nums">{new Date(row.ts).toLocaleString()}</td>
                       <td className="px-4 py-3">{row.taskTitle}{row.estimatedHours ? <span className="ms-1 text-[10px] text-muted-foreground">({row.estimatedHours}{t("hoursShort")})</span> : null}</td>
                       <td className="px-4 py-3"><span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-muted-foreground" />{row.where}</span></td>

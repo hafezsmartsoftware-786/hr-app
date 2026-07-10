@@ -88,6 +88,9 @@ export type ManagerTask = {
   city?: string;
   district?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
+  radius_m?: number;
   estimatedHours?: number;
   // Employee progress (check-in/out via task)
   startedAt?: number;

@@ -11,6 +11,7 @@ import { getMyTeam } from "@/lib/team.functions";
 import { createTask, listTasks, transitionTask as transitionTaskFn, deleteTask as deleteTaskFn, getProfileNames, updateTaskAssignees } from "@/backend/functions/tasks.functions";
 import { mapTaskRow, type TaskRow } from "@/lib/task-mapping";
 import { supabase } from "@/integrations/supabase/client";
+import { TaskLocationPicker } from "@/components/admin/TaskLocationPicker";
 
 export const Route = createFileRoute("/manager/tasks")({
   component: ManagerTasksPage,
@@ -566,8 +567,8 @@ function HistoryList({ history, nameOf }: { history?: ManagerTask["history"]; na
   );
 }
 
-type Row = { title: string; description: string; cityId: string; district: string; address: string; hours: string };
-const emptyRow = (): Row => ({ title: "", description: "", cityId: "", district: "", address: "", hours: "" });
+type Row = { title: string; description: string; cityId: string; district: string; address: string; hours: string; lat?: number; lng?: number; radius_m?: number; showMap?: boolean };
+const emptyRow = (): Row => ({ title: "", description: "", cityId: "", district: "", address: "", hours: "", showMap: false });
 
 function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Array<{ id: string; name: string }>; onClose: () => void; onCreated?: () => void }) {
   const { t } = useI18n();
@@ -613,6 +614,9 @@ function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Arra
       createdBy: me,
       district: r.district || undefined,
       address: r.address.trim() || undefined,
+      lat: r.lat,
+      lng: r.lng,
+      radius_m: r.radius_m,
       estimatedHours: r.hours ? Number(r.hours) : undefined,
     }));
     try {
@@ -627,6 +631,9 @@ function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Arra
               due_time: p.dueTime ?? null,
               district: p.district ?? null,
               address: p.address ?? null,
+              lat: p.lat ?? null,
+              lng: p.lng ?? null,
+              radius_m: p.radius_m ?? null,
               estimated_hours: p.estimatedHours ?? null,
               assignees: p.assignees,
             },
@@ -710,8 +717,11 @@ function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Arra
                     <label className="text-[11px] font-medium">{t("rowHours")}</label>
                     <input type="number" min="0" step="0.5" value={r.hours} onChange={(e) => updateRow(i, { hours: e.target.value })} className="input" />
                   </div>
-                  <div className="col-span-8 md:col-span-1">
-                    <button type="button" onClick={() => removeRow(i)} disabled={rows.length === 1} className="w-full rounded-lg border border-border bg-card p-1.5 text-[11px] text-danger disabled:opacity-30">
+                  <div className="col-span-8 md:col-span-1 flex gap-1">
+                    <button type="button" title="Map location" onClick={() => updateRow(i, { showMap: !r.showMap })} className={`w-full rounded-lg border p-1.5 text-[11px] ${r.showMap || r.lat ? "border-brand bg-brand/10 text-brand" : "border-border bg-card text-muted-foreground"}`}>
+                      <MapPin className="mx-auto h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" title="Remove" onClick={() => removeRow(i)} disabled={rows.length === 1} className="w-full rounded-lg border border-border bg-card p-1.5 text-[11px] text-danger disabled:opacity-30">
                       <Trash2 className="mx-auto h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -719,6 +729,16 @@ function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Arra
                     <label className="text-[11px] font-medium">{t("taskDescription")}</label>
                     <input value={r.description} onChange={(e) => updateRow(i, { description: e.target.value })} className="input" />
                   </div>
+                  {r.showMap && (
+                    <div className="col-span-12 mt-1">
+                      <TaskLocationPicker
+                        lat={r.lat}
+                        lng={r.lng}
+                        radius_m={r.radius_m}
+                        onChange={(lat, lng, radius_m) => updateRow(i, { lat, lng, radius_m })}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

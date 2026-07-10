@@ -443,6 +443,8 @@ export const ui: Record<UiKey, string> = {
   hoursShort: "س",
   taskCheckIn: "تسجيل دخول للمهمة",
   taskCheckOut: "تسجيل خروج من المهمة",
+  locationRequiredStart: "يجب أن تكون في المنطقة المحددة للمهمة للبدء",
+  locationRequiredComplete: "يجب أن تكون في المنطقة المحددة للمهمة للإنهاء",
   taskActivityToday: "نشاط المهام اليوم",
   taskActivitySubtitle: "المهام الميدانية كدليل على الحضور والانصراف",
   noTaskActivity: "لا يوجد نشاط مهام اليوم",

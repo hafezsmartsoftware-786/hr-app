@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MapPin, Wifi, WifiOff, CheckCircle2, Calendar, Sparkles, AlertTriangle, Loader2, LogIn, LogOut, Radio, ShieldCheck } from "lucide-react";
+import { MapPin, Wifi, WifiOff, CheckCircle2, Calendar, Sparkles, AlertTriangle, Loader2, LogIn, LogOut, Radio, ShieldCheck, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n, useTranslators } from "@/lib/i18n";
 import { getMe } from "@/backend/functions/auth.functions";
 import { checkIn, checkOut, listMyAttendance, listMyAccess } from "@/backend/functions/attendance.functions";
 import { listMyLeaves } from "@/backend/functions/leaves.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
+import { listTasks } from "@/backend/functions/tasks.functions";
+import { mapTaskRow, type TaskRow } from "@/lib/task-mapping";
+import { useStore } from "@/lib/store";
+import { useSession } from "@/lib/auth";
 
 export function EmployeeDashboard() {
   const { t, lang } = useI18n();
@@ -32,6 +36,24 @@ export function EmployeeDashboard() {
   const lvQ = useQuery({ queryKey: ["my-leaves"], queryFn: () => lvFn() });
   const holQ = useQuery({ queryKey: ["holidays"], queryFn: () => holFn() });
   const accessQ = useQuery({ queryKey: ["my-access"], queryFn: () => accessFn() });
+
+  const session = useSession();
+  const employees = useStore((s) => s.employees);
+  const currentEmpId = useStore((s) => s.currentEmployeeId);
+  const meId = session?.employeeId ?? employees.find((e) => e.name === session?.name)?.id ?? currentEmpId;
+
+  const listTasksFn = useServerFn(listTasks);
+  const { data: taskRows = [] } = useQuery({
+    queryKey: ["tasks-db"],
+    queryFn: () => listTasksFn(),
+    enabled: !!meId,
+  });
+  
+  const tasks = useMemo(() => (taskRows as TaskRow[]).map(mapTaskRow), [taskRows]);
+  const myTasks = useMemo(() => {
+    const myKey = (id: string) => id === meId || id === session?.employeeId;
+    return tasks.filter((tk) => tk.assignees.some(myKey) && tk.status === "pending").slice(0, 5);
+  }, [tasks, meId, session?.employeeId]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -264,34 +286,17 @@ export function EmployeeDashboard() {
 
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold">
-          <ShieldCheck className="h-4 w-4 text-brand" /> Allowed locations & networks
+          <ListChecks className="h-4 w-4 text-brand" /> {t("myTasks")}
         </h2>
-        {accessQ.isLoading ? (
-          <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">…</p>
-        ) : ((accessQ.data as any)?.locations?.length ?? 0) === 0 && ((accessQ.data as any)?.networks?.length ?? 0) === 0 ? (
-          <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">No restrictions — check in from anywhere.</p>
+        {myTasks.length === 0 ? (
+          <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">No new assigned tasks.</p>
         ) : (
           <ul className="space-y-2">
-            {((accessQ.data as any)?.locations ?? []).map((l: any) => (
-              <li key={`loc-${l.id}`} className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2">
-                <MapPin className="mt-0.5 h-4 w-4 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{l.name}</p>
-                  <p className="text-[11px] text-muted-foreground tabular-nums">
-                    {Number(l.lat).toFixed(4)}, {Number(l.lng).toFixed(4)} · {l.radius_m} m
-                  </p>
-                </div>
-              </li>
-            ))}
-            {((accessQ.data as any)?.networks ?? []).map((n: any) => (
-              <li key={`net-${n.id}`} className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2">
-                <Radio className="mt-0.5 h-4 w-4 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{n.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {n.ssid ? `SSID: ${n.ssid}` : "any SSID"}
-                  </p>
-                </div>
+            {myTasks.map((tk) => (
+              <li key={tk.id} className="rounded-xl border border-border bg-muted/40 p-3">
+                <p className="text-sm font-semibold">{tk.title}</p>
+                <p className="text-[11px] text-muted-foreground">{tk.date} {tk.dueTime ? `• ${tk.dueTime}` : ""}</p>
+                {tk.description && <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">{tk.description}</p>}
               </li>
             ))}
           </ul>

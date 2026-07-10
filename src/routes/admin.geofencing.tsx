@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { LeafletMap } from "@/components/LeafletMap";
+import { lookupCity } from "@/lib/egypt-cities";
 
 import { listCitiesWithDistricts } from "@/backend/functions/directory.functions";
 import {
@@ -173,7 +174,7 @@ function GeoPage() {
 }
 
 function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onClose: () => void; onCreated: () => void; initialLat?: number; initialLng?: number }) {
-  const { t, language } = useI18n();
+  const { t, lang: language } = useI18n();
   const listCitiesFn = useServerFn(listCitiesWithDistricts);
   const { data: dbCities = [] } = useQuery({
     queryKey: ["admin", "cities-districts"],
@@ -183,10 +184,31 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
-  const [lat, setLat] = useState(initialLat != null ? initialLat.toFixed(6) : "24.7136");
-  const [lng, setLng] = useState(initialLng != null ? initialLng.toFixed(6) : "46.6753");
-  const [radius, setRadius] = useState(100);
+  const [lat, setLat] = useState(initialLat != null ? initialLat.toFixed(6) : "30.044420");
+  const [lng, setLng] = useState(initialLng != null ? initialLng.toFixed(6) : "31.235712");
+  const [radius, setRadius] = useState(500);
   const createFn = useServerFn(createGeofenceAdmin);
+
+  async function geocodeAndPan(placeName: string, contextName: string = "") {
+    if (!placeName) return;
+    const loc = lookupCity(placeName);
+    if (loc) {
+      setLat(loc.lat.toFixed(6));
+      setLng(loc.lng.toFixed(6));
+      return;
+    }
+    try {
+      const q = encodeURIComponent(`${placeName}${contextName ? ", " + contextName : ""}, Egypt`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setLat(Number(data[0].lat).toFixed(6));
+        setLng(Number(data[0].lon).toFixed(6));
+      }
+    } catch (e) {
+      console.warn("Geocoding failed", e);
+    }
+  }
 
   const selectedCity = dbCities.find(c => c.name_en === city || c.name_ar === city);
   const availableDistricts = selectedCity?.districts ?? [];
@@ -236,7 +258,11 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
             <span className="mb-1 block text-xs font-medium text-muted-foreground">City</span>
             <select
               value={city}
-              onChange={(e) => setCity(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCity(v);
+                void geocodeAndPan(v);
+              }}
               className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"
             >
               <option value="">Select city...</option>
@@ -251,7 +277,12 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
             <span className="mb-1 block text-xs font-medium text-muted-foreground">District</span>
             <select
               value={district}
-              onChange={(e) => setDistrict(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setDistrict(v);
+                if (v) void geocodeAndPan(v, city);
+                else if (city) void geocodeAndPan(city);
+              }}
               disabled={!city || availableDistricts.length === 0}
               className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm disabled:opacity-50"
             >

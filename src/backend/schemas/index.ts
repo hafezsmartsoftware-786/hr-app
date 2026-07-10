@@ -129,6 +129,9 @@ export const TaskCreateSchema = z.object({
   address: z.string().max(255).optional().nullable(),
   estimated_hours: z.number().min(0).max(999).optional().nullable(),
   assignees: z.array(z.string().uuid()).max(50).default([]),
+  lat: z.number().min(-90).max(90).optional().nullable(),
+  lng: z.number().min(-180).max(180).optional().nullable(),
+  radius_m: z.number().min(10).max(100000).optional().nullable(),
 });
 export const TripCreateSchema = z.object({
   destination: z.string().min(1).max(200),

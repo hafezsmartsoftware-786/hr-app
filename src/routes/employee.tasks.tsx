@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ListChecks, Route as RouteIcon, MapPin, Play, Check, History, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useStore, transitionTrip, selfAssignTask, getState, type TaskStatus, type TaskPriority } from "@/lib/store";
@@ -90,6 +90,48 @@ function EmployeeTasksPage() {
   const myTasks = tasks.filter((tk) => tk.assignees.some(myKey));
   const myTrips = trips.filter((tr) => myKey(tr.assignee));
 
+  const [liveGeo, setLiveGeo] = useState<{ district?: string; err?: string; lat?: number; lng?: number }>({});
+  useEffect(() => {
+    let cancelled = false;
+    async function refresh() {
+      const coords = await getLocation();
+      if (cancelled) return;
+      if (coords.lat == null || coords.lng == null) return setLiveGeo({ err: "Location unavailable" });
+      try {
+        const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.lat}&longitude=${coords.lng}&localityLanguage=en`);
+        if (!r.ok) return;
+        const j = await r.json();
+        if (cancelled) return;
+        setLiveGeo({ 
+          district: j.localityInfo?.administrative?.find((a: any) => a.adminLevel >= 6)?.name || j.locality || undefined,
+          lat: coords.lat,
+          lng: coords.lng
+        });
+      } catch { }
+    }
+    refresh();
+    const id = setInterval(refresh, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const isLocationValid = (tk: any) => {
+    if (tk.lat != null && tk.lng != null && liveGeo.lat != null && liveGeo.lng != null) {
+      const R = 6371e3; // metres
+      const p1 = (liveGeo.lat * Math.PI) / 180;
+      const p2 = (tk.lat * Math.PI) / 180;
+      const dp = ((tk.lat - liveGeo.lat) * Math.PI) / 180;
+      const dl = ((tk.lng - liveGeo.lng) * Math.PI) / 180;
+      const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      const radius = tk.radius_m || 500;
+      return distance <= radius;
+    }
+    if (!tk.district) return true;
+    if (!liveGeo.district) return false;
+    return liveGeo.district.toLowerCase().includes(tk.district.toLowerCase()) || tk.district.toLowerCase().includes(liveGeo.district.toLowerCase());
+  };
+
   const [prompt, setPrompt] = useState<null | { kind: "task" | "trip"; id: string; to: TaskStatus; label: string }>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showNew, setShowNew] = useState(false);
@@ -144,13 +186,19 @@ function EmployeeTasksPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {tk.status === "pending" && (
-                    <button onClick={() => setPrompt({ kind: "task", id: tk.id, to: "in_progress", label: t("taskCheckIn") })} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold">
+                    <button
+                      disabled={!isLocationValid(tk)}
+                      title={!isLocationValid(tk) ? t("locationRequiredStart") : ""}
+                      onClick={() => setPrompt({ kind: "task", id: tk.id, to: "in_progress", label: t("taskCheckIn") })}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       <Play className="h-3 w-3" /> {t("markInProgress")}
                     </button>
                   )}
                   {tk.status !== "done" && tk.status !== "cancelled" && (
                     <button
-                      disabled={tk.status !== "in_progress"}
+                      disabled={tk.status !== "in_progress" || !isLocationValid(tk)}
+                      title={!isLocationValid(tk) ? t("locationRequiredComplete") : ""}
                       onClick={() => setPrompt({ kind: "task", id: tk.id, to: "done", label: t("taskCheckOut") })}
                       className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success disabled:cursor-not-allowed disabled:opacity-50"
                     >

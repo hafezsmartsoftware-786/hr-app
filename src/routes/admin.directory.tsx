@@ -316,7 +316,7 @@ function CitiesSection() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {(c.districts ?? []).map((d2: any) => (
                   <span key={d2.id} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs">
-                    {d2.name_en}
+                    {d2.name_en} {d2.name_ar ? <span className="text-[10px] opacity-70">({d2.name_ar})</span> : null}
                     <button onClick={() => mDD.mutate(d2.id)} className="ml-1 text-destructive">×</button>
                   </span>
                 ))}

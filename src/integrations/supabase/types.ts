@@ -2126,7 +2126,10 @@ export type Database = {
           due_time: string | null
           estimated_hours: number | null
           id: string
+          lat: number | null
+          lng: number | null
           priority: string
+          radius_m: number | null
           started_at: string | null
           status: string
           title: string
@@ -2145,7 +2148,10 @@ export type Database = {
           due_time?: string | null
           estimated_hours?: number | null
           id?: string
+          lat?: number | null
+          lng?: number | null
           priority?: string
+          radius_m?: number | null
           started_at?: string | null
           status?: string
           title: string
@@ -2164,7 +2170,10 @@ export type Database = {
           due_time?: string | null
           estimated_hours?: number | null
           id?: string
+          lat?: number | null
+          lng?: number | null
           priority?: string
+          radius_m?: number | null
           started_at?: string | null
           status?: string
           title?: string

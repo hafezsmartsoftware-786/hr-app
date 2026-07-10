@@ -3,8 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { LogIn, LogOut, MapPin, Plus, X, Wifi, WifiOff, Radio, ShieldCheck } from "lucide-react";
+import { LogIn, LogOut, MapPin, Plus, X, Wifi, WifiOff, Radio, ShieldCheck, ListChecks } from "lucide-react";
 import { checkIn, checkOut, listMyAttendance, listMyAccess } from "@/backend/functions/attendance.functions";
+import { listTasks } from "@/backend/functions/tasks.functions";
+import { mapTaskRow, type TaskRow } from "@/lib/task-mapping";
+import { useStore } from "@/lib/store";
+import { useSession } from "@/lib/auth";
 import { submitLeave, listMyLeaves, cancelLeave } from "@/backend/functions/leaves.functions";
 import { Fingerprint, ScanFace } from "lucide-react";
 import {
@@ -24,7 +28,7 @@ function CheckPage() {
         <p className="text-xs text-muted-foreground">Live attendance and leave requests.</p>
       </header>
       <CheckInOutCard />
-      <AllowedAccessCard />
+      <AssignedTasksCard />
       <AttendanceList />
       <LeavesSection />
     </div>
@@ -243,58 +247,44 @@ function CheckInOutCard() {
   );
 }
 
-function AllowedAccessCard() {
-  const accessFn = useServerFn(listMyAccess);
-  const q = useQuery({ queryKey: ["my-access"], queryFn: () => accessFn() });
-  const locations = (q.data as any)?.locations ?? [];
-  const networks = (q.data as any)?.networks ?? [];
-  const empty = !q.isLoading && locations.length === 0 && networks.length === 0;
+function AssignedTasksCard() {
+  const { t } = useI18n();
+  const session = useSession();
+  const employees = useStore((s) => s.employees);
+  const currentEmpId = useStore((s) => s.currentEmployeeId);
+  const meId = session?.employeeId ?? employees.find((e) => e.name === session?.name)?.id ?? currentEmpId;
+
+  const listTasksFn = useServerFn(listTasks);
+  const { data: taskRows = [] } = useQuery({
+    queryKey: ["tasks-db"],
+    queryFn: () => listTasksFn(),
+    enabled: !!meId,
+  });
+  
+  const tasks = (taskRows as TaskRow[]).map(mapTaskRow);
+  const myKey = (id: string) => id === meId || id === session?.employeeId;
+  const myTasks = tasks.filter((tk) => tk.assignees.some(myKey) && tk.status === "pending").slice(0, 5);
+
   return (
     <section className="rounded-3xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-brand" />
-        <h2 className="font-display text-sm font-semibold">Allowed locations & networks</h2>
+        <ListChecks className="h-4 w-4 text-brand" />
+        <h2 className="font-display text-sm font-semibold">{t("myTasks")}</h2>
       </div>
-      {empty && (
+      {myTasks.length === 0 ? (
         <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          No assignments yet — you can check in from anywhere.
+          No new assigned tasks.
         </p>
-      )}
-      {locations.length > 0 && (
-        <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Locations</p>
-          <ul className="space-y-2">
-            {locations.map((l: any) => (
-              <li key={l.id} className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
-                <MapPin className="mt-0.5 h-4 w-4 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{l.name}</p>
-                  <p className="text-[11px] text-muted-foreground tabular-nums">
-                    {l.lat.toFixed(5)}, {l.lng.toFixed(5)} · radius {l.radius_m} m
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {networks.length > 0 && (
-        <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Networks</p>
-          <ul className="space-y-2">
-            {networks.map((n: any) => (
-              <li key={n.id} className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
-                <Radio className="mt-0.5 h-4 w-4 text-brand" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{n.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {n.ssid ? `SSID: ${n.ssid}` : "any SSID"}{n.bssid ? ` · BSSID: ${n.bssid}` : ""}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+      ) : (
+        <ul className="space-y-2">
+          {myTasks.map((tk) => (
+            <li key={tk.id} className="rounded-xl border border-border bg-muted/40 p-3">
+              <p className="text-sm font-semibold">{tk.title}</p>
+              <p className="text-[11px] text-muted-foreground">{tk.date} {tk.dueTime ? `• ${tk.dueTime}` : ""}</p>
+              {tk.description && <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">{tk.description}</p>}
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

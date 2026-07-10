@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import {
   Download, FileText, FileSpreadsheet, FileBarChart2,
   TrendingUp, TrendingDown, Clock, UserX, Users, Timer, CheckCircle2, Calendar,
@@ -117,21 +118,45 @@ function ReportsPage() {
               </p>
             </div>
           </div>
-          <div className="mt-6 flex h-44 items-end gap-1.5">
-            {trend.map((p, i) => (
-              <div key={i} className="group relative flex-1">
-                <div
-                  className="w-full rounded-t-lg bg-gradient-brand opacity-90 transition-all hover:opacity-100"
-                  style={{ height: `${p.value}%` }}
-                  title={`${p.label}: ${p.value}%`}
+          <div className="mt-6 h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trend} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  dy={10}
+                  minTickGap={20}
                 />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
-            <span>{trend[0].label}</span>
-            <span>{trend[Math.floor(trend.length / 2)].label}</span>
-            <span>{trend[trend.length - 1].label}</span>
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  domain={['dataMin - 5', 'dataMax + 5']}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "1px solid hsl(var(--border))",
+                    backgroundColor: "hsl(var(--card))",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)"
+                  }}
+                  itemStyle={{ color: "#ea580c", fontWeight: 600 }}
+                  formatter={(value: number) => [`${value}%`, "Attendance"]}
+                  labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
+                />
+                <Area type="monotone" dataKey="value" stroke="#ea580c" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
