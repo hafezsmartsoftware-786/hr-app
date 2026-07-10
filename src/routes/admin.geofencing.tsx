@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { LeafletMap } from "@/components/LeafletMap";
 
+import { listCitiesWithDistricts } from "@/backend/functions/directory.functions";
 import {
   listGeofencesAdmin,
   createGeofenceAdmin,
@@ -172,7 +173,13 @@ function GeoPage() {
 }
 
 function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onClose: () => void; onCreated: () => void; initialLat?: number; initialLng?: number }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const listCitiesFn = useServerFn(listCitiesWithDistricts);
+  const { data: dbCities = [] } = useQuery({
+    queryKey: ["admin", "cities-districts"],
+    queryFn: () => listCitiesFn(),
+  });
+
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
@@ -180,6 +187,19 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
   const [lng, setLng] = useState(initialLng != null ? initialLng.toFixed(6) : "46.6753");
   const [radius, setRadius] = useState(100);
   const createFn = useServerFn(createGeofenceAdmin);
+
+  const selectedCity = dbCities.find(c => c.name_en === city || c.name_ar === city);
+  const availableDistricts = selectedCity?.districts ?? [];
+
+  useEffect(() => {
+    if (city && availableDistricts.length > 0) {
+      if (!availableDistricts.some(d => d.name_en === district || d.name_ar === district)) {
+        setDistrict("");
+      }
+    } else if (city && availableDistricts.length === 0) {
+      setDistrict("");
+    }
+  }, [city, availableDistricts, district]);
   const mut = useMutation({
     mutationFn: (vars: { name: string; lat: number; lng: number; radius_m: number }) =>
       createFn({ data: { ...vars, active: true } }),
@@ -214,11 +234,34 @@ function AddLocationModal({ onClose, onCreated, initialLat, initialLng }: { onCl
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">City</span>
-            <input value={city} onChange={(e) => setCity(e.target.value)} maxLength={40} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"
+            >
+              <option value="">Select city...</option>
+              {dbCities.map(c => (
+                <option key={c.id} value={language === "ar" ? c.name_ar : c.name_en}>
+                  {language === "ar" ? c.name_ar : c.name_en}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">District</span>
-            <input value={district} onChange={(e) => setDistrict(e.target.value)} maxLength={40} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+            <select
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              disabled={!city || availableDistricts.length === 0}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm disabled:opacity-50"
+            >
+              <option value="">Select district...</option>
+              {availableDistricts.map(d => (
+                <option key={d.id} value={language === "ar" ? d.name_ar : d.name_en}>
+                  {language === "ar" ? d.name_ar : d.name_en}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         {validCoords && (
