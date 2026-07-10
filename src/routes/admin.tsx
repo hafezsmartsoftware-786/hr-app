@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { LayoutDashboard, Users, MapPin, Clock, CalendarDays, FileBarChart2, ScrollText, Menu, X, Bell, Search, Wallet, Settings, FileSignature, Shield, Building2, KeyRound, Calculator, UserCog, Network } from "lucide-react";
+import { LayoutDashboard, Users, MapPin, Clock, CalendarDays, FileBarChart2, ScrollText, Menu, X, Bell, Search, Wallet, Settings, FileSignature, Shield, Building2, KeyRound, Calculator, UserCog, Network, StickyNote } from "lucide-react";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { AppLogo } from "@/components/AppLogo";
 import { UserMenu } from "@/components/UserMenu";
@@ -45,7 +45,7 @@ function AdminLayout() {
     { to: "/admin/audit", icon: ScrollText, label: t("audit"), page: "audit" },
     { to: "/admin/directory", icon: Building2, label: "Directory", page: "directory" },
     { to: "/admin/org-chart", icon: Network, label: "Org Chart", page: "employees" },
-    { to: "/admin/roles", icon: Shield, label: "Roles", page: "roles" },
+    { to: "/admin/sticky-notes", icon: StickyNote, label: "Sticky Notes", page: null },
     { to: "/admin/settings", icon: Settings, label: t("settings") || "Settings", page: "settings" },
   ] as const;
   const nav = isAdmin || permsLoading

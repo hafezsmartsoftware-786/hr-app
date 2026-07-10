@@ -37,6 +37,7 @@ import { Route as EmployeeCheckRouteImport } from './routes/employee.check'
 import { Route as EmployeeBiometricsRouteImport } from './routes/employee.biometrics'
 import { Route as EmployeeAttendanceRouteImport } from './routes/employee.attendance'
 import { Route as AdminTargetsOvertimeRouteImport } from './routes/admin.targets-overtime'
+import { Route as AdminStickyNotesRouteImport } from './routes/admin.sticky-notes'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminRolesRouteImport } from './routes/admin.roles'
@@ -204,6 +205,11 @@ const EmployeeAttendanceRoute = EmployeeAttendanceRouteImport.update({
 const AdminTargetsOvertimeRoute = AdminTargetsOvertimeRouteImport.update({
   id: '/targets-overtime',
   path: '/targets-overtime',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStickyNotesRoute = AdminStickyNotesRouteImport.update({
+  id: '/sticky-notes',
+  path: '/sticky-notes',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminShiftsRoute = AdminShiftsRouteImport.update({
@@ -380,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
@@ -433,6 +440,7 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
@@ -552,6 +561,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/attendance'
     | '/employee/biometrics'
@@ -605,6 +615,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/attendance'
     | '/employee/biometrics'
@@ -663,6 +674,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/attendance'
     | '/employee/biometrics'
@@ -897,6 +909,13 @@ declare module '@tanstack/react-router' {
       path: '/targets-overtime'
       fullPath: '/admin/targets-overtime'
       preLoaderRoute: typeof AdminTargetsOvertimeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/sticky-notes': {
+      id: '/admin/sticky-notes'
+      path: '/sticky-notes'
+      fullPath: '/admin/sticky-notes'
+      preLoaderRoute: typeof AdminStickyNotesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shifts': {
@@ -1137,6 +1156,7 @@ interface AdminRouteChildren {
   AdminRolesRoute: typeof AdminRolesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
+  AdminStickyNotesRoute: typeof AdminStickyNotesRoute
   AdminTargetsOvertimeRoute: typeof AdminTargetsOvertimeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminActivityTimelineIdRoute: typeof AdminActivityTimelineIdRoute
@@ -1167,6 +1187,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminRolesRoute: AdminRolesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
+  AdminStickyNotesRoute: AdminStickyNotesRoute,
   AdminTargetsOvertimeRoute: AdminTargetsOvertimeRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminActivityTimelineIdRoute: AdminActivityTimelineIdRoute,
