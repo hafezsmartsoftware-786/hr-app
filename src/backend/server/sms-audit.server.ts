@@ -62,3 +62,19 @@ export async function loadLastSmsAudit(): Promise<SmsAuditRow | null> {
   }
   return (data as SmsAuditRow) ?? null;
 }
+
+export async function loadRecentSmsAudit(opts: { kind?: string; limit?: number } = {}): Promise<SmsAuditRow[]> {
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  let q = (supabaseAdmin as any)
+    .from("sms_audit")
+    .select("id, created_at, sent_by, mobile, message, kind, ok, provider_code, sms_id, cost, error")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (opts.kind) q = q.eq("kind", opts.kind);
+  const { data, error } = await q;
+  if (error) {
+    console.warn("sms_audit list failed", error.message);
+    return [];
+  }
+  return (data as SmsAuditRow[]) ?? [];
+}
