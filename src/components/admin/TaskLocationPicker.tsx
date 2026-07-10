@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { EGYPT_CENTER } from "@/lib/egypt-cities";
+import { EGYPT_CENTER, EGYPT_CITIES } from "@/lib/egypt-cities";
 
 // Fix leaflet default icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -16,6 +16,8 @@ type Props = {
   lat?: number;
   lng?: number;
   radius_m?: number;
+  cityName?: string;
+  districtName?: string;
   onChange: (lat?: number, lng?: number, radius_m?: number) => void;
 };
 
@@ -28,7 +30,51 @@ function MapEvents({ onChange }: { onChange: (lat: number, lng: number) => void 
   return null;
 }
 
-export function TaskLocationPicker({ lat, lng, radius_m = 500, onChange }: Props) {
+function MapController({ cityName, districtName, hasPosition }: { cityName?: string; districtName?: string; hasPosition: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (hasPosition) return;
+    
+    let cancelled = false;
+    async function locate() {
+      if (!cityName) {
+        map.flyTo(EGYPT_CENTER, 6);
+        return;
+      }
+      
+      const query = [districtName, cityName, "Egypt"].filter(Boolean).join(", ");
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        
+        if (data && data.length > 0) {
+          map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], districtName ? 13 : 11);
+        } else {
+          // Fallback to local EGYPT_CITIES list
+          const cityKey = cityName.toLowerCase();
+          const fallback = EGYPT_CITIES[cityKey] || Object.values(EGYPT_CITIES).find(c => c.en.toLowerCase() === cityKey || c.ar === cityKey);
+          if (fallback) {
+            map.flyTo([fallback.lat, fallback.lng], 11);
+          }
+        }
+      } catch {
+        if (cancelled) return;
+        const cityKey = cityName.toLowerCase();
+        const fallback = EGYPT_CITIES[cityKey] || Object.values(EGYPT_CITIES).find(c => c.en.toLowerCase() === cityKey || c.ar === cityKey);
+        if (fallback) {
+          map.flyTo([fallback.lat, fallback.lng], 11);
+        }
+      }
+    }
+    
+    locate();
+    return () => { cancelled = true; };
+  }, [cityName, districtName, map, hasPosition]);
+  return null;
+}
+
+export function TaskLocationPicker({ lat, lng, radius_m = 500, cityName, districtName, onChange }: Props) {
   const [position, setPosition] = useState<L.LatLng | null>(
     lat != null && lng != null ? new L.LatLng(lat, lng) : null
   );
@@ -54,6 +100,7 @@ export function TaskLocationPicker({ lat, lng, radius_m = 500, onChange }: Props
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <MapController cityName={cityName} districtName={districtName} hasPosition={position !== null} />
         <MapEvents onChange={handleMapClick} />
         {position && (
           <>

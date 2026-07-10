@@ -735,6 +735,8 @@ function AddTaskModal({ me, team, onClose, onCreated }: { me: string; team: Arra
                         lat={r.lat}
                         lng={r.lng}
                         radius_m={r.radius_m}
+                        cityName={cities.find((c: any) => c.id === r.cityId)?.name_en}
+                        districtName={r.district}
                         onChange={(lat, lng, radius_m) => updateRow(i, { lat, lng, radius_m })}
                       />
                     </div>
