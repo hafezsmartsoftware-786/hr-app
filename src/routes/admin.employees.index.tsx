@@ -639,6 +639,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
   const [contractEndDate, setContractEndDate] = useState("");
   const [contractCancelled, setContractCancelled] = useState(false);
   const [allowPastExpiry, setAllowPastExpiry] = useState(false);
+  const [autoGenId, setAutoGenId] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const upd = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
@@ -862,9 +863,26 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             <Field label="Phone" error={fieldErrors.phone}>
               <input type="tel" dir="ltr" inputMode="tel" value={form.phone} onChange={(e) => upd("phone", formatEgPhone(e.target.value))} onBlur={() => handleBlur("phone")} maxLength={20} placeholder="+20 100 123 4567" className={inputCls + " font-mono"} />
             </Field>
-            <Field label="Employee Code">
-              <input value={form.empCode} onChange={(e) => upd("empCode", e.target.value)} maxLength={20} placeholder="auto if blank" className={inputCls + " font-mono"} />
-            </Field>
+            <div className="flex flex-col">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="block text-xs font-medium text-muted-foreground">Employee ID</span>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-foreground cursor-pointer">
+                  <input type="checkbox" checked={autoGenId} onChange={(e) => {
+                    setAutoGenId(e.target.checked);
+                    if (e.target.checked) upd("empCode", "");
+                  }} className="h-3.5 w-3.5 accent-brand rounded" />
+                  Auto-generate ID
+                </label>
+              </div>
+              <input 
+                value={form.empCode} 
+                onChange={(e) => upd("empCode", e.target.value)} 
+                maxLength={40} 
+                disabled={autoGenId}
+                placeholder={autoGenId ? "Auto-generated on save (e.g. EMP-XXXX)" : "Enter Employee ID..."} 
+                className={inputCls + " font-mono disabled:opacity-50 disabled:bg-muted/50"} 
+              />
+            </div>
             <Field label="Status">
               <select value={form.status} onChange={(e) => upd("status", e.target.value)} className={inputCls}>
                 <option value="Active">Active</option>

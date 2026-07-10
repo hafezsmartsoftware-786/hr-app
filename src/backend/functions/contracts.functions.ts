@@ -61,7 +61,7 @@ export const listContractsAdmin = createServerFn({ method: "POST" })
     if (data.filter === "cancelled") {
       query = query.eq("contract_cancelled", true);
     } else if (data.filter === "expired") {
-      query = query.eq("contract_cancelled", false).lt("contract_end_date", todayIso);
+      query = query.eq("contract_cancelled", false).lte("contract_end_date", todayIso);
     } else if (data.filter !== "all") {
       const max = Number(data.filter);
       query = query
@@ -107,7 +107,7 @@ export const listContractsAdmin = createServerFn({ method: "POST" })
         countQ((q) =>
           q.eq("contract_cancelled", false).gte("contract_end_date", todayIso).lte("contract_end_date", plusDaysIso(90)),
         ),
-        countQ((q) => q.eq("contract_cancelled", false).lt("contract_end_date", todayIso)),
+        countQ((q) => q.eq("contract_cancelled", false).lte("contract_end_date", todayIso)),
       ]);
 
     return {

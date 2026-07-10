@@ -2318,15 +2318,13 @@ function ContractCard({
 
   const tone = info.cancelled
     ? { pill: "bg-muted text-muted-foreground", text: "text-muted-foreground", Icon: Ban, label: t("cancelled") }
-    : info.remaining < 0
+    : info.remaining <= 0
       ? { pill: "bg-destructive/15 text-destructive", text: "text-destructive", Icon: AlertTriangle, label: t("expired") }
-      : info.remaining === 0
-        ? { pill: "bg-destructive/15 text-destructive", text: "text-destructive", Icon: AlertTriangle, label: t("endsToday") }
-        : info.remaining <= 30
-          ? { pill: "bg-destructive/15 text-destructive", text: "text-destructive", Icon: AlertTriangle, label: t("expiringSoon") }
-          : info.remaining <= 90
-            ? { pill: "bg-warning/15 text-warning", text: "text-warning", Icon: CheckCircle2, label: t("upcoming") }
-            : { pill: "bg-success/15 text-success", text: "text-success", Icon: CheckCircle2, label: t("active") };
+      : info.remaining <= 30
+        ? { pill: "bg-destructive/15 text-destructive", text: "text-destructive", Icon: AlertTriangle, label: t("expiringSoon") }
+        : info.remaining <= 90
+          ? { pill: "bg-warning/15 text-warning", text: "text-warning", Icon: CheckCircle2, label: t("upcoming") }
+          : { pill: "bg-success/15 text-success", text: "text-success", Icon: CheckCircle2, label: t("active") };
 
   const remainingText =
     info.remaining < 0

@@ -25,15 +25,43 @@ export type StickyNote = {
 
 export const listStickyNotes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await (context.supabase as any)
+  .inputValidator((i) =>
+    z
+      .object({
+        search: z.string().optional(),
+        sort: z.enum(["newest", "oldest"]).default("newest"),
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(20),
+      })
+      .optional()
+      .default({})
+      .parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    let query = (context.supabase as any)
       .from("sticky_notes")
-      .select("*")
-      .eq("profile_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(500);
+      .select("*", { count: "exact" })
+      .eq("profile_id", context.userId);
+
+    if (data.search) {
+      query = query.or(`title.ilike.%${data.search}%,content.ilike.%${data.search}%`);
+    }
+
+    query = query.order("updated_at", { ascending: data.sort === "oldest" });
+
+    const from = (data.page - 1) * data.limit;
+    const to = from + data.limit - 1;
+    query = query.range(from, to);
+
+    const { data: rows, error, count } = await query;
     if (error) throw new Error(error.message);
-    return (data ?? []) as StickyNote[];
+    
+    return {
+      notes: (rows ?? []) as StickyNote[],
+      count: count ?? 0,
+      page: data.page,
+      limit: data.limit,
+    };
   });
 
 export const createStickyNote = createServerFn({ method: "POST" })

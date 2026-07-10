@@ -175,10 +175,10 @@ function ContractsPage() {
 
       {/* Stat cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<FileSignature className="h-4 w-4" />} label={t("totalContracts")} value={counts.total} tone="brand" />
-        <StatCard icon={<CalendarClock className="h-4 w-4" />} label={t("expiringIn30")} value={counts.expiring30} tone="warning" />
-        <StatCard icon={<CalendarClock className="h-4 w-4" />} label={t("expiringIn90")} value={counts.expiring90} tone="info" />
-        <StatCard icon={<AlertTriangle className="h-4 w-4" />} label={t("expired")} value={counts.expired} tone="danger" />
+        <StatCard icon={<FileSignature className="h-4 w-4" />} label={t("totalContracts")} value={counts.total} tone="brand" active={filter === "all"} onClick={() => setFilter("all")} />
+        <StatCard icon={<CalendarClock className="h-4 w-4" />} label={t("expiringIn30")} value={counts.expiring30} tone="warning" active={filter === "30"} onClick={() => setFilter("30")} />
+        <StatCard icon={<CalendarClock className="h-4 w-4" />} label={t("expiringIn90")} value={counts.expiring90} tone="info" active={filter === "90"} onClick={() => setFilter("90")} />
+        <StatCard icon={<AlertTriangle className="h-4 w-4" />} label={t("expired")} value={counts.expired} tone="danger" active={filter === "expired"} onClick={() => setFilter("expired")} />
       </div>
 
       {/* Search + filter chips + view toggle */}
@@ -562,7 +562,7 @@ function ActionBtn({ children, onClick, danger }: { children: React.ReactNode; o
 }
 
 function remainingTone(days: number) {
-  if (days < 0) {
+  if (days <= 0) {
     return {
       pill: "bg-destructive/15 text-destructive",
       text: "text-destructive",
@@ -594,20 +594,31 @@ function remainingTone(days: number) {
   };
 }
 
-function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: "brand" | "warning" | "info" | "danger" }) {
+function StatCard({ icon, label, value, tone, active, onClick }: { icon: React.ReactNode; label: string; value: number; tone: "brand" | "warning" | "info" | "danger"; active?: boolean; onClick?: () => void }) {
   const toneCls = {
     brand: "bg-gradient-brand text-brand-foreground",
     warning: "bg-warning/15 text-warning",
     info: "bg-brand/10 text-brand",
     danger: "bg-destructive/15 text-destructive",
   }[tone];
+  const ringCls = {
+    brand: "ring-brand",
+    warning: "ring-warning",
+    info: "ring-brand",
+    danger: "ring-destructive",
+  }[tone];
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <button
+      onClick={onClick}
+      className={`w-full rounded-2xl border bg-card p-4 text-start transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer ${
+        active ? `border-transparent ring-2 ${ringCls} shadow-sm` : "border-border hover:border-muted-foreground/30"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">{label}</p>
         <span className={`grid h-7 w-7 place-items-center rounded-full ${toneCls}`}>{icon}</span>
       </div>
       <p className="mt-2 font-display text-2xl font-semibold">{value}</p>
-    </div>
+    </button>
   );
 }

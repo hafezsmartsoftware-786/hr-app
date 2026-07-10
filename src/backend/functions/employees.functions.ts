@@ -544,6 +544,27 @@ export const createEmployeeAdmin = createServerFn({ method: "POST" })
   .inputValidator((input) => CreateEmployeeSchema.parse(input))
   .handler(async ({ context, data }): Promise<CreateEmployeeResult> => {
     const { supabase } = context;
+
+    if (!data.empCode) {
+      // Auto-generate employee code
+      const { data: lastProfile } = await supabase
+        .from("profiles")
+        .select("emp_code")
+        .like("emp_code", "EMP-%")
+        .order("emp_code", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextNum = 1;
+      if (lastProfile && lastProfile.emp_code) {
+        const match = lastProfile.emp_code.match(/^EMP-(\d+)$/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      data.empCode = `EMP-${nextNum.toString().padStart(4, "0")}`;
+    }
+
     const { data: result, error } = await supabase.functions.invoke("create-employee-account", { body: data });
     if (error) throw new Error(error.message ?? "Employee account creation failed");
     const created = result as CreateEmployeeResult & { error?: string };

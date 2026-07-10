@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, StickyNote as StickyNoteIcon, Save, Check } from "lucide-react";
+import { Plus, Trash2, StickyNote as StickyNoteIcon, Save, Check, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   listStickyNotes,
@@ -35,11 +35,28 @@ function StickyNotesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, sort]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listFn();
-      setNotes(rows);
+      const res = await listFn({ data: { search: debouncedSearch, sort, page, limit } });
+      setNotes(res.notes);
+      setTotalCount(res.count);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg.includes("sticky_notes")
@@ -48,7 +65,7 @@ function StickyNotesPage() {
     } finally {
       setLoading(false);
     }
-  }, [listFn]);
+  }, [listFn, debouncedSearch, sort, page]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -115,20 +132,38 @@ function StickyNotesPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <FilterChip active={filter === "all"} onClick={() => setFilter("all")} label={`All (${notes.length})`} swatch={null} />
-        {STICKY_COLORS.map((c) => {
-          const count = notes.filter((n) => n.color === c).length;
-          return (
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+          <FilterChip active={filter === "all"} onClick={() => setFilter("all")} label="All" swatch={null} />
+          {STICKY_COLORS.map((c) => (
             <FilterChip
               key={c}
               active={filter === c}
               onClick={() => setFilter(c)}
-              label={`${COLOR_LABELS[c] ?? c} (${count})`}
+              label={COLOR_LABELS[c] ?? c}
               swatch={c}
             />
-          );
-        })}
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search notes..."
+              className="w-56 rounded-full border border-input bg-card py-1.5 pl-9 pr-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as "newest" | "oldest")}
+            className="rounded-full border border-input bg-card py-1.5 pl-3 pr-8 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -151,6 +186,28 @@ function StickyNotesPage() {
               onDelete={() => removeNote(n.id)}
             />
           ))}
+        </div>
+      )}
+
+      {!loading && totalCount > limit && (
+        <div className="mt-6 flex items-center justify-center gap-2 pb-6">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card transition hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-medium text-muted-foreground">
+            Page {page} of {Math.ceil(totalCount / limit)}
+          </span>
+          <button
+            disabled={page >= Math.ceil(totalCount / limit)}
+            onClick={() => setPage((p) => p + 1)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card transition hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>
