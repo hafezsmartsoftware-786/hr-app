@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useState, useRef, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
+import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare, UserCog } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
 import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit, listRecentOtpAudits } from "@/backend/functions/sms.functions";
@@ -422,6 +422,7 @@ function AdminSettings() {
     { to: "/admin/kpis", label: "KPIs", icon: Gauge, desc: "Performance indicators" },
     { to: "/admin/holiday-types", label: "Holiday Types", icon: Tag, desc: "Holiday category catalog" },
     { to: "/admin/networks", label: "Networks", icon: Wifi, desc: "Allowed Wi-Fi networks" },
+    { to: "/admin/roles", label: "Roles & Permissions", icon: UserCog, desc: "Role assignments and permissions" },
   ];
 
   return (
