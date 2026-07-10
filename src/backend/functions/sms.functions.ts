@@ -63,6 +63,18 @@ export const getLastSmsAudit = createServerFn({ method: "GET" })
     return await loadLastSmsAudit();
   });
 
+export const listRecentOtpAudits = createServerFn({ method: "GET" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => {
+    const o = (input ?? {}) as { limit?: unknown };
+    const limit = typeof o.limit === "number" ? Math.min(100, Math.max(1, o.limit)) : 20;
+    return { limit };
+  })
+  .handler(async ({ data }) => {
+    const { loadRecentSmsAudit } = await import("../server/sms-audit.server");
+    return await loadRecentSmsAudit({ kind: "otp", limit: data.limit });
+  });
+
 /**
  * Convenience: send a 4-6 digit OTP. Caller controls where the code is stored.
  * Returns the generated code so the caller can persist / hash it.
