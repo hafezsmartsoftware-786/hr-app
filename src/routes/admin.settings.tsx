@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
-import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit } from "@/backend/functions/sms.functions";
+import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit, listRecentOtpAudits } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -116,11 +116,30 @@ function AdminSettings() {
   const sendSmsFn = useServerFn(sendSms);
   const sendOtpFn = useServerFn(sendOtpSms);
   const loadLastSmsFn = useServerFn(getLastSmsAudit);
+  const loadRecentOtpFn = useServerFn(listRecentOtpAudits);
   type LastSmsAudit = {
     id: string; created_at: string; mobile: string; message: string; ok: boolean;
     provider_code: string | null; sms_id: string | null; cost: string | null; error: string | null;
   } | null;
   const [lastSms, setLastSms] = useState<LastSmsAudit>(null);
+  type OtpAuditRow = {
+    id: string; created_at: string; mobile: string; ok: boolean;
+    provider_code: string | null; sms_id: string | null; error: string | null;
+  };
+  const [recentOtps, setRecentOtps] = useState<OtpAuditRow[]>([]);
+  const [recentOtpsLoading, setRecentOtpsLoading] = useState(false);
+  const refreshRecentOtps = useCallback(async () => {
+    setRecentOtpsLoading(true);
+    try {
+      const r: any = await loadRecentOtpFn({ data: { limit: 20 } });
+      setRecentOtps(Array.isArray(r) ? (r as OtpAuditRow[]) : []);
+    } catch (e) {
+      console.warn("Failed to load recent OTP attempts", e);
+    } finally {
+      setRecentOtpsLoading(false);
+    }
+  }, [loadRecentOtpFn]);
+  useEffect(() => { refreshRecentOtps(); }, [refreshRecentOtps]);
   const refreshLastSms = useCallback(async () => {
     try { const r = await loadLastSmsFn(); setLastSms((r as any) ?? null); }
     catch (e) { console.warn("Failed to load last SMS audit", e); }
