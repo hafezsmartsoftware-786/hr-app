@@ -245,7 +245,7 @@ function AdminDashboard() {
           <ModuleTile to="/admin/payroll" icon={Wallet} label="Payroll" tone="violet" />
           <ModuleTile to="/admin/contracts" icon={FileText} label="Contracts" tone="amber" />
           <ModuleTile to="/admin/networks" icon={Building2} label="Branches" tone="orange" />
-          <ModuleTile to="/admin/roles" icon={Shield} label="Roles" tone="rose" />
+          <ModuleTile to="/admin/settings/roles" icon={Shield} label="Roles" tone="rose" />
           <ModuleTile to="/admin/reports" icon={BarChart3} label="Reports" tone="brand" />
         </div>
       </section>
