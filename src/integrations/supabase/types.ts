@@ -2031,6 +2031,44 @@ export type Database = {
         }
         Relationships: []
       }
+      sticky_notes: {
+        Row: {
+          color: string
+          content: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          profile_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sticky_notes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       targets_overtime: {
         Row: {
           created_at: string
@@ -2229,9 +2267,9 @@ export type Database = {
           id: string
           lat: number | null
           lng: number | null
-          radius_m: number | null
           notes: string | null
           purpose: string | null
+          radius_m: number | null
           started_at: string | null
           status: string
           trip_date: string
@@ -2250,9 +2288,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
-          radius_m?: number | null
           notes?: string | null
           purpose?: string | null
+          radius_m?: number | null
           started_at?: string | null
           status?: string
           trip_date: string
@@ -2271,9 +2309,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
-          radius_m?: number | null
           notes?: string | null
           purpose?: string | null
+          radius_m?: number | null
           started_at?: string | null
           status?: string
           trip_date?: string
@@ -2289,17 +2327,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "trips_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "trips_city_fkey"
             columns: ["city"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

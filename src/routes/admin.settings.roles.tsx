@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Shield, X, Lock, Search } from "lucide-react";
+import { Shield, X, Lock, Search, ChevronLeft, UserPlus, UserMinus } from "lucide-react";
 import { listUsersWithRoles, assignRole, removeRole } from "@/backend/functions/auth.functions";
 import {
   getRoleMatrix,
@@ -15,8 +15,18 @@ import {
   type PermissionAction,
 } from "@/backend/functions/permissions.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/admin/roles")({ component: RolesPage });
+export const Route = createFileRoute("/admin/settings/roles")({ component: RolesPage });
 
 const ALL_ROLES = ["admin", "hr", "manager", "employee", "staff", "user"] as const;
 type Role = (typeof ALL_ROLES)[number];
@@ -32,12 +42,29 @@ const roleColor: Record<Role, string> = {
   user:     "bg-slate-100 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400 ring-1 ring-slate-300 dark:ring-slate-600",
 };
 
+const ROLE_DESC: Record<Role, string> = {
+  admin: "Full access to every admin surface. Cannot be revoked from this UI.",
+  hr: "Manages employees, leaves, payroll and settings.",
+  manager: "Approves team requests and reviews team performance.",
+  employee: "Standard employee panel access only.",
+  staff: "Read-only staff view for shared kiosks.",
+  user: "Baseline authenticated user with no admin capabilities.",
+};
+
 function RolesPage() {
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Roles & Permissions</h1>
-        <p className="text-sm text-muted-foreground">Assign roles and fine-tune what each role or user can do.</p>
+      <header className="space-y-2">
+        <Link
+          to="/admin/settings"
+          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-brand"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" /> Back to Settings
+        </Link>
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Roles & Permissions</h1>
+          <p className="text-sm text-muted-foreground">Assign roles and fine-tune what each role or user can do. Add and remove actions require confirmation.</p>
+        </div>
       </header>
       <Tabs defaultValue="users" className="space-y-5">
         <TabsList>
@@ -57,6 +84,10 @@ function RolesPage() {
   );
 }
 
+type PendingAction =
+  | { kind: "assign"; user: { id: string; name: string; email: string }; role: Role }
+  | { kind: "remove"; user: { id: string; name: string; email: string }; role: Role };
+
 function UsersAndRoles() {
   const qc = useQueryClient();
   const list = useServerFn(listUsersWithRoles);
@@ -66,6 +97,7 @@ function UsersAndRoles() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -92,6 +124,16 @@ function UsersAndRoles() {
     onSuccess: () => { inv(); toast.success("Role removed"); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function confirmPending() {
+    if (!pending) return;
+    if (pending.kind === "assign") {
+      mA.mutate({ user_id: pending.user.id, role: pending.role });
+    } else {
+      mR.mutate({ user_id: pending.user.id, role: pending.role });
+    }
+    setPending(null);
+  }
 
   return (
     <div className="space-y-4">
@@ -140,7 +182,11 @@ function UsersAndRoles() {
                       <span key={r} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${roleColor[r] ?? "bg-muted"}`}>
                         <Shield className="h-3 w-3" /> {r}
                         {!u.roles.includes("admin") && (
-                          <button onClick={() => mR.mutate({ user_id: u.id, role: r })} className="ml-1 opacity-70 hover:opacity-100"><X className="h-3 w-3" /></button>
+                          <button
+                            onClick={() => setPending({ kind: "remove", user: { id: u.id, name: u.full_name || "—", email: u.email }, role: r })}
+                            className="ml-1 opacity-70 hover:opacity-100"
+                            aria-label={`Remove ${r} role`}
+                          ><X className="h-3 w-3" /></button>
                         )}
                       </span>
                     ))}
@@ -149,8 +195,14 @@ function UsersAndRoles() {
                 <td className="px-4 py-3">
                   {!u.roles.includes("admin") && (
                     <select
-                      defaultValue=""
-                      onChange={(e) => { const v = e.target.value as Role; if (v) { mA.mutate({ user_id: u.id, role: v }); e.currentTarget.value = ""; } }}
+                      value=""
+                      onChange={(e) => {
+                        const v = e.target.value as Role;
+                        if (v) {
+                          setPending({ kind: "assign", user: { id: u.id, name: u.full_name || "—", email: u.email }, role: v });
+                          e.currentTarget.value = "";
+                        }
+                      }}
                       className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm">
                       <option value="">+ add role…</option>
                       {ALL_ROLES.filter((r) => !u.roles.includes(r)).map((r) => (
@@ -186,6 +238,47 @@ function UsersAndRoles() {
           >Next</button>
         </div>
       </div>
+
+      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
+        <AlertDialogContent>
+          {pending && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  {pending.kind === "assign" ? (
+                    <><UserPlus className="h-5 w-5 text-brand" /> Assign role “{pending.role}”?</>
+                  ) : (
+                    <><UserMinus className="h-5 w-5 text-destructive" /> Remove role “{pending.role}”?</>
+                  )}
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      {pending.kind === "assign"
+                        ? `This will grant the “${pending.role}” role to:`
+                        : `This will revoke the “${pending.role}” role from:`}
+                    </p>
+                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="font-semibold text-foreground">{pending.user.name}</p>
+                      <p className="text-xs text-muted-foreground">{pending.user.email}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{ROLE_DESC[pending.role]}</p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmPending}
+                  className={pending.kind === "remove" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+                >
+                  {pending.kind === "assign" ? "Assign role" : "Remove role"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -221,6 +314,7 @@ function RolePermissionsTab() {
           >{r}</button>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">Editing permissions for role: <strong className="capitalize text-foreground">{role}</strong> — {ROLE_DESC[role]}</p>
       {q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
       <div className="overflow-hidden rounded-3xl border border-border bg-card">
         <table className="w-full text-sm">

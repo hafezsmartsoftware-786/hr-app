@@ -420,9 +420,8 @@ function AdminSettings() {
     { to: "/admin/allowances", label: "Allowances", icon: Coins, desc: "Pay allowance catalog" },
     { to: "/admin/targets-overtime", label: "Targets & Overtime", icon: Target, desc: "Hours targets and OT rules" },
     { to: "/admin/kpis", label: "KPIs", icon: Gauge, desc: "Performance indicators" },
-    { to: "/admin/roles", label: "Roles", icon: Shield, desc: "User access and permissions" },
     { to: "/admin/networks", label: "Networks", icon: Wifi, desc: "Allowed Wi-Fi networks" },
-    { to: "/admin/roles", label: "Roles & Permissions", icon: UserCog, desc: "Role assignments and permissions" },
+    { to: "/admin/settings/roles", label: "Roles & Permissions", icon: UserCog, desc: "Role assignments and permissions" },
   ];
 
   return (
