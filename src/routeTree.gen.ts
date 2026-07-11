@@ -40,7 +40,6 @@ import { Route as AdminTargetsOvertimeRouteImport } from './routes/admin.targets
 import { Route as AdminStickyNotesRouteImport } from './routes/admin.sticky-notes'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminReassignManagersRouteImport } from './routes/admin.reassign-managers'
 import { Route as AdminPayrollSettingsRouteImport } from './routes/admin.payroll-settings'
@@ -222,11 +221,6 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminRolesRoute = AdminRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -383,7 +377,6 @@ export interface FileRoutesByFullPath {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
@@ -437,7 +430,6 @@ export interface FileRoutesByTo {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
@@ -497,7 +489,6 @@ export interface FileRoutesById {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/roles': typeof AdminRolesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
@@ -558,7 +549,6 @@ export interface FileRouteTypes {
     | '/admin/payroll-settings'
     | '/admin/reassign-managers'
     | '/admin/reports'
-    | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
     | '/admin/sticky-notes'
@@ -612,7 +602,6 @@ export interface FileRouteTypes {
     | '/admin/payroll-settings'
     | '/admin/reassign-managers'
     | '/admin/reports'
-    | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
     | '/admin/sticky-notes'
@@ -671,7 +660,6 @@ export interface FileRouteTypes {
     | '/admin/payroll-settings'
     | '/admin/reassign-managers'
     | '/admin/reports'
-    | '/admin/roles'
     | '/admin/settings'
     | '/admin/shifts'
     | '/admin/sticky-notes'
@@ -932,13 +920,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/roles': {
-      id: '/admin/roles'
-      path: '/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AdminRolesRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -1153,7 +1134,6 @@ interface AdminRouteChildren {
   AdminPayrollSettingsRoute: typeof AdminPayrollSettingsRoute
   AdminReassignManagersRoute: typeof AdminReassignManagersRoute
   AdminReportsRoute: typeof AdminReportsRoute
-  AdminRolesRoute: typeof AdminRolesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
   AdminStickyNotesRoute: typeof AdminStickyNotesRoute
@@ -1184,7 +1164,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPayrollSettingsRoute: AdminPayrollSettingsRoute,
   AdminReassignManagersRoute: AdminReassignManagersRoute,
   AdminReportsRoute: AdminReportsRoute,
-  AdminRolesRoute: AdminRolesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
   AdminStickyNotesRoute: AdminStickyNotesRoute,
