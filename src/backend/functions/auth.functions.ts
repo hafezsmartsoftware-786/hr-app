@@ -20,7 +20,7 @@ type AuditRow = {
 async function insertRoleAudit(rows: AuditRow[]) {
   if (rows.length === 0) return;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin.from("role_audit").insert(rows as never);
+  await (supabaseAdmin as any).from("role_audit").insert(rows);
 }
 
 async function fetchTargetInfo(supabase: any, ids: string[]) {
@@ -315,7 +315,7 @@ export const listRoleAudit = createServerFn({ method: "GET" })
   .inputValidator((i) => z.object({ limit: z.number().int().min(1).max(200).optional() }).optional().parse(i))
   .handler(async ({ data, context }): Promise<RoleAuditEntry[]> => {
     const limit = data?.limit ?? 50;
-    const { data: rows, error } = await context.supabase
+    const { data: rows, error } = await (context.supabase as any)
       .from("role_audit")
       .select("id, created_at, actor_email, target_id, target_email, target_name, role, action, batch_id, ok, error")
       .order("created_at", { ascending: false })
@@ -325,5 +325,5 @@ export const listRoleAudit = createServerFn({ method: "GET" })
       if (/relation .*role_audit.* does not exist/i.test(error.message)) return [];
       throw new Error(error.message);
     }
-    return (rows ?? []) as RoleAuditEntry[];
+    return ((rows ?? []) as unknown) as RoleAuditEntry[];
   });
