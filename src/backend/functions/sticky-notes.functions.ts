@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
+import { requireStaffAccess } from "@/integrations/supabase/admin-auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const STICKY_COLORS = [
   "bg-yellow-200",
   "bg-pink-200",
@@ -122,6 +123,74 @@ export const deleteStickyNote = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("profile_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminListStickyNotes = createServerFn({ method: "POST" })
+  .middleware([requireStaffAccess])
+  .inputValidator((i) => z.object({ profile_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("sticky_notes")
+      .select("*")
+      .eq("profile_id", data.profile_id)
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows as StickyNote[];
+  });
+
+export const adminCreateStickyNote = createServerFn({ method: "POST" })
+  .middleware([requireStaffAccess])
+  .inputValidator((i) =>
+    z.object({
+      profile_id: z.string().uuid(),
+      color: ColorSchema.optional(),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await (supabaseAdmin as any)
+      .from("sticky_notes")
+      .insert({
+        profile_id: data.profile_id,
+        title: "",
+        content: "",
+        color: data.color ?? "bg-yellow-200",
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as StickyNote;
+  });
+
+export const adminUpdateStickyNote = createServerFn({ method: "POST" })
+  .middleware([requireStaffAccess])
+  .inputValidator((i) =>
+    z.object({
+      id: z.string().uuid(),
+      title: z.string().max(200).nullable().optional(),
+      content: z.string().max(10000).nullable().optional(),
+      color: ColorSchema.optional(),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    const { id, ...patch } = data;
+    const { error } = await (supabaseAdmin as any)
+      .from("sticky_notes")
+      .update(patch)
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteStickyNote = createServerFn({ method: "POST" })
+  .middleware([requireStaffAccess])
+  .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { error } = await (supabaseAdmin as any)
+      .from("sticky_notes")
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

@@ -23,6 +23,14 @@ import {
   deleteEmployeeDevice,
 } from "@/backend/functions/devices.functions";
 import {
+  adminListStickyNotes,
+  adminCreateStickyNote,
+  adminUpdateStickyNote,
+  adminDeleteStickyNote,
+  STICKY_COLORS,
+  type StickyNote,
+} from "@/backend/functions/sticky-notes.functions";
+import {
   ArrowLeft,
   Mail,
   Phone,
@@ -42,7 +50,7 @@ import {
   EyeOff,
   Lock,
 } from "lucide-react";
-import { User as UserIcon, ShieldCheck, IdCard, Briefcase, CalendarDays, Plane, AlertCircle } from "lucide-react";
+import { User as UserIcon, ShieldCheck, IdCard, Briefcase, CalendarDays, Plane, AlertCircle, StickyNote as StickyNoteIcon, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -262,7 +270,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
   const [err, setErr] = useState<string | null>(null);
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
-  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices";
+  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
@@ -274,6 +282,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     { id: "leaves", label: "Leaves", icon: Plane },
     { id: "documents", label: "Documents", icon: FileText },
     { id: "devices", label: "Devices", icon: Smartphone },
+    { id: "notes", label: "Notes", icon: StickyNoteIcon },
   ];
 
   async function save() {
@@ -623,6 +632,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
             {sideTab === "devices" && (
               <EmployeeDevicesPanel userId={detail.id} canManage={canEdit} />
+            )}
+
+            {sideTab === "notes" && (
+              <EmployeeNotesPanel profileId={detail.id} canManage={canEdit} />
             )}
           </div>
         </div>
@@ -2658,6 +2671,142 @@ function EmployeeDevicesPanel({ userId, canManage }: { userId: string; canManage
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+const COLOR_LABELS: Record<string, string> = {
+  "bg-yellow-200": "Yellow",
+  "bg-pink-200": "Pink",
+  "bg-green-200": "Green",
+  "bg-blue-200": "Blue",
+  "bg-purple-200": "Purple",
+  "bg-orange-200": "Orange",
+};
+
+function EmployeeNotesPanel({ profileId, canManage }: { profileId: string; canManage: boolean }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListStickyNotes);
+  const createFn = useServerFn(adminCreateStickyNote);
+  const updateFn = useServerFn(adminUpdateStickyNote);
+  const deleteFn = useServerFn(adminDeleteStickyNote);
+
+  const { data: notes = [], isLoading } = useQuery({
+    queryKey: ["employee", "notes", profileId],
+    queryFn: () => listFn({ data: { profile_id: profileId } }),
+  });
+
+  const addNote = async (color: string) => {
+    try {
+      await createFn({ data: { profile_id: profileId, color } });
+      qc.invalidateQueries({ queryKey: ["employee", "notes", profileId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const saveNote = async (n: StickyNote) => {
+    try {
+      await updateFn({ data: { id: n.id, title: n.title ?? "", content: n.content ?? "", color: n.color as any } });
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["employee", "notes", profileId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const removeNote = async (id: string) => {
+    try {
+      await deleteFn({ data: { id } });
+      qc.invalidateQueries({ queryKey: ["employee", "notes", profileId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const patchLocal = (id: string, patch: Partial<StickyNote>) => {
+    qc.setQueryData(["employee", "notes", profileId], (old: StickyNote[] | undefined) => {
+      if (!old) return old;
+      return old.map(n => n.id === id ? { ...n, ...patch } : n);
+    });
+  };
+
+  return (
+    <div className="rounded-3xl border border-border bg-card p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-base font-semibold inline-flex items-center gap-2">
+          <StickyNoteIcon className="h-4 w-4" /> Notes
+        </h2>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">New:</span>
+            {STICKY_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => addNote(c)}
+                title={`Add ${COLOR_LABELS[c] ?? c} note`}
+                className={`h-6 w-6 rounded-full border border-border shadow-sm transition hover:scale-110 ${c}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : notes.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border p-10 text-center">
+          <StickyNoteIcon className="mx-auto h-8 w-8 text-muted-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">No notes yet. Add one above.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {notes.map((n) => (
+            <div key={n.id} className={`flex flex-col rounded-2xl p-4 shadow-sm ring-1 ring-black/5 ${n.color} text-slate-900`}>
+              <input
+                value={n.title ?? ""}
+                onChange={(e) => patchLocal(n.id, { title: e.target.value })}
+                placeholder="Title"
+                readOnly={!canManage}
+                className="w-full bg-transparent text-base font-semibold placeholder:text-slate-600/60 focus:outline-none"
+              />
+              <textarea
+                value={n.content ?? ""}
+                onChange={(e) => patchLocal(n.id, { content: e.target.value })}
+                placeholder="Write something…"
+                rows={4}
+                readOnly={!canManage}
+                className="mt-2 w-full flex-1 resize-none bg-transparent text-sm leading-relaxed placeholder:text-slate-600/60 focus:outline-none"
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  {canManage && STICKY_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => patchLocal(n.id, { color: c })}
+                      title={COLOR_LABELS[c] ?? c}
+                      className={`h-4 w-4 rounded-full border border-black/10 ${c} ${n.color === c ? "ring-2 ring-slate-900/60" : ""}`}
+                    />
+                  ))}
+                </div>
+                {canManage && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => saveNote(n)} className="inline-flex items-center gap-1 rounded-full bg-slate-900/10 px-2.5 py-1 text-[10px] font-medium hover:bg-slate-900/20">
+                      <Save className="h-3 w-3" /> Save
+                    </button>
+                    <button onClick={() => confirm("Delete note?") && removeNote(n.id)} className="inline-flex items-center gap-1 rounded-full bg-slate-900/10 px-2 py-1 text-[10px] font-medium hover:bg-red-500/20 text-red-700">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 text-[10px] text-slate-700/70">
+                Updated {new Date(n.updated_at).toLocaleString()}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
