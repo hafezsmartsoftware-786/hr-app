@@ -495,7 +495,7 @@ function AdminAttendance() {
         taskTitle: tk.title,
         city: tk.city ?? "",
         district: tk.district ?? "",
-        where: [tk.district, tk.address].filter(Boolean).join(" — ") || tk.address || "—",
+        where: [tk.city, tk.district].filter(Boolean).join("/") || tk.address || "—",
         action: h.to === "in_progress" ? t("taskCheckIn") : h.to === "done" ? t("taskCheckOut") : h.to,
         note: h.note,
         estimatedHours: tk.estimatedHours,
@@ -508,7 +508,7 @@ function AdminAttendance() {
       taskTitle: r.task_name ?? "",
       city: r.city ?? "",
       district: r.district ?? "",
-      where: [r.district, r.city].filter(Boolean).join(" — ") || "—",
+      where: [r.city, r.district].filter(Boolean).join("/") || "—",
       action: actionLabel(r.kind),
       note: r.note ?? undefined,
     }));

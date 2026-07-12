@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/admin/settings/roles")({ component: RolesPage });
+export const Route = createFileRoute("/admin/settings_/roles")({ component: RolesPage });
 
 const ALL_ROLES = ["admin", "hr", "manager", "employee", "staff", "user"] as const;
 type Role = (typeof ALL_ROLES)[number];

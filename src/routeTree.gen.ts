@@ -62,7 +62,7 @@ import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAllowancesRouteImport } from './routes/admin.allowances'
 import { Route as AdminEmployeesIndexRouteImport } from './routes/admin.employees.index'
-import { Route as AdminSettingsRolesRouteImport } from './routes/admin.settings.roles'
+import { Route as AdminSettingsRolesRouteImport } from './routes/admin.settings_.roles'
 import { Route as AdminEmployeesIdRouteImport } from './routes/admin.employees.$id'
 import { Route as AdminActivityTimelineIdRouteImport } from './routes/admin.activity-timeline.$id'
 import { Route as ApiPublicCronRunSchedulesRouteImport } from './routes/api/public/cron/run-schedules'
@@ -334,9 +334,9 @@ const AdminEmployeesIndexRoute = AdminEmployeesIndexRouteImport.update({
   getParentRoute: () => AdminEmployeesRoute,
 } as any)
 const AdminSettingsRolesRoute = AdminSettingsRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => AdminSettingsRoute,
+  id: '/settings_/roles',
+  path: '/settings/roles',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminEmployeesIdRoute = AdminEmployeesIdRouteImport.update({
   id: '/$id',
@@ -383,7 +383,7 @@ export interface FileRoutesByFullPath {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/settings': typeof AdminSettingsRouteWithChildren
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
@@ -437,7 +437,7 @@ export interface FileRoutesByTo {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/settings': typeof AdminSettingsRouteWithChildren
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
@@ -497,7 +497,7 @@ export interface FileRoutesById {
   '/admin/payroll-settings': typeof AdminPayrollSettingsRoute
   '/admin/reassign-managers': typeof AdminReassignManagersRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/admin/settings': typeof AdminSettingsRouteWithChildren
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
@@ -524,7 +524,7 @@ export interface FileRoutesById {
   '/staff/': typeof StaffIndexRoute
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
-  '/admin/settings/roles': typeof AdminSettingsRolesRoute
+  '/admin/settings_/roles': typeof AdminSettingsRolesRoute
   '/admin/employees/': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
 }
@@ -698,7 +698,7 @@ export interface FileRouteTypes {
     | '/staff/'
     | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
-    | '/admin/settings/roles'
+    | '/admin/settings_/roles'
     | '/admin/employees/'
     | '/api/public/cron/run-schedules'
   fileRoutesById: FileRoutesById
@@ -1086,12 +1086,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmployeesIndexRouteImport
       parentRoute: typeof AdminEmployeesRoute
     }
-    '/admin/settings/roles': {
-      id: '/admin/settings/roles'
-      path: '/roles'
+    '/admin/settings_/roles': {
+      id: '/admin/settings_/roles'
+      path: '/settings/roles'
       fullPath: '/admin/settings/roles'
       preLoaderRoute: typeof AdminSettingsRolesRouteImport
-      parentRoute: typeof AdminSettingsRoute
+      parentRoute: typeof AdminRoute
     }
     '/admin/employees/$id': {
       id: '/admin/employees/$id'
@@ -1131,18 +1131,6 @@ const AdminEmployeesRouteWithChildren = AdminEmployeesRoute._addFileChildren(
   AdminEmployeesRouteChildren,
 )
 
-interface AdminSettingsRouteChildren {
-  AdminSettingsRolesRoute: typeof AdminSettingsRolesRoute
-}
-
-const AdminSettingsRouteChildren: AdminSettingsRouteChildren = {
-  AdminSettingsRolesRoute: AdminSettingsRolesRoute,
-}
-
-const AdminSettingsRouteWithChildren = AdminSettingsRoute._addFileChildren(
-  AdminSettingsRouteChildren,
-)
-
 interface AdminRouteChildren {
   AdminAllowancesRoute: typeof AdminAllowancesRoute
   AdminAttendanceRoute: typeof AdminAttendanceRoute
@@ -1165,12 +1153,13 @@ interface AdminRouteChildren {
   AdminPayrollSettingsRoute: typeof AdminPayrollSettingsRoute
   AdminReassignManagersRoute: typeof AdminReassignManagersRoute
   AdminReportsRoute: typeof AdminReportsRoute
-  AdminSettingsRoute: typeof AdminSettingsRouteWithChildren
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
   AdminStickyNotesRoute: typeof AdminStickyNotesRoute
   AdminTargetsOvertimeRoute: typeof AdminTargetsOvertimeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminActivityTimelineIdRoute: typeof AdminActivityTimelineIdRoute
+  AdminSettingsRolesRoute: typeof AdminSettingsRolesRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1195,12 +1184,13 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPayrollSettingsRoute: AdminPayrollSettingsRoute,
   AdminReassignManagersRoute: AdminReassignManagersRoute,
   AdminReportsRoute: AdminReportsRoute,
-  AdminSettingsRoute: AdminSettingsRouteWithChildren,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
   AdminStickyNotesRoute: AdminStickyNotesRoute,
   AdminTargetsOvertimeRoute: AdminTargetsOvertimeRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminActivityTimelineIdRoute: AdminActivityTimelineIdRoute,
+  AdminSettingsRolesRoute: AdminSettingsRolesRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
