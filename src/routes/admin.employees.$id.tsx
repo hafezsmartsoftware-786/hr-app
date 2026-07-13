@@ -406,6 +406,20 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
               <option value="Inactive">Inactive</option>
             </select>
           </EditField>
+          {form.status === "Inactive" && (
+            <EditField label="Inactive reason">
+              <select
+                className={editInputCls}
+                value={form.inactive_reason}
+                onChange={(e) => upd("inactive_reason", e.target.value as any)}
+              >
+                <option value="">— Select a reason —</option>
+                {INACTIVE_REASONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </EditField>
+          )}
           <EditField label="City">
             <select className={editInputCls} value={form.city_id} onChange={(e) => { upd("city_id", e.target.value); upd("district_id", ""); }}>
               <option value="">—</option>
