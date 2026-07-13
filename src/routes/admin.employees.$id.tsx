@@ -233,6 +233,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     position_id: detail.position_id ?? "",
     manager_id: detail.manager_id ?? "",
     status: detail.status as "Active" | "Inactive",
+    inactive_reason: (detail.inactive_reason ?? "") as "" | (typeof INACTIVE_REASONS)[number],
     allow_past_expiry: false,
     salary_mode: (detail.salary_mode ?? "gross") as "gross" | "net",
     salary_gross: detail.salary_gross ?? 0,
@@ -370,6 +371,11 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
             </div>
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
               {detail.status === "Active" ? t("active") : t("inactive")}
+              {detail.status === "Inactive" && detail.inactive_reason ? (
+                <span className="ms-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal">
+                  {detail.inactive_reason}
+                </span>
+              ) : null}
             </span>
             {canEdit && !editing && (
               <button
