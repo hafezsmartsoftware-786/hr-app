@@ -12,6 +12,7 @@ import {
   updateEmployeeAdmin,
   getEmployeeAttendanceHistory,
   getEmployeeLeavesHistory,
+  INACTIVE_REASONS,
 } from "@/backend/functions/employees.functions";
 import { getEmployeeWorkingDays } from "@/backend/functions/employee-working-days.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
