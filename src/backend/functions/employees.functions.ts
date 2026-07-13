@@ -343,7 +343,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       throw new Error(error.message);
     }
     if (patch.status !== undefined && patch.status !== previousStatus) {
-      await (supabase.from("employee_status_audit") as any).insert({
+      await (supabase as any).from("employee_status_audit").insert({
         profile_id: data.id,
         previous_status: previousStatus,
         new_status: patch.status,
@@ -389,7 +389,7 @@ export const bulkSetEmployeeStatus = createServerFn({ method: "POST" })
         changed_by: userId,
       }));
     if (auditRows.length > 0) {
-      await (supabase.from("employee_status_audit") as any).insert(auditRows);
+      await (supabase as any).from("employee_status_audit").insert(auditRows);
     }
     return { ok: true, count: data.ids.length };
   });
