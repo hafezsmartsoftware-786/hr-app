@@ -384,9 +384,16 @@ function EmployeesPage() {
                 <Td>{e.position ?? "—"}</Td>
                 <Td mono>{e.phone ?? "—"}</Td>
                 <Td>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${e.status === "Active" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
-                    {e.status}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${e.status === "Active" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                      {e.status}
+                    </span>
+                    {e.status === "Inactive" && e.inactive_reason && (
+                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                        {e.inactive_reason}
+                      </span>
+                    )}
+                  </div>
                 </Td>
                 <Td>
                   <ContractDaysBadge endDate={e.contract_end_date} cancelled={e.contract_cancelled} />
