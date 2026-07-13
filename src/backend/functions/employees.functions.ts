@@ -133,6 +133,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
         positionId: z.string().optional().default(""),
         role: z.string().optional().default(""),
         status: z.enum(["", "Active", "Inactive"]).optional().default(""),
+        inactiveReason: z.string().optional().default(""),
       })
       .parse(input ?? {}),
   )
@@ -180,6 +181,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     if (data.departmentId) q = q.eq("department_id", data.departmentId);
     if (data.positionId) q = q.eq("position_id", data.positionId);
     if (data.status) q = q.eq("status", data.status);
+    if (data.inactiveReason) q = q.eq("inactive_reason", data.inactiveReason);
     if (roleUserIds) q = q.in("id", roleUserIds);
 
     const sortCol = data.sort === "contract_remaining" ? "contract_end_date" : data.sort;
