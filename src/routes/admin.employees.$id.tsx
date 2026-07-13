@@ -273,7 +273,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
   const [err, setErr] = useState<string | null>(null);
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
-  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes";
+  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "status";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
@@ -286,6 +286,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     { id: "documents", label: "Documents", icon: FileText },
     { id: "devices", label: "Devices", icon: Smartphone },
     { id: "notes", label: "Notes", icon: StickyNoteIcon },
+    { id: "status", label: "Status history", icon: Clock },
   ];
 
   async function save() {
@@ -664,6 +665,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
             {sideTab === "notes" && (
               <EmployeeNotesPanel profileId={detail.id} canManage={canEdit} />
+            )}
+
+            {sideTab === "status" && (
+              <StatusHistoryPanel profileId={detail.id} />
             )}
           </div>
         </div>
