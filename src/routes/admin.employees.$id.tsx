@@ -302,6 +302,11 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     }
     setSaving(true);
     try {
+      if (form.status === "Inactive" && !form.inactive_reason) {
+        setErr("Please choose a reason when marking the employee as Inactive.");
+        setSaving(false);
+        return;
+      }
       await updateFn({
         data: {
           id: detail.id,
@@ -317,6 +322,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
           position_id: form.position_id || null,
           manager_id: form.manager_id || null,
           status: form.status,
+          inactive_reason: form.status === "Active" ? null : (form.inactive_reason || null),
           allow_past_expiry: form.allow_past_expiry,
           salary_mode: form.salary_mode,
           salary_gross: Number(form.salary_gross) || 0,
