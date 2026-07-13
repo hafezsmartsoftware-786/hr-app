@@ -16,6 +16,7 @@ export type AdminEmployeeRow = {
   district: string | null;
   roles: string[];
   status: string;
+  inactive_reason: string | null;
   avatar_url: string | null;
   created_at: string;
   contract_start_date: string | null;
@@ -25,6 +26,15 @@ export type AdminEmployeeRow = {
 
 const SORT_COLS = ["full_name", "email", "created_at", "status", "contract_end_date", "contract_remaining"] as const;
 const IMPORT_ROLES = ["admin", "hr", "manager", "employee"] as const;
+export const INACTIVE_REASONS = [
+  "Resigned",
+  "Terminated",
+  "End of Contract",
+  "Deceased",
+  "Long-Term Leave",
+  "Suspended",
+] as const;
+export type InactiveReason = (typeof INACTIVE_REASONS)[number];
 
 function isStrictIsoDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -159,7 +169,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     let q = supabase
       .from("profiles")
       .select(
-        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
+        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, inactive_reason, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
         { count: "exact" },
       );
 
@@ -198,6 +208,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
       city: p.city,
       district: p.district,
       status: p.status ?? "Active",
+      inactive_reason: p.inactive_reason ?? null,
       avatar_url: p.avatar_url ?? null,
       created_at: p.created_at,
       contract_start_date: p.contract_start_date ?? null,
@@ -234,6 +245,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
         id_expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         emp_code: z.string().max(40).nullable().optional(),
         status: z.enum(["Active", "Inactive"]).optional(),
+        inactive_reason: z.enum(INACTIVE_REASONS).nullable().optional(),
         avatar_url: z.string().max(2_000_000).nullable().optional(),
         allow_past_expiry: z.boolean().optional().default(false),
         salary_mode: z.enum(["gross", "net"]).nullable().optional(),
@@ -286,6 +298,13 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       }
     }
     if (data.status !== undefined) patch.status = data.status;
+    if (data.inactive_reason !== undefined) patch.inactive_reason = data.inactive_reason;
+    if (patch.status === "Active") {
+      patch.inactive_reason = null;
+    }
+    if (patch.status === "Inactive" && patch.inactive_reason === null) {
+      throw new Error("Please choose a reason when marking the employee as Inactive.");
+    }
     if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
     if (data.salary_mode !== undefined) patch.salary_mode = data.salary_mode;
     if (data.salary_gross !== undefined) patch.salary_gross = data.salary_gross;
@@ -775,6 +794,7 @@ export type EmployeeDetail = {
   city: string | null;
   district: string | null;
   status: string;
+  inactive_reason: string | null;
   avatar_url: string | null;
   manager_id: string | null;
   manager_name: string | null;
@@ -804,7 +824,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: p, error } = await supabase
       .from("profiles")
-      .select("id, emp_code, full_name, email, phone, department_id, position_id, city_id, district_id, city, district, status, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, created_at, updated_at")
+      .select("id, emp_code, full_name, email, phone, department_id, position_id, city_id, district_id, city, district, status, inactive_reason, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, created_at, updated_at")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -842,6 +862,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
       city: (cityRow as any)?.name_en ?? (p as any).city ?? null,
       district: (distRow as any)?.name_en ?? (p as any).district ?? null,
       status: (p as any).status ?? "Active",
+      inactive_reason: (p as any).inactive_reason ?? null,
       avatar_url: (p as any).avatar_url ?? null,
       manager_id: (p as any).manager_id ?? null,
       manager_name: (mgr as any)?.full_name ?? null,

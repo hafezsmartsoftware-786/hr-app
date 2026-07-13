@@ -12,6 +12,7 @@ import {
   updateEmployeeAdmin,
   getEmployeeAttendanceHistory,
   getEmployeeLeavesHistory,
+  INACTIVE_REASONS,
 } from "@/backend/functions/employees.functions";
 import { getEmployeeWorkingDays } from "@/backend/functions/employee-working-days.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
@@ -232,6 +233,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     position_id: detail.position_id ?? "",
     manager_id: detail.manager_id ?? "",
     status: detail.status as "Active" | "Inactive",
+    inactive_reason: (detail.inactive_reason ?? "") as "" | (typeof INACTIVE_REASONS)[number],
     allow_past_expiry: false,
     salary_mode: (detail.salary_mode ?? "gross") as "gross" | "net",
     salary_gross: detail.salary_gross ?? 0,
@@ -300,6 +302,11 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     }
     setSaving(true);
     try {
+      if (form.status === "Inactive" && !form.inactive_reason) {
+        setErr("Please choose a reason when marking the employee as Inactive.");
+        setSaving(false);
+        return;
+      }
       await updateFn({
         data: {
           id: detail.id,
@@ -315,6 +322,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
           position_id: form.position_id || null,
           manager_id: form.manager_id || null,
           status: form.status,
+          inactive_reason: form.status === "Active" ? null : (form.inactive_reason || null),
           allow_past_expiry: form.allow_past_expiry,
           salary_mode: form.salary_mode,
           salary_gross: Number(form.salary_gross) || 0,
@@ -369,6 +377,11 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
             </div>
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
               {detail.status === "Active" ? t("active") : t("inactive")}
+              {detail.status === "Inactive" && detail.inactive_reason ? (
+                <span className="ms-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal">
+                  {detail.inactive_reason}
+                </span>
+              ) : null}
             </span>
             {canEdit && !editing && (
               <button
@@ -399,6 +412,20 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
               <option value="Inactive">Inactive</option>
             </select>
           </EditField>
+          {form.status === "Inactive" && (
+            <EditField label="Inactive reason">
+              <select
+                className={editInputCls}
+                value={form.inactive_reason}
+                onChange={(e) => upd("inactive_reason", e.target.value as any)}
+              >
+                <option value="">— Select a reason —</option>
+                {INACTIVE_REASONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </EditField>
+          )}
           <EditField label="City">
             <select className={editInputCls} value={form.city_id} onChange={(e) => { upd("city_id", e.target.value); upd("district_id", ""); }}>
               <option value="">—</option>
