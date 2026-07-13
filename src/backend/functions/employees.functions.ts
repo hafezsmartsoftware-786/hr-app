@@ -416,8 +416,7 @@ export const listEmployeeStatusAudit = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }): Promise<EmployeeStatusAuditRow[]> => {
     const { supabase } = context;
-    let q = supabase
-      .from("employee_status_audit")
+    let q = (supabase.from("employee_status_audit") as any)
       .select("id, profile_id, previous_status, new_status, inactive_reason, source, changed_by, created_at")
       .order("created_at", { ascending: false })
       .limit(data.limit);
