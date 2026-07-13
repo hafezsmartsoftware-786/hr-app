@@ -416,14 +416,16 @@ export const listEmployeeStatusAudit = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }): Promise<EmployeeStatusAuditRow[]> => {
     const { supabase } = context;
-    let q = (supabase.from("employee_status_audit") as any)
+    let q = (supabase as any).from("employee_status_audit")
       .select("id, profile_id, previous_status, new_status, inactive_reason, source, changed_by, created_at")
       .order("created_at", { ascending: false })
       .limit(data.limit);
     if (data.profile_id) q = q.eq("profile_id", data.profile_id);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    const actorIds = Array.from(new Set((rows ?? []).map((r: any) => r.changed_by).filter(Boolean)));
+    const actorIds: string[] = Array.from(
+      new Set(((rows ?? []) as any[]).map((r: any) => r.changed_by as string | null).filter((v): v is string => !!v)),
+    );
     const nameMap = new Map<string, string>();
     if (actorIds.length) {
       const { data: profs } = await supabase
