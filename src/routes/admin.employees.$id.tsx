@@ -13,6 +13,7 @@ import {
   getEmployeeAttendanceHistory,
   getEmployeeLeavesHistory,
   INACTIVE_REASONS,
+  listEmployeeStatusAudit,
 } from "@/backend/functions/employees.functions";
 import { getEmployeeWorkingDays } from "@/backend/functions/employee-working-days.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
@@ -272,7 +273,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
   const [err, setErr] = useState<string | null>(null);
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
-  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes";
+  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "status";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
@@ -285,6 +286,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     { id: "documents", label: "Documents", icon: FileText },
     { id: "devices", label: "Devices", icon: Smartphone },
     { id: "notes", label: "Notes", icon: StickyNoteIcon },
+    { id: "status", label: "Status history", icon: Clock },
   ];
 
   async function save() {
@@ -663,6 +665,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
             {sideTab === "notes" && (
               <EmployeeNotesPanel profileId={detail.id} canManage={canEdit} />
+            )}
+
+            {sideTab === "status" && (
+              <StatusHistoryPanel profileId={detail.id} />
             )}
           </div>
         </div>
@@ -2834,6 +2840,56 @@ function EmployeeNotesPanel({ profileId, canManage }: { profileId: string; canMa
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function StatusHistoryPanel({ profileId }: { profileId: string }) {
+  const fn = useServerFn(listEmployeeStatusAudit);
+  const { data, isLoading } = useQuery({
+    queryKey: ["employee", "status-audit", profileId],
+    queryFn: () => fn({ data: { profile_id: profileId, limit: 100 } }),
+  });
+  const rows = data ?? [];
+  return (
+    <div className="rounded-3xl border border-border bg-card p-5">
+      <h2 className="mb-4 font-display text-base font-semibold">Status history</h2>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No status changes recorded yet.</p>
+      ) : (
+        <ol className="space-y-3">
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-start gap-3 rounded-2xl border border-border bg-background p-3 text-sm">
+              <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand" />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider">{r.source}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.previous_status === "Active" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                    {r.previous_status ?? "—"}
+                  </span>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.new_status === "Active" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                    {r.new_status}
+                  </span>
+                  {r.inactive_reason && (
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                      {r.inactive_reason}
+                    </span>
+                  )}
+                </div>
+                {r.changed_by_name && (
+                  <p className="mt-1 text-xs text-muted-foreground">by {r.changed_by_name}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   );

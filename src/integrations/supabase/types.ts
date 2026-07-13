@@ -1592,6 +1592,7 @@ export type Database = {
           id: string
           id_expiry_date: string | null
           id_issue_date: string | null
+          inactive_reason: string | null
           insurance_applicable: boolean
           locale: string
           manager_id: string | null
@@ -1630,6 +1631,7 @@ export type Database = {
           id: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
+          inactive_reason?: string | null
           insurance_applicable?: boolean
           locale?: string
           manager_id?: string | null
@@ -1668,6 +1670,7 @@ export type Database = {
           id?: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
+          inactive_reason?: string | null
           insurance_applicable?: boolean
           locale?: string
           manager_id?: string | null

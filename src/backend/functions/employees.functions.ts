@@ -133,6 +133,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
         positionId: z.string().optional().default(""),
         role: z.string().optional().default(""),
         status: z.enum(["", "Active", "Inactive"]).optional().default(""),
+        inactiveReason: z.string().optional().default(""),
       })
       .parse(input ?? {}),
   )
@@ -180,6 +181,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     if (data.departmentId) q = q.eq("department_id", data.departmentId);
     if (data.positionId) q = q.eq("position_id", data.positionId);
     if (data.status) q = q.eq("status", data.status);
+    if (data.inactiveReason) q = q.eq("inactive_reason", data.inactiveReason);
     if (roleUserIds) q = q.in("id", roleUserIds);
 
     const sortCol = data.sort === "contract_remaining" ? "contract_end_date" : data.sort;
@@ -262,7 +264,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ context, data }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context as { supabase: any; userId: string };
     // Cross-field date validation: issue <= expiry; expiry not in past unless admin overrides.
     if (data.id_issue_date && data.id_expiry_date && data.id_issue_date > data.id_expiry_date) {
       throw new Error("ID issue date cannot be after the expiry date");
@@ -324,12 +326,31 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       throw new Error("Contract start date cannot be after the end date");
     }
     if (Object.keys(patch).length === 0) return { ok: true };
+    // Snapshot previous status so we can log a status-change audit row.
+    let previousStatus: string | null = null;
+    if (patch.status !== undefined) {
+      const { data: prev } = await (supabase.from("profiles") as any)
+        .select("status")
+        .eq("id", data.id)
+        .maybeSingle();
+      previousStatus = (prev as any)?.status ?? null;
+    }
     const { error } = await (supabase.from("profiles") as any).update(patch).eq("id", data.id);
     if (error) {
       if ((error as any).code === "23505" && /emp_code/.test(error.message)) {
         throw new Error("That employee code is already used by another employee.");
       }
       throw new Error(error.message);
+    }
+    if (patch.status !== undefined && patch.status !== previousStatus) {
+      await (supabase as any).from("employee_status_audit").insert({
+        profile_id: data.id,
+        previous_status: previousStatus,
+        new_status: patch.status,
+        inactive_reason: patch.status === "Inactive" ? (patch.inactive_reason ?? null) : null,
+        source: "update",
+        changed_by: userId,
+      });
     }
     return { ok: true };
   });
@@ -341,16 +362,84 @@ export const bulkSetEmployeeStatus = createServerFn({ method: "POST" })
       .object({
         ids: z.array(z.string().uuid()).min(1).max(500),
         status: z.enum(["Active", "Inactive"]),
+        inactive_reason: z.enum(INACTIVE_REASONS).optional(),
       })
       .parse(input),
   )
   .handler(async ({ context, data }) => {
-    const { supabase } = context;
-    const { error } = await (supabase.from("profiles") as any)
-      .update({ status: data.status })
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    if (data.status === "Inactive" && !data.inactive_reason) {
+      throw new Error("Please choose a reason when marking employees Inactive.");
+    }
+    const { data: prevRows } = await (supabase.from("profiles") as any)
+      .select("id, status")
       .in("id", data.ids);
+    const patch: Record<string, any> = { status: data.status };
+    patch.inactive_reason = data.status === "Inactive" ? (data.inactive_reason ?? null) : null;
+    const { error } = await (supabase.from("profiles") as any).update(patch).in("id", data.ids);
     if (error) throw new Error(error.message);
+    const auditRows = (prevRows ?? [])
+      .filter((r: any) => (r.status ?? null) !== data.status)
+      .map((r: any) => ({
+        profile_id: r.id,
+        previous_status: r.status ?? null,
+        new_status: data.status,
+        inactive_reason: data.status === "Inactive" ? (data.inactive_reason ?? null) : null,
+        source: "bulk",
+        changed_by: userId,
+      }));
+    if (auditRows.length > 0) {
+      await (supabase as any).from("employee_status_audit").insert(auditRows);
+    }
     return { ok: true, count: data.ids.length };
+  });
+
+export type EmployeeStatusAuditRow = {
+  id: string;
+  profile_id: string;
+  previous_status: string | null;
+  new_status: string;
+  inactive_reason: string | null;
+  source: string;
+  changed_by: string | null;
+  changed_by_name: string | null;
+  created_at: string;
+};
+
+export const listEmployeeStatusAudit = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) =>
+    z.object({
+      profile_id: z.string().uuid().optional(),
+      limit: z.number().int().min(1).max(200).optional().default(50),
+    }).parse(input ?? {}),
+  )
+  .handler(async ({ context, data }): Promise<EmployeeStatusAuditRow[]> => {
+    const { supabase } = context;
+    let q = (supabase as any).from("employee_status_audit")
+      .select("id, profile_id, previous_status, new_status, inactive_reason, source, changed_by, created_at")
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (data.profile_id) q = q.eq("profile_id", data.profile_id);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const actorIds: string[] = Array.from(
+      new Set(((rows ?? []) as any[]).map((r: any) => r.changed_by as string | null).filter((v): v is string => !!v)),
+    );
+    const nameMap = new Map<string, string>();
+    if (actorIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", actorIds);
+      for (const p of profs ?? []) {
+        nameMap.set(String((p as any).id), String((p as any).full_name ?? (p as any).email ?? ""));
+      }
+    }
+    return (rows ?? []).map((r: any) => ({
+      ...r,
+      changed_by_name: r.changed_by ? (nameMap.get(String(r.changed_by)) ?? null) : null,
+    }));
   });
 
 export const importEmployeesAdmin = createServerFn({ method: "POST" })
