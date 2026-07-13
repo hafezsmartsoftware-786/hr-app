@@ -169,7 +169,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     let q = supabase
       .from("profiles")
       .select(
-        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
+        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, inactive_reason, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
         { count: "exact" },
       );
 
@@ -208,6 +208,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
       city: p.city,
       district: p.district,
       status: p.status ?? "Active",
+      inactive_reason: p.inactive_reason ?? null,
       avatar_url: p.avatar_url ?? null,
       created_at: p.created_at,
       contract_start_date: p.contract_start_date ?? null,
