@@ -1761,6 +1761,51 @@ export type Database = {
         }
         Relationships: []
       }
+      role_audit: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          batch_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          ok: boolean
+          role: string
+          target_email: string | null
+          target_id: string
+          target_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          batch_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          role: string
+          target_email?: string | null
+          target_id: string
+          target_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          batch_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          role?: string
+          target_email?: string | null
+          target_id?: string
+          target_name?: string | null
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           can_create: boolean
