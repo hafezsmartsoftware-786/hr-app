@@ -25,6 +25,15 @@ export type AdminEmployeeRow = {
 
 const SORT_COLS = ["full_name", "email", "created_at", "status", "contract_end_date", "contract_remaining"] as const;
 const IMPORT_ROLES = ["admin", "hr", "manager", "employee"] as const;
+export const INACTIVE_REASONS = [
+  "Resigned",
+  "Terminated",
+  "End of Contract",
+  "Deceased",
+  "Long-Term Leave",
+  "Suspended",
+] as const;
+export type InactiveReason = (typeof INACTIVE_REASONS)[number];
 
 function isStrictIsoDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -234,6 +243,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
         id_expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         emp_code: z.string().max(40).nullable().optional(),
         status: z.enum(["Active", "Inactive"]).optional(),
+        inactive_reason: z.enum(INACTIVE_REASONS).nullable().optional(),
         avatar_url: z.string().max(2_000_000).nullable().optional(),
         allow_past_expiry: z.boolean().optional().default(false),
         salary_mode: z.enum(["gross", "net"]).nullable().optional(),
@@ -286,6 +296,16 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       }
     }
     if (data.status !== undefined) patch.status = data.status;
+    if (data.inactive_reason !== undefined) patch.inactive_reason = data.inactive_reason;
+    // Clearing / enforcing reason based on status:
+    if (patch.status === "Active") {
+      patch.inactive_reason = null;
+    } else if (patch.status === "Inactive" && patch.inactive_reason === undefined) {
+      // status changed to Inactive but no reason supplied — leave as-is
+    }
+    if (patch.status === "Inactive" && patch.inactive_reason === null) {
+      throw new Error("Please choose a reason when marking the employee as Inactive.");
+    }
     if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
     if (data.salary_mode !== undefined) patch.salary_mode = data.salary_mode;
     if (data.salary_gross !== undefined) patch.salary_gross = data.salary_gross;
