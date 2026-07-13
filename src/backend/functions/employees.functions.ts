@@ -796,6 +796,7 @@ export type EmployeeDetail = {
   city: string | null;
   district: string | null;
   status: string;
+  inactive_reason: string | null;
   avatar_url: string | null;
   manager_id: string | null;
   manager_name: string | null;
