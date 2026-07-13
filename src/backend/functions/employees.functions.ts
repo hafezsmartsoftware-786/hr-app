@@ -299,11 +299,8 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
     }
     if (data.status !== undefined) patch.status = data.status;
     if (data.inactive_reason !== undefined) patch.inactive_reason = data.inactive_reason;
-    // Clearing / enforcing reason based on status:
     if (patch.status === "Active") {
       patch.inactive_reason = null;
-    } else if (patch.status === "Inactive" && patch.inactive_reason === undefined) {
-      // status changed to Inactive but no reason supplied — leave as-is
     }
     if (patch.status === "Inactive" && patch.inactive_reason === null) {
       throw new Error("Please choose a reason when marking the employee as Inactive.");
