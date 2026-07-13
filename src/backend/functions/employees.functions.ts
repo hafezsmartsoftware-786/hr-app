@@ -16,6 +16,7 @@ export type AdminEmployeeRow = {
   district: string | null;
   roles: string[];
   status: string;
+  inactive_reason: string | null;
   avatar_url: string | null;
   created_at: string;
   contract_start_date: string | null;
@@ -824,7 +825,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: p, error } = await supabase
       .from("profiles")
-      .select("id, emp_code, full_name, email, phone, department_id, position_id, city_id, district_id, city, district, status, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, created_at, updated_at")
+      .select("id, emp_code, full_name, email, phone, department_id, position_id, city_id, district_id, city, district, status, inactive_reason, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, created_at, updated_at")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -862,6 +863,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
       city: (cityRow as any)?.name_en ?? (p as any).city ?? null,
       district: (distRow as any)?.name_en ?? (p as any).district ?? null,
       status: (p as any).status ?? "Active",
+      inactive_reason: (p as any).inactive_reason ?? null,
       avatar_url: (p as any).avatar_url ?? null,
       manager_id: (p as any).manager_id ?? null,
       manager_name: (mgr as any)?.full_name ?? null,
