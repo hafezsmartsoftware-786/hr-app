@@ -29,6 +29,8 @@ import {
   listCitiesAndDistricts,
   type AdminEmployeeRow,
   type ListEmployeesResult,
+  INACTIVE_REASONS,
+  type InactiveReason,
 } from "@/backend/functions/employees.functions";
 import { useRef } from "react";
 import { EmployeeAvatar } from "@/components/EmployeeAvatar";
@@ -50,6 +52,7 @@ function EmployeesPage() {
   const [posFilter, setPosFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | "Active" | "Inactive">("");
+  const [inactiveReasonFilter, setInactiveReasonFilter] = useState<"" | InactiveReason>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [sort, setSort] = useState<"full_name" | "email" | "created_at" | "status" | "contract_end_date" | "contract_remaining">("created_at");
@@ -67,13 +70,14 @@ function EmployeesPage() {
     staleTime: 60_000,
   });
   const isAdmin = (me?.roles ?? []).includes("admin");
-  const queryKey = ["admin", "employees", "list", { q, deptFilter, posFilter, roleFilter, statusFilter, page, pageSize, sort, dir }] as const;
+  const queryKey = ["admin", "employees", "list", { q, deptFilter, posFilter, roleFilter, statusFilter, inactiveReasonFilter, page, pageSize, sort, dir }] as const;
   const { data, isLoading, isFetching } = useQuery<ListEmployeesResult>({
     queryKey,
     queryFn: () => listFn({
       data: {
         q, departmentId: deptFilter, positionId: posFilter, role: roleFilter,
-        status: statusFilter, page, pageSize, sort, dir,
+        status: statusFilter, inactiveReason: inactiveReasonFilter,
+        page, pageSize, sort, dir,
       },
     }),
     placeholderData: (prev) => prev,
@@ -101,9 +105,10 @@ function EmployeesPage() {
 
   const bulkFn = useServerFn(bulkSetEmployeeStatus);
   const bulkMut = useMutation({
-    mutationFn: (status: "Active" | "Inactive") => bulkFn({ data: { ids: Array.from(selected), status } }),
+    mutationFn: (args: { status: "Active" | "Inactive"; reason?: InactiveReason }) =>
+      bulkFn({ data: { ids: Array.from(selected), status: args.status, inactive_reason: args.reason } }),
     onSuccess: (res, status) => {
-      toast.success(`${res.count} employees set ${status}`);
+      toast.success(`${res.count} employees set ${status.status}`);
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin", "employees", "list"] });
     },
@@ -219,15 +224,22 @@ function EmployeesPage() {
           <option value="">All roles</option>
           {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); resetPage(); }}
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setInactiveReasonFilter(""); resetPage(); }}
           className="rounded-full border border-input bg-card px-3 py-2 text-sm">
           <option value="">All statuses</option>
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
         </select>
-        {(deptFilter || posFilter || roleFilter || statusFilter || q) && (
+        {statusFilter === "Inactive" && (
+          <select value={inactiveReasonFilter} onChange={(e) => { setInactiveReasonFilter(e.target.value as any); resetPage(); }}
+            className="rounded-full border border-input bg-card px-3 py-2 text-sm">
+            <option value="">All reasons</option>
+            {INACTIVE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        )}
+        {(deptFilter || posFilter || roleFilter || statusFilter || inactiveReasonFilter || q) && (
           <button
-            onClick={() => { setQ(""); setDeptFilter(""); setPosFilter(""); setRoleFilter(""); setStatusFilter(""); resetPage(); }}
+            onClick={() => { setQ(""); setDeptFilter(""); setPosFilter(""); setRoleFilter(""); setStatusFilter(""); setInactiveReasonFilter(""); resetPage(); }}
             className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-xs"
           ><X className="h-3 w-3" /> Clear</button>
         )}
@@ -237,10 +249,25 @@ function EmployeesPage() {
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-brand/30 bg-brand/5 px-4 py-2 text-sm">
           <span className="font-semibold">{selected.size} selected</span>
           <div className="ms-auto flex flex-wrap gap-2">
-            <button onClick={() => bulkMut.mutate("Active")} disabled={bulkMut.isPending}
+            <button onClick={() => bulkMut.mutate({ status: "Active" })} disabled={bulkMut.isPending}
               className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/20">Activate</button>
-            <button onClick={() => bulkMut.mutate("Inactive")} disabled={bulkMut.isPending}
-              className="rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/20">Deactivate</button>
+            <select
+              onChange={(ev) => {
+                const reason = ev.target.value as InactiveReason | "";
+                if (!reason) return;
+                if (confirm(`Mark ${selected.size} employee(s) Inactive with reason "${reason}"?`)) {
+                  bulkMut.mutate({ status: "Inactive", reason });
+                }
+                ev.target.value = "";
+              }}
+              disabled={bulkMut.isPending}
+              defaultValue=""
+              title="Choose an inactive reason"
+              className="rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              <option value="" disabled>Deactivate…</option>
+              {INACTIVE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
             <button onClick={exportSelected}
               className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold">
               <Download className="h-3.5 w-3.5" /> Export
