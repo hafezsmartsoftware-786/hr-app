@@ -87,6 +87,8 @@ export const ui: Record<UiKey, string> = {
   all: "الكل",
   active: "نشط",
   inactive: "غير نشط",
+  inactiveReasonRequired: "يرجى اختيار سبب عند تعيين الموظف كغير نشط.",
+  selectReasonPlaceholder: "اختر سببًا…",
   off: "متوقف",
   radius: "نصف القطر",
   location: "الموقع",
