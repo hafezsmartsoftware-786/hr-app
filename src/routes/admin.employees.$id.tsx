@@ -305,7 +305,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     setSaving(true);
     try {
       if (form.status === "Inactive" && !form.inactive_reason) {
-        setErr("Please choose a reason when marking the employee as Inactive.");
+        setErr(t("inactiveReasonRequired"));
         setSaving(false);
         return;
       }
@@ -415,17 +415,21 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
             </select>
           </EditField>
           {form.status === "Inactive" && (
-            <EditField label="Inactive reason">
+            <EditField label="Inactive reason *">
               <select
-                className={editInputCls}
+                className={`${editInputCls} ${form.status === "Inactive" && !form.inactive_reason && err ? "border-destructive" : ""}`}
                 value={form.inactive_reason}
-                onChange={(e) => upd("inactive_reason", e.target.value as any)}
+                onChange={(e) => { upd("inactive_reason", e.target.value as any); if (err) setErr(null); }}
+                aria-invalid={form.status === "Inactive" && !form.inactive_reason && !!err}
               >
-                <option value="">— Select a reason —</option>
+                <option value="">{t("selectReasonPlaceholder")}</option>
                 {INACTIVE_REASONS.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
+              {form.status === "Inactive" && !form.inactive_reason && err === t("inactiveReasonRequired") && (
+                <p role="alert" className="mt-1 text-xs font-medium text-destructive">{err}</p>
+              )}
             </EditField>
           )}
           <EditField label="City">
