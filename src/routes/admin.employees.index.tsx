@@ -515,6 +515,7 @@ function EditEmployeeDrawer({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [departmentId, setDepartmentId] = useState<string>(row.department_id ?? "");
   const [positionId, setPositionId] = useState<string>(row.position_id ?? "");
   const [status, setStatus] = useState<"Active" | "Inactive">(row.status === "Inactive" ? "Inactive" : "Active");
@@ -544,7 +545,7 @@ function EditEmployeeDrawer({
 
   async function save() {
     if (status === "Inactive" && !inactiveReason) {
-      setReasonErr("Please choose a reason when marking the employee as Inactive.");
+      setReasonErr(t("inactiveReasonRequired"));
       return;
     }
     setReasonErr(null);
@@ -620,16 +621,19 @@ function EditEmployeeDrawer({
           </label>
           {status === "Inactive" && (
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">Inactive reason</span>
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                Inactive reason <span className="text-destructive">*</span>
+              </span>
               <select
                 value={inactiveReason}
                 onChange={(e) => { setInactiveReason(e.target.value as any); setReasonErr(null); }}
-                className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm"
+                aria-invalid={!!reasonErr}
+                className={`w-full rounded-xl border bg-card px-3 py-2 text-sm ${reasonErr ? "border-destructive" : "border-input"}`}
               >
-                <option value="">Select a reason…</option>
+                <option value="">{t("selectReasonPlaceholder")}</option>
                 {INACTIVE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
-              {reasonErr && <p className="mt-1 text-xs text-destructive">{reasonErr}</p>}
+              {reasonErr && <p role="alert" className="mt-1 text-xs font-medium text-destructive">{reasonErr}</p>}
             </label>
           )}
         </div>
