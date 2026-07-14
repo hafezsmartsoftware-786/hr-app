@@ -477,6 +477,54 @@ export type Database = {
           },
         ]
       }
+      employee_status_audit: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          inactive_reason: string | null
+          new_status: string
+          previous_status: string | null
+          profile_id: string
+          source: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          inactive_reason?: string | null
+          new_status: string
+          previous_status?: string | null
+          profile_id: string
+          source?: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          inactive_reason?: string | null
+          new_status?: string
+          previous_status?: string | null
+          profile_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_status_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_status_audit_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_targets_overtime: {
         Row: {
           created_at: string
