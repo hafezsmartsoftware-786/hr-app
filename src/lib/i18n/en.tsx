@@ -87,6 +87,8 @@ export const ui = {
   all: "All",
   active: "Active",
   inactive: "Inactive",
+  inactiveReasonRequired: "Please choose a reason when marking the employee as Inactive.",
+  selectReasonPlaceholder: "Select a reason…",
   off: "Off",
   radius: "Radius",
   location: "Location",
