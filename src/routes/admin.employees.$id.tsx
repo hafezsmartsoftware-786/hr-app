@@ -226,6 +226,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     phone: detail.phone ?? "",
     emp_code: detail.emp_code ?? "",
     national_id: detail.national_id ?? "",
+    is_passport: detail.national_id ? !/^\d{14}$/.test(detail.national_id) : false,
     id_issue_date: detail.id_issue_date ?? "",
     id_expiry_date: detail.id_expiry_date ?? "",
     city_id: detail.city_id ?? "",
@@ -271,6 +272,16 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [nationalIdErr, setNationalIdErr] = useState<string | null>(null);
+
+  function validateNationalId(id: string, isPassport: boolean): string | null {
+    if (!id) return "Required";
+    if (isPassport) {
+      return /^[a-zA-Z0-9]{1,15}$/.test(id) ? null : "Invalid passport format";
+    }
+    return /^[23]\d{13}$/.test(id) ? null : "Must be 14 digits starting with 2 or 3";
+  }
+
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
   type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "status";
@@ -291,6 +302,21 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
   async function save() {
     setErr(null);
+    if (!form.national_id) {
+      setErr("National ID is required");
+      return;
+    }
+    if (form.is_passport) {
+      if (!/^[a-zA-Z0-9]{1,15}$/.test(form.national_id)) {
+        setErr("Invalid passport format");
+        return;
+      }
+    } else {
+      if (!/^[23]\d{13}$/.test(form.national_id)) {
+        setErr("Must be 14 digits starting with 2 or 3");
+        return;
+      }
+    }
     if (form.id_issue_date && form.id_expiry_date && form.id_issue_date > form.id_expiry_date) {
       setErr("Issue date cannot be after expiry date.");
       return;
@@ -462,8 +488,27 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
               {(locs?.managers ?? []).filter((m) => m.id !== detail.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </EditField>
-          <EditField label="National ID"><input className={editInputCls + " font-mono"} value={form.national_id} onChange={(e) => upd("national_id", e.target.value)} /></EditField>
-          <EditField label="ID Issue Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_issue_date} onChange={(e) => upd("id_issue_date", e.target.value)} /></EditField>
+          <label className="block">
+            <span className="mb-1 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              National ID
+              <label className="flex cursor-pointer items-center gap-1.5 normal-case tracking-normal">
+                <input type="checkbox" checked={form.is_passport} onChange={(e) => { upd("is_passport", e.target.checked); setNationalIdErr(validateNationalId(form.national_id, e.target.checked)); }} className="rounded border-input text-brand focus:ring-brand" />
+                Passport
+              </label>
+            </span>
+            <input className={editInputCls + " font-mono" + (nationalIdErr ? " border-destructive" : "")} value={form.national_id} onChange={(e) => { upd("national_id", e.target.value); setNationalIdErr(validateNationalId(e.target.value, form.is_passport)); }} onBlur={() => setNationalIdErr(validateNationalId(form.national_id, form.is_passport))} maxLength={form.is_passport ? 15 : 14} placeholder={form.is_passport ? "Passport Number" : "14-digit National ID"} />
+            {nationalIdErr && <p className="mt-1 text-xs font-medium text-destructive">{nationalIdErr}</p>}
+          </label>
+          <EditField label="ID Issue Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_issue_date} onChange={(e) => {
+            const d = e.target.value;
+            upd("id_issue_date", d);
+            if (d) {
+              const exp = new Date(d);
+              exp.setFullYear(exp.getFullYear() + 7);
+              exp.setDate(exp.getDate() - 1);
+              upd("id_expiry_date", exp.toISOString().slice(0, 10));
+            }
+          }} /></EditField>
           <EditField label="ID Expiry Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_expiry_date} onChange={(e) => upd("id_expiry_date", e.target.value)} /></EditField>
           <EditField label="Contract Type">
             <select className={editInputCls} value={form.contract_type} onChange={(e) => upd("contract_type", e.target.value as any)}>
@@ -703,11 +748,12 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
 const editInputCls = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
 
-function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+function EditField({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
       {children}
+      {error && <p className="mt-1 text-xs font-medium text-destructive">{error}</p>}
     </label>
   );
 }

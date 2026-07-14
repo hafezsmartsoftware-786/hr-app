@@ -682,6 +682,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     building: "",
     flat: "",
     nationalId: "",
+    isPassport: false,
     nationalIdExpiry: "",
     position: positions[0]?.name ?? "",
     contractType: "FullTime",
@@ -719,6 +720,15 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
       case "contractType": return !(VALID_CONTRACT_TYPES as readonly string[]).includes(f.contractType) ? "Invalid contract type" : "";
       case "dept": return !f.dept.trim() ? "Department is required" : "";
       case "manager": return (f.manager && !managers.some((emp) => emp.id === f.manager)) ? "Invalid manager" : "";
+      case "nationalId": {
+        if (!f.nationalId) return "Required";
+        if (f.isPassport) {
+          if (!/^[a-zA-Z0-9]{1,15}$/.test(f.nationalId)) return "Invalid passport format";
+        } else {
+          if (!/^[23]\d{13}$/.test(f.nationalId)) return "Must be 14 digits starting with 2 or 3";
+        }
+        return "";
+      }
       case "nationalIdExpiry": {
         const c = validateIdExpiry(f.nationalId, f.nationalIdExpiry);
         return c === "ok" ? "" : t(c as any);
@@ -727,7 +737,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     }
   }
 
-  const FIELD_NAMES = ["name","email","phone","password","salary","target","salaryMode","contractType","dept","manager","nationalIdExpiry"] as const;
+  const FIELD_NAMES = ["name","email","phone","password","salary","target","salaryMode","contractType","dept","manager","nationalId","nationalIdExpiry"] as const;
 
   function validate(f: typeof form = form): Record<string, string> {
     const errs: Record<string, string> = {};
@@ -987,11 +997,28 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
                 {managers.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
               </select>
             </Field>
-            <Field label="National ID">
-              <input value={form.nationalId} onChange={(e) => upd("nationalId", e.target.value)} maxLength={32} className={inputCls + " font-mono"} />
-            </Field>
+            <label className="block">
+              <span className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                National ID
+                <label className="flex cursor-pointer items-center gap-1.5">
+                  <input type="checkbox" checked={form.isPassport} onChange={(e) => { upd("isPassport", e.target.checked); handleBlur("nationalId"); }} className="rounded border-input text-brand focus:ring-brand" />
+                  Passport
+                </label>
+              </span>
+              <input value={form.nationalId} onChange={(e) => { upd("nationalId", e.target.value); handleBlur("nationalId"); }} onBlur={() => handleBlur("nationalId")} maxLength={form.isPassport ? 15 : 14} className={inputCls + " font-mono" + (fieldErrors.nationalId ? " border-destructive" : "")} placeholder={form.isPassport ? "Passport Number" : "14-digit National ID"} />
+              {fieldErrors.nationalId && <p className="mt-1 text-[11px] text-destructive">{fieldErrors.nationalId}</p>}
+            </label>
             <Field label="ID Issue Date">
-              <input type="date" value={form.idIssueDate} onChange={(e) => upd("idIssueDate", e.target.value)} className={inputCls + " font-mono"} />
+              <input type="date" value={form.idIssueDate} onChange={(e) => {
+                const d = e.target.value;
+                upd("idIssueDate", d);
+                if (d) {
+                  const exp = new Date(d);
+                  exp.setFullYear(exp.getFullYear() + 7);
+                  exp.setDate(exp.getDate() - 1);
+                  upd("nationalIdExpiry", exp.toISOString().slice(0, 10));
+                }
+              }} className={inputCls + " font-mono"} />
             </Field>
             <Field label="ID Expiry Date" error={fieldErrors.nationalIdExpiry}>
               <input type="date" value={form.nationalIdExpiry} onChange={(e) => upd("nationalIdExpiry", e.target.value)} onBlur={() => handleBlur("nationalIdExpiry")} className={inputCls + " font-mono"} />
@@ -1204,7 +1231,7 @@ function validateIdExpiry(nationalId: string, exp: string): "ok" | "idExpiryRequ
 type ExtraHr = {
   personalPhone: string; gender: string; country: string; city: string;
   district: string; street: string; building: string; flat: string;
-  nationalId: string; nationalIdExpiry: string; position: string;
+  nationalId: string; isPassport: boolean; nationalIdExpiry: string; position: string;
   contractType: string; notes: string; manager: string;
   salaryMode: "gross" | "net"; salaryGross: number; salaryNet: number;
   empCode: string; idIssueDate: string; idCardAddress: string; avatarUrl: string;

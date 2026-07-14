@@ -118,7 +118,7 @@ function Index() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 text-xs text-muted-foreground">
-          <span>© 2026 INT-HR App</span>
+          <span>© 2026 INT-HR App Developer : Mr.Hafez Rahim</span>
           <span>v1.0 • Built for mobile, tablet, and web</span>
         </div>
       </footer>
