@@ -518,6 +518,10 @@ function EditEmployeeDrawer({
   const [departmentId, setDepartmentId] = useState<string>(row.department_id ?? "");
   const [positionId, setPositionId] = useState<string>(row.position_id ?? "");
   const [status, setStatus] = useState<"Active" | "Inactive">(row.status === "Inactive" ? "Inactive" : "Active");
+  const [inactiveReason, setInactiveReason] = useState<"" | InactiveReason>(
+    (row.inactive_reason as InactiveReason | null) ?? ""
+  );
+  const [reasonErr, setReasonErr] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(row.avatar_url ?? "");
   const [busy, setBusy] = useState(false);
   const updateFn = useServerFn(updateEmployeeAdmin);
@@ -539,6 +543,11 @@ function EditEmployeeDrawer({
   }
 
   async function save() {
+    if (status === "Inactive" && !inactiveReason) {
+      setReasonErr("Please choose a reason when marking the employee as Inactive.");
+      return;
+    }
+    setReasonErr(null);
     setBusy(true);
     try {
       await updateFn({ data: {
@@ -546,6 +555,7 @@ function EditEmployeeDrawer({
         department_id: departmentId || null,
         position_id: positionId || null,
         status,
+        inactive_reason: status === "Active" ? null : (inactiveReason || null),
         avatar_url: avatarUrl || null,
       }});
       toast.success("Employee updated");
@@ -608,6 +618,20 @@ function EditEmployeeDrawer({
               <option value="Inactive">Inactive</option>
             </select>
           </label>
+          {status === "Inactive" && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">Inactive reason</span>
+              <select
+                value={inactiveReason}
+                onChange={(e) => { setInactiveReason(e.target.value as any); setReasonErr(null); }}
+                className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm"
+              >
+                <option value="">Select a reason…</option>
+                {INACTIVE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {reasonErr && <p className="mt-1 text-xs text-destructive">{reasonErr}</p>}
+            </label>
+          )}
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-full border border-border bg-card px-4 py-2 text-sm">Cancel</button>
