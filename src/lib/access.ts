@@ -1,9 +1,9 @@
 import { useStore } from "./store";
 
 // Roles that are allowed to see unmasked sensitive PII (national ID, full passport).
-const SENSITIVE_ROLES = new Set(["admin", "hr"]);
+const SENSITIVE_ROLES = new Set(["admin", "hr", "finance"]);
 
-export type ViewerRole = "admin" | "hr" | "manager" | "employee";
+export type ViewerRole = "admin" | "hr" | "manager" | "employee" | "finance";
 
 // In a real app this would come from the authenticated session.
 // The admin panel runs as an admin, so default to "admin"; this hook

@@ -53,11 +53,13 @@ function AuthPage() {
       }
       const roleHome = roles.includes("admin") || roles.includes("hr")
         ? "/admin"
-        : roles.includes("staff")
-          ? "/staff"
-          : roles.includes("manager")
-            ? "/manager"
-            : "/employee";
+        : roles.includes("finance")
+          ? "/finance"
+          : roles.includes("staff")
+            ? "/staff"
+            : roles.includes("manager")
+              ? "/manager"
+              : "/employee";
       if (cancelled) return;
       if (redirectTo) {
         window.location.replace(redirectTo);

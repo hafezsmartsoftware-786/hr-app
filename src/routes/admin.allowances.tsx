@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { TripAllowancesTab } from "@/components/admin/TripAllowancesTab";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/admin/allowances")({ component: Page });
@@ -24,6 +26,7 @@ function Page() {
   const listFn = useServerFn(listAllowances);
   const upsertFn = useServerFn(upsertAllowance);
   const delFn = useServerFn(deleteAllowance);
+  const [activeTab, setActiveTab] = useState("general");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(blank);
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -49,11 +52,20 @@ function Page() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold md:text-3xl">Allowances</h1>
-          <p className="text-sm text-muted-foreground">Pay allowances added to employee compensation.</p>
+          <p className="text-sm text-muted-foreground">Pay allowances and trip policies.</p>
         </div>
-        <Button onClick={() => { setForm(blank); setErrs({}); setOpen(true); }} className="rounded-full"><Plus className="h-4 w-4" /> Add allowance</Button>
       </div>
-      <div className="overflow-hidden rounded-3xl border border-border bg-card">
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="general">General Allowances</TabsTrigger>
+          <TabsTrigger value="trips">Trip Allowances</TabsTrigger>
+        </TabsList>
+        <TabsContent value="general" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => { setForm(blank); setErrs({}); setOpen(true); }} className="rounded-full"><Plus className="h-4 w-4" /> Add allowance</Button>
+          </div>
+          <div className="overflow-hidden rounded-3xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr><th className="px-4 py-3 text-start">Name</th><th className="px-4 py-3 text-start">Kind</th><th className="px-4 py-3 text-start">Amount</th><th className="px-4 py-3 text-start">Currency</th><th className="px-4 py-3 text-start">Taxable</th><th className="px-4 py-3 text-start">Active</th><th /></tr>
@@ -116,6 +128,11 @@ function Page() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </TabsContent>
+        <TabsContent value="trips" className="mt-4">
+          <TripAllowancesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

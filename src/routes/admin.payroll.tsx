@@ -36,15 +36,15 @@ function AdminPayroll() {
 
   type ColKey = "salary" | "daily_rate" | "attendance" | "allowance" | "bonus" | "penalty" | "net_pay" | "kpi" | "payslip";
   const COLS: { key: ColKey; label: string }[] = [
-    { key: "salary", label: "Salary" },
-    { key: "daily_rate", label: "Daily rate" },
-    { key: "attendance", label: "P / L / A" },
-    { key: "allowance", label: "Allowance" },
-    { key: "bonus", label: "Bonus" },
-    { key: "penalty", label: "Penalty" },
-    { key: "net_pay", label: "Net pay" },
-    { key: "kpi", label: "KPI" },
-    { key: "payslip", label: "Payslip" },
+    { key: "salary", label: t("grossSalary") || "Salary" },
+    { key: "daily_rate", label: t("dailyRate") || "Daily rate" },
+    { key: "attendance", label: t("attendance") || "P / L / A" },
+    { key: "allowance", label: t("allowance") || "Allowance" },
+    { key: "bonus", label: t("bonus") || "Bonus" },
+    { key: "penalty", label: t("penalty") || "Penalty" },
+    { key: "net_pay", label: t("netPay") || "Net pay" },
+    { key: "kpi", label: t("kpi") || "KPI" },
+    { key: "payslip", label: t("payslip") || "Payslip" },
   ];
   const [visibleCols, setVisibleCols] = useState<Record<ColKey, boolean>>(() => {
     if (typeof window !== "undefined") {
@@ -383,7 +383,7 @@ function AdminPayroll() {
         </div>
         <details className="relative">
           <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm">
-            <Columns3 className="h-4 w-4 text-muted-foreground" /> Columns
+            <Columns3 className="h-4 w-4 text-muted-foreground" /> {t("columns") || "Columns"}
           </summary>
           <div className="absolute end-0 z-20 mt-2 w-52 rounded-2xl border border-border bg-popover p-2 shadow-lg">
             {COLS.map((c) => (

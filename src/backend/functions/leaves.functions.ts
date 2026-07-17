@@ -141,3 +141,48 @@ export const listActiveLeaveTypes = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+export const adminBulkLeaveDeduction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ days: z.number().positive(), reason: z.string().optional() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    // Fetch all profiles
+    const { data: profiles } = await supabase.from("profiles").select("id, contract_type");
+    if (!profiles || profiles.length === 0) return { ok: true, count: 0 };
+
+    // Fetch leave types
+    const { data: types } = await supabase.from("leave_types").select("id, name");
+    const annual = types?.find(t => t.name === "Annual leaves");
+    const unpaid = types?.find(t => t.name === "Unpaid Leaves");
+
+    if (!annual || !unpaid) throw new Error("Annual leaves or Unpaid Leaves not found in DB.");
+
+    let count = 0;
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+
+    const inserts = profiles.map(p => {
+      const isProbation = p.contract_type === "Probation3M";
+      const targetType = isProbation ? unpaid : annual;
+      count++;
+      return {
+        employee_id: p.id,
+        leave_type_id: targetType.id,
+        leave_type_name: targetType.name,
+        start_date: today,
+        end_date: today,
+        days: data.days,
+        paid: targetType.name !== "Unpaid Leaves",
+        reason: data.reason ?? "Bulk admin deduction",
+        status: "approved",
+        decided_by: context.userId,
+        decided_at: now
+      };
+    });
+
+    const { error } = await supabase.from("leaves").insert(inserts);
+    if (error) throw new Error(error.message);
+
+    return { ok: true, count };
+  });

@@ -20,12 +20,14 @@ export function SalaryPreview({
   insuranceApplicable = true,
   taxApplicable = true,
   martyrsFundApplicable = true,
+  insuranceSalary,
 }: {
   amount: number;
   mode: "NET" | "GROSS";
   insuranceApplicable?: boolean;
   taxApplicable?: boolean;
   martyrsFundApplicable?: boolean;
+  insuranceSalary?: number;
 }) {
   const preview = useServerFn(previewSalary);
   const [result, setResult] = useState<any>(null);
@@ -46,6 +48,7 @@ export function SalaryPreview({
             insurance_applicable: insuranceApplicable,
             tax_applicable: taxApplicable,
             martyrs_fund_applicable: martyrsFundApplicable,
+            employee_insurance_salary: insuranceSalary,
           },
         });
         setResult(r);
@@ -56,7 +59,7 @@ export function SalaryPreview({
       }
     }, 300);
     return () => clearTimeout(id);
-  }, [amount, mode, insuranceApplicable, taxApplicable, martyrsFundApplicable]);
+  }, [amount, mode, insuranceApplicable, taxApplicable, martyrsFundApplicable, insuranceSalary]);
 
   if (!amount || amount <= 0) {
     return (

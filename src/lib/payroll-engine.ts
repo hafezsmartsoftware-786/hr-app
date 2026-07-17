@@ -28,6 +28,11 @@ export type Applicability = {
   insurance_applicable?: boolean;
   tax_applicable?: boolean;
   martyrs_fund_applicable?: boolean;
+  employee_insurance_salary?: number;
+  external_income?: number;       // monthly EGP from other employers
+  external_tax_paid?: number;     // monthly EGP tax already paid by other employers
+  medical_insurance?: number;     // monthly deduction
+  other_deductions?: number;      // monthly other deductions
 };
 
 export type PayrollBreakdown = {
@@ -40,6 +45,10 @@ export type PayrollBreakdown = {
   tax: number;
   taxable_annual: number;
   employer_cost: number; // gross + employer_insurance
+  medical_insurance: number;
+  other_deductions: number;
+  external_income: number;
+  external_tax_paid: number;
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -67,8 +76,12 @@ export function pickActiveBrackets(
     .sort((a, b) => a.from_amount - b.from_amount);
 }
 
-export function calcInsuranceWage(gross: number, s: PayrollSettings): number {
-  const clamped = Math.max(s.insurance_floor, Math.min(gross, s.insurance_ceiling));
+export function calcInsuranceWage(gross: number, s: PayrollSettings, opts: Applicability = {}): number {
+  let base = gross;
+  if (opts.employee_insurance_salary && opts.employee_insurance_salary > 0) {
+    base = opts.employee_insurance_salary;
+  }
+  const clamped = Math.max(s.insurance_floor, Math.min(base, s.insurance_ceiling));
   return round2(clamped);
 }
 
@@ -79,7 +92,7 @@ export function calcEmployeeInsurance(gross: number, s: PayrollSettings, opts: A
 
 export function calcEmployerInsurance(gross: number, s: PayrollSettings, opts: Applicability = {}): number {
   if (opts.insurance_applicable === false) return 0;
-  return round2(calcInsuranceWage(gross, s) * s.employer_insurance_rate);
+  return round2(calcInsuranceWage(gross, s, opts) * s.employer_insurance_rate);
 }
 
 export function calcMartyrsFund(gross: number, s: PayrollSettings, opts: Applicability = {}): number {
@@ -102,7 +115,7 @@ export function calcAnnualTax(taxableAnnual: number, brackets: readonly TaxBrack
   return round2(tax);
 }
 
-/** Monthly tax = annual tax / 12. */
+/** Monthly tax = annual tax / 12, including external income & external tax paid. */
 export function calcMonthlyTax(
   gross: number,
   s: PayrollSettings,
@@ -111,11 +124,14 @@ export function calcMonthlyTax(
 ): { tax: number; taxable_annual: number } {
   if (opts.tax_applicable === false) return { tax: 0, taxable_annual: 0 };
   const empIns = calcEmployeeInsurance(gross, s, opts);
-  const annualGross = gross * 12;
+  const externalMonthly = opts.external_income ?? 0;
+  const annualGross = (gross + externalMonthly) * 12;
   const annualEmpIns = empIns * 12;
   const taxable = Math.max(0, annualGross - annualEmpIns - s.annual_personal_exemption);
   const annualTax = calcAnnualTax(taxable, brackets);
-  return { tax: round2(annualTax / 12), taxable_annual: round2(taxable) };
+  const externalTaxPaidMonthly = opts.external_tax_paid ?? 0;
+  const tax = Math.max(0, round2(annualTax / 12) - externalTaxPaidMonthly);
+  return { tax: round2(tax), taxable_annual: round2(taxable) };
 }
 
 export function grossToNet(
@@ -125,12 +141,16 @@ export function grossToNet(
   opts: Applicability = {},
 ): PayrollBreakdown {
   const g = round2(gross);
-  const insurance_wage = calcInsuranceWage(g, settings);
+  const insurance_wage = calcInsuranceWage(g, settings, opts);
   const employee_insurance = calcEmployeeInsurance(g, settings, opts);
   const employer_insurance = calcEmployerInsurance(g, settings, opts);
   const martyrs_fund = calcMartyrsFund(g, settings, opts);
   const { tax, taxable_annual } = calcMonthlyTax(g, settings, brackets, opts);
-  const net = round2(g - employee_insurance - tax - martyrs_fund);
+  const medical_insurance = round2(opts.medical_insurance ?? 0);
+  const other_deductions = round2(opts.other_deductions ?? 0);
+  const external_income = round2(opts.external_income ?? 0);
+  const external_tax_paid = round2(opts.external_tax_paid ?? 0);
+  const net = round2(g - employee_insurance - tax - martyrs_fund - medical_insurance - other_deductions);
   return {
     gross: g,
     net,
@@ -141,6 +161,10 @@ export function grossToNet(
     tax,
     taxable_annual,
     employer_cost: round2(g + employer_insurance),
+    medical_insurance,
+    other_deductions,
+    external_income,
+    external_tax_paid,
   };
 }
 

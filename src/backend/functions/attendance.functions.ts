@@ -47,7 +47,7 @@ export const checkIn = createServerFn({ method: "POST" })
     }
 
     // Resolve assigned geofences + per-employee authorized networks + branch-level networks
-    const [{ data: assigns }, { data: netAssigns }, { data: leaveRow }, { data: holidayRow }] = await Promise.all([
+    const [{ data: assigns }, { data: netAssigns }, { data: leaveRow }, { data: holidayRow }, { data: profileRow }] = await Promise.all([
       supabase
         .from("geofence_assignments")
         .select("geofence_locations(id, name, lat, lng, radius_m, active)")
@@ -69,10 +69,17 @@ export const checkIn = createServerFn({ method: "POST" })
         .select("name, type")
         .eq("date", today)
         .maybeSingle() as any,
+      supabase
+        .from("profiles")
+        .select("approved_work_date")
+        .eq("id", userId)
+        .maybeSingle() as any,
     ]);
 
+    const isApprovedToWork = profileRow?.approved_work_date === today;
+
     // 1. Approved leave
-    if (leaveRow) {
+    if (leaveRow && !isApprovedToWork) {
       const raw = (leaveRow.leave_type_name ?? '').trim();
       const hasName = !!raw;
       const leaveName = raw
@@ -89,7 +96,7 @@ export const checkIn = createServerFn({ method: "POST" })
       };
     }
     // 2. Holiday
-    if (holidayRow) {
+    if (holidayRow && !isApprovedToWork) {
       return {
         ok: false as const, blocked: true as const,
         code: "holiday" as const,
@@ -98,7 +105,7 @@ export const checkIn = createServerFn({ method: "POST" })
       };
     }
     // 3. Weekend (Fri/Sat)
-    if (isWeekend) {
+    if (isWeekend && !isApprovedToWork) {
       return {
         ok: false as const, blocked: true as const,
         code: "weekend" as const,
@@ -209,7 +216,7 @@ export const checkOut = createServerFn({ method: "POST" })
 
     const dow = new Date(today + "T00:00:00Z").getUTCDay();
     const isWeekend = dow === 5 || dow === 6;
-    const [{ data: leaveRow }, { data: holidayRow }] = await Promise.all([
+    const [{ data: leaveRow }, { data: holidayRow }, { data: profileRow }] = await Promise.all([
       supabase
         .from("leaves")
         .select("id, leave_type_name, status, start_date, end_date")
@@ -223,9 +230,16 @@ export const checkOut = createServerFn({ method: "POST" })
         .select("name, type")
         .eq("date", today)
         .maybeSingle() as any,
+      supabase
+        .from("profiles")
+        .select("approved_work_date")
+        .eq("id", userId)
+        .maybeSingle() as any,
     ]);
 
-    if (leaveRow) {
+    const isApprovedToWork = profileRow?.approved_work_date === today;
+
+    if (leaveRow && !isApprovedToWork) {
       const raw = (leaveRow.leave_type_name ?? '').trim();
       const hasName = !!raw;
       const leaveName = raw
@@ -241,7 +255,7 @@ export const checkOut = createServerFn({ method: "POST" })
         reason: `Check-out blocked · Today is ${leaveName} (${dateRange}).`,
       };
     }
-    if (holidayRow) {
+    if (holidayRow && !isApprovedToWork) {
       return {
         ok: false as const, blocked: true as const,
         code: "holiday" as const,
@@ -249,7 +263,7 @@ export const checkOut = createServerFn({ method: "POST" })
         reason: `Check-out blocked · today is a holiday (${holidayRow.name}).`,
       };
     }
-    if (isWeekend) {
+    if (isWeekend && !isApprovedToWork) {
       return {
         ok: false as const, blocked: true as const,
         code: "weekend" as const,

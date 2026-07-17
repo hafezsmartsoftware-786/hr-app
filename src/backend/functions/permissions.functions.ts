@@ -9,6 +9,7 @@ export const PERMISSION_PAGES = [
   { slug: "leaves", label: "Leaves" },
   { slug: "leaves-requests", label: "Leave Requests" },
   { slug: "payroll", label: "Payroll" },
+  { slug: "advances", label: "Advances" },
   { slug: "holidays", label: "Holidays" },
   { slug: "holiday-types", label: "Holiday Types" },
   { slug: "contracts", label: "Contracts" },

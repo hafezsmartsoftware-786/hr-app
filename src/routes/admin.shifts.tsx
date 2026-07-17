@@ -43,19 +43,36 @@ function Page() {
     if (!r.success) { const e: Record<string, string> = {}; r.error.issues.forEach(i => { const k = i.path[0] as string; if (k && !e[k]) e[k] = i.message; }); setErrs(e); return; }
     setErrs({}); m.mutate(form);
   }
+function formatTime12(time24: string): string {
+  if (!time24) return "—";
+  const [h, m] = time24.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return time24;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold md:text-3xl">Shifts</h1>
-          <p className="text-sm text-muted-foreground">Work shift definitions with grace time.</p>
+          <h1 className="font-display text-2xl font-semibold">Shifts</h1>
+          <p className="text-sm text-muted-foreground">Manage work shifts and grace periods</p>
         </div>
-        <Button onClick={() => { setForm(blank); setErrs({}); setOpen(true); }} className="rounded-full"><Plus className="h-4 w-4" /> Add shift</Button>
+        <Button onClick={() => { setForm({ id: "", name: "", start_time: "09:00", end_time: "17:00", grace_minutes: 15, is_overnight: false, is_active: true }); setErrs({}); setOpen(true); }}><Plus className="h-4 w-4" /> Add shift</Button>
       </div>
-      <div className="overflow-hidden rounded-3xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
-            <tr><th className="px-4 py-3 text-start">Name</th><th className="px-4 py-3 text-start">Start</th><th className="px-4 py-3 text-start">End</th><th className="px-4 py-3 text-start">Grace</th><th className="px-4 py-3 text-start">Overnight</th><th className="px-4 py-3 text-start">Active</th><th className="px-4 py-3" /></tr>
+      <div className="overflow-x-auto rounded-3xl border border-border bg-card">
+        <table className="w-full text-start text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/20 text-muted-foreground">
+              <th className="px-4 py-3 font-semibold">Name</th>
+              <th className="px-4 py-3 font-semibold">Start</th>
+              <th className="px-4 py-3 font-semibold">End</th>
+              <th className="px-4 py-3 font-semibold">Grace</th>
+              <th className="px-4 py-3 font-semibold">Overnight</th>
+              <th className="px-4 py-3 font-semibold">Active</th>
+              <th className="px-4 py-3"></th>
+            </tr>
           </thead>
           <tbody>
             {isLoading ? (<tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" /></td></tr>) :
@@ -63,8 +80,8 @@ function Page() {
               rows.map((r: any) => (
                 <tr key={r.id} className="border-b border-border last:border-b-0 hover:bg-muted/40">
                   <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3 font-mono">{r.start_time}</td>
-                  <td className="px-4 py-3 font-mono">{r.end_time}</td>
+                  <td className="px-4 py-3 font-mono">{formatTime12(r.start_time)}</td>
+                  <td className="px-4 py-3 font-mono">{formatTime12(r.end_time)}</td>
                   <td className="px-4 py-3 font-mono">{r.grace_minutes}m</td>
                   <td className="px-4 py-3">{r.is_overnight ? "Yes" : "No"}</td>
                   <td className="px-4 py-3">{r.is_active ? "Yes" : "No"}</td>

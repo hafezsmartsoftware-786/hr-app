@@ -146,6 +146,8 @@ export const TripCreateSchema = z.object({
   lng: z.number().min(-180).max(180).optional().nullable(),
   radius_m: z.number().min(10).max(100000).optional().nullable(),
   assignee: z.string().uuid(),
+  overnight_nights: z.number().min(0).max(365).optional().default(0),
+  transport_type: z.string().max(50).optional().nullable(),
 });
 export const TransitionSchema = z.object({
   id: z.string().uuid(),
@@ -241,3 +243,42 @@ export const AdminAttendanceSchema = z.object({
   status: z.enum(["present", "late", "absent", "leave"]),
   note: z.string().trim().max(500).optional().nullable(),
 });
+
+// ── Employee Advance Management ────────────────────────────
+export const ADVANCE_STATUSES = [
+  "draft",
+  "pending_manager",
+  "pending_hr",
+  "pending_finance",
+  "approved_for_payment",
+  "paid",
+  "rejected",
+  "cancelled",
+  "returned",
+] as const;
+export type AdvanceStatus = (typeof ADVANCE_STATUSES)[number];
+
+export const AdvanceRequestSchema = z.object({
+  requested_amount: z.number().positive("Amount must be greater than zero"),
+  reason: z.string().min(1, "Reason is required").max(2000),
+  expected_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  attachment_url: z.string().max(2_500_000).optional().nullable(),
+  currency: z.string().max(8).default("EGP"),
+});
+export type AdvanceRequestInput = z.infer<typeof AdvanceRequestSchema>;
+
+export const AdvanceDecideSchema = z.object({
+  id: z.string().uuid(),
+  action: z.enum(["approved", "rejected", "returned", "cancelled"]),
+  comments: z.string().max(2000).optional().nullable(),
+});
+export type AdvanceDecideInput = z.infer<typeof AdvanceDecideSchema>;
+
+export const AdvancePaymentSchema = z.object({
+  id: z.string().uuid(),
+  approved_amount: z.number().positive(),
+  installment_count: z.number().int().min(1).max(60),
+  deduction_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  comments: z.string().max(2000).optional().nullable(),
+});
+export type AdvancePaymentInput = z.infer<typeof AdvancePaymentSchema>;

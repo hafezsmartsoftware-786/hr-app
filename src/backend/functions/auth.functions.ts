@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const RoleSchema = z.enum(["admin", "hr", "manager", "employee", "staff", "user"]);
+const RoleSchema = z.enum(["admin", "hr", "finance", "manager", "employee", "staff", "user"]);
 
 type AuditRow = {
   actor_id: string;
@@ -124,7 +124,7 @@ export const assignRole = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (targetIsAdmin) throw new Error("Cannot modify roles of an admin account");
-    const { error } = await supabaseAdmin.from("user_roles").upsert(
+    const { error } = await (supabaseAdmin as any).from("user_roles").upsert(
       { user_id: data.user_id, role: data.role },
       { onConflict: "user_id,role" },
     );
@@ -162,7 +162,7 @@ export const removeRole = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (targetIsAdmin) throw new Error("Cannot modify roles of an admin account");
-    const { error } = await supabaseAdmin.from("user_roles")
+    const { error } = await (supabaseAdmin as any).from("user_roles")
       .delete().eq("user_id", data.user_id).eq("role", data.role);
     if (error) throw new Error(error.message);
     const info = await fetchTargetInfo(context.supabase, [data.user_id]);
@@ -252,7 +252,7 @@ export const bulkChangeRole = createServerFn({ method: "POST" })
       for (const id of targets) succeeded.push(id);
     } else {
       if (targets.length > 0) {
-        const { error } = await supabaseAdmin
+        const { error } = await (supabaseAdmin as any)
           .from("user_roles")
           .delete()
           .eq("role", data.role)

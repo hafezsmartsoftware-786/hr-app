@@ -105,6 +105,7 @@ const PreviewInput = z.object({
   insurance_applicable: z.boolean().optional(),
   tax_applicable: z.boolean().optional(),
   martyrs_fund_applicable: z.boolean().optional(),
+  employee_insurance_salary: z.number().optional(),
 });
 
 export type PreviewSalaryResult =
@@ -155,6 +156,7 @@ export const previewSalary = createServerFn({ method: "POST" })
       insurance_applicable: data.insurance_applicable,
       tax_applicable: data.tax_applicable,
       martyrs_fund_applicable: data.martyrs_fund_applicable,
+      employee_insurance_salary: data.employee_insurance_salary,
     });
     return { ok: true, breakdown, settings, brackets };
   });

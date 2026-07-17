@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { MapPin, Plus, Users, X, Trash2, Loader2, Layers } from "lucide-react";
+import { MapPin, Plus, Users, X, Trash2, Loader2, Layers, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -71,6 +71,12 @@ function GeoPage() {
           <p className="text-sm text-muted-foreground">{t("approvedZones")}</p>
         </div>
         <div className="flex gap-2">
+          <Link
+            to="/admin/employee-access"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-foreground hover:bg-muted"
+          >
+            <KeyRound className="h-4 w-4" /> {t("employeeAccess")}
+          </Link>
           <button
             onClick={() => setBulkOpen(true)}
             disabled={locations.length === 0}

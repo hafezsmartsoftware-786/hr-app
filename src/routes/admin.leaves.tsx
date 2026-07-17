@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Wallet, Pencil, ChevronLeft, ChevronRight, Search, Download, CheckSquare } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { listAllLeavesAdmin, decideLeave } from "@/backend/functions/leaves.functions";
+import { listAllLeavesAdmin, decideLeave, adminBulkLeaveDeduction } from "@/backend/functions/leaves.functions";
 import { listLeaveBalancesAdmin, updateLeaveBalance, bulkUpdateLeaveBalances, exportLeaveBalancesAdmin } from "@/backend/functions/leave-balances.functions";
 import { listLeaveTypes } from "@/backend/functions/directory.functions";
 import { LeaveTypesManager } from "@/components/admin/LeaveTypesManager";
@@ -33,11 +33,11 @@ const STATUSES: Status[] = ["all", "pending", "approved", "rejected", "cancelled
 type LeavesTab = "requests" | "balances" | "leaveTypes" | "holidays" | "holidayTypes";
 const LEAVES_TABS: LeavesTab[] = ["requests", "balances", "leaveTypes", "holidays", "holidayTypes"];
 const TAB_LABELS: Record<LeavesTab, string> = {
-  requests: "Requests",
-  balances: "Balances",
-  leaveTypes: "Leave Types",
-  holidays: "Holidays",
-  holidayTypes: "Holiday Types",
+  requests: "leaveRequests",
+  balances: "leaveBalances",
+  leaveTypes: "leaveTypesAdmin",
+  holidays: "holidaysAdmin",
+  holidayTypes: "holidayTypes",
 };
 
 function AdminLeaves() {
@@ -51,6 +51,7 @@ function AdminLeaves() {
   const updateBalFn = useServerFn(updateLeaveBalance);
   const bulkUpdateBalFn = useServerFn(bulkUpdateLeaveBalances);
   const exportBalFn = useServerFn(exportLeaveBalancesAdmin);
+  const bulkDeductFn = useServerFn(adminBulkLeaveDeduction);
   const [filter, setFilter] = useState<Status>("all");
   const tab: LeavesTab = search.tab ?? "requests";
   const setTab = (t: LeavesTab) => navigate({ search: { tab: t }, replace: true });
@@ -175,20 +176,46 @@ function AdminLeaves() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">{t("leaves")}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">{t("leaveManagement") || "Leave Management"}</h1>
           <p className="text-sm text-muted-foreground">{t("leavesSubtitle")}</p>
         </div>
-        <span className="rounded-full bg-warning/20 px-3 py-1.5 text-xs font-semibold text-warning-foreground">
-          {pending} {t("pendingWord")}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-warning/20 px-3 py-1.5 text-xs font-semibold text-warning-foreground">
+            {pending} {t("pendingWord")}
+          </span>
+          <button
+            onClick={async () => {
+              const daysStr = window.prompt(t("deductionAmount") || "Enter number of days to deduct for all employees:", "1");
+              if (!daysStr) return;
+              const days = Number(daysStr);
+              if (isNaN(days) || days <= 0) return toast.error("Invalid number of days");
+              const reason = window.prompt(t("reasonOptional") || "Reason for deduction:", "Monthly bulk deduction") || "Monthly bulk deduction";
+              const id = toast.loading("Processing bulk deduction...");
+              try {
+                const res = await bulkDeductFn({ data: { days, reason } });
+                toast.success(`Deducted ${days} days from ${res.count} employees.`, { id });
+                qc.invalidateQueries({ queryKey: ["admin"] });
+              } catch (e: any) {
+                toast.error(e.message, { id });
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground shadow-sm hover:bg-destructive/90"
+          >
+            {t("deductLeaves") || "Bulk Deduct"}
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-border">
-        {LEAVES_TABS.map((k) => (
-          <button key={k} onClick={() => setTab(k)}
-            className={`relative px-4 py-2 text-sm font-medium capitalize transition ${tab === k ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {TAB_LABELS[k]}
-            {tab === k && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
+      <div className="mb-6 flex gap-1 rounded-xl bg-muted p-1">
+        {LEAVES_TABS.map((tId) => (
+          <button
+            key={tId}
+            onClick={() => setTab(tId)}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all md:flex-none ${
+              tab === tId ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t(TAB_LABELS[tId]) || TAB_LABELS[tId]}
           </button>
         ))}
       </div>
@@ -209,7 +236,7 @@ function AdminLeaves() {
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-            {s} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
+            {t(s) || s} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
           </button>
         ))}
       </div>
@@ -221,7 +248,7 @@ function AdminLeaves() {
       )}
       {!isLoading && visible.length === 0 && (
         <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No {filter === "all" ? "" : filter} leave requests.
+          No {filter === "all" ? "" : t(filter) || filter} leave requests.
         </div>
       )}
 
@@ -239,7 +266,7 @@ function AdminLeaves() {
                 </div>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone[l.status] ?? "bg-muted text-muted-foreground"}`}>
-                {l.status}
+                {t(l.status) || l.status}
               </span>
             </div>
             <div className="mt-4 rounded-xl bg-muted/60 p-3 text-xs">
@@ -262,11 +289,11 @@ function AdminLeaves() {
               <div className="mt-3 flex gap-2">
                 <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "approved", name: l.employee_name })} className="flex-1 rounded-xl bg-success px-3 py-2 text-xs font-semibold text-success-foreground disabled:opacity-50">{t("approve")}</button>
                 <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "rejected", name: l.employee_name })} className="flex-1 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50">{t("reject")}</button>
-                <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="flex-1 rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">Cancel</button>
+                <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="flex-1 rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">{t("cancel") || "Cancel"}</button>
               </div>
             ) : l.status === "approved" ? (
               <div className="mt-3">
-                <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="w-full rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">Cancel approval</button>
+                <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="w-full rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">{t("cancelApproval") || "Cancel approval"}</button>
               </div>
             ) : null}
           </div>
@@ -326,7 +353,7 @@ function AdminLeaves() {
                 disabled={exporting}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted disabled:opacity-40"
               >
-                <Download className="h-3.5 w-3.5" /> {exporting ? "Exporting…" : "Export CSV"}
+                <Download className="h-3.5 w-3.5" /> {exporting ? t("exporting") || "Exporting…" : t("exportCsv") || "Export CSV"}
               </button>
             </div>
           </div>
@@ -338,7 +365,7 @@ function AdminLeaves() {
           )}
           {!balLoading && (balData?.rows?.length ?? 0) === 0 && (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-              No balances yet. Add employees and active leave types.
+              {t("noBalancesYet") || "No balances yet. Add employees and active leave types."}
             </div>
           )}
           {(balData?.rows?.length ?? 0) > 0 && (
@@ -347,16 +374,16 @@ function AdminLeaves() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/60 text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3 text-left">
+                    <th className="px-4 py-3 text-start">
                       <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage} aria-label="Select all on page" />
                     </th>
-                    <th className="px-4 py-3 text-left">Employee</th>
-                    <th className="px-4 py-3 text-left">Leave Type</th>
-                    <th className="px-4 py-3 text-right">Year</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                    <th className="px-4 py-3 text-right">Used</th>
-                    <th className="px-4 py-3 text-right">Remaining</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+                    <th className="px-4 py-3 text-start">{t("employee") || "Employee"}</th>
+                    <th className="px-4 py-3 text-start">{t("leaveType") || "Leave Type"}</th>
+                    <th className="px-4 py-3 text-right">{t("tableYear") || "Year"}</th>
+                    <th className="px-4 py-3 text-right">{t("tableTotal") || "Total"}</th>
+                    <th className="px-4 py-3 text-right">{t("used") || "Used"}</th>
+                    <th className="px-4 py-3 text-right">{t("tableRemaining") || "Remaining"}</th>
+                    <th className="px-4 py-3 text-right">{t("tableAction") || "Action"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -386,7 +413,7 @@ function AdminLeaves() {
                             balMut.mutate({ id: b.id, total_days: n });
                           }}
                           className="inline-flex items-center gap-1 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium hover:bg-muted/80"
-                        ><Pencil className="h-3 w-3" /> Edit</button>
+                        ><Pencil className="h-3 w-3" /> {t("edit") || "Edit"}</button>
                       </td>
                     </tr>
                   ))}
@@ -404,7 +431,7 @@ function AdminLeaves() {
                   onClick={() => setBalPage((p) => Math.max(1, p - 1))}
                   className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium disabled:opacity-40 hover:bg-muted"
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                  <ChevronLeft className="h-3.5 w-3.5" /> {t("prev") || "Prev"}
                 </button>
                 <span className="rounded-xl bg-muted px-3 py-2 text-xs font-medium tabular-nums">{balData!.page}</span>
                 <button
@@ -412,7 +439,7 @@ function AdminLeaves() {
                   onClick={() => setBalPage((p) => p + 1)}
                   className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium disabled:opacity-40 hover:bg-muted"
                 >
-                  Next <ChevronRight className="h-3.5 w-3.5" />
+                  {t("next") || "Next"} <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

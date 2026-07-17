@@ -17,9 +17,10 @@ export type OrgDept = {
   id: string;
   name: string;
   head: OrgPerson | null;
-  positions: { id: string; name: string; people: OrgPerson[] }[];
+  positions: { id: string; name: string; people: OrgPerson[]; plannedHeadcount?: number }[];
   unassigned: OrgPerson[];
   total: number;
+  plannedTotal?: number;
 };
 
 export type OrgChart = {
@@ -33,7 +34,7 @@ export const getOrgChart = createServerFn({ method: "GET" })
   .middleware([requireAdminAccess])
   .handler(async ({ context }): Promise<OrgChart> => {
     const sb = context.supabase;
-    const [{ data: depts }, { data: positions }, { data: profiles }] = await Promise.all([
+    const [{ data: depts }, { data: positions }, { data: profiles }, { data: plans }] = await Promise.all([
       sb.from("departments").select("id, name_en, name_ar, sort_order, responsible_person_id").order("sort_order").order("name_en"),
       sb.from("positions").select("id, name_en, name_ar, sort_order").order("sort_order").order("name_en"),
       sb
@@ -41,6 +42,11 @@ export const getOrgChart = createServerFn({ method: "GET" })
         .select("id, full_name, email, phone, avatar_url, department_id, position_id, manager_id, status")
         .order("full_name", { ascending: true })
         .limit(2000),
+      (sb as any)
+        .from("manpower_plans")
+        .select("department_id, position_id, planned_headcount")
+        .eq("status", "Approved")
+        .eq("fiscal_year", new Date().getFullYear())
     ]);
 
     const posMap = new Map<string, string>(
@@ -115,18 +121,34 @@ export const getOrgChart = createServerFn({ method: "GET" })
           byPos.set(p.positionId, arr);
         } else unassigned.push(p);
       }
+      
+      const deptPlans = (plans ?? []).filter((x: any) => x.department_id === d.id);
+      for (const plan of deptPlans) {
+        if (plan.position_id && !byPos.has(plan.position_id)) {
+          byPos.set(plan.position_id, []);
+        }
+      }
+
       const posArr = Array.from(byPos.entries())
-        .map(([pid, ppl]) => ({
-          id: pid,
-          name: posMap.get(pid) ?? "Position",
-          people: ppl,
-        }))
-        .filter((pg) => pg.people.length > 0)
+        .map(([pid, ppl]) => {
+          const mpp = deptPlans.filter((x: any) => x.position_id === pid);
+          const planned = mpp.reduce((sum: number, x: any) => sum + (x.planned_headcount || 0), 0);
+          return {
+            id: pid,
+            name: posMap.get(pid) ?? "Position",
+            people: ppl,
+            plannedHeadcount: planned
+          };
+        })
+        .filter((pg) => pg.people.length > 0 || pg.plannedHeadcount > 0)
         .sort((a, b) => {
           const ai = (positions ?? []).findIndex((x: any) => x.id === a.id);
           const bi = (positions ?? []).findIndex((x: any) => x.id === b.id);
           return ai - bi;
         });
+
+      const totalPlanned = deptPlans.reduce((sum: number, x: any) => sum + (x.planned_headcount || 0), 0);
+
       return {
         id: d.id,
         name: d.name,
@@ -134,8 +156,9 @@ export const getOrgChart = createServerFn({ method: "GET" })
         positions: posArr,
         unassigned,
         total: people.length,
+        plannedTotal: totalPlanned
       };
-    }).filter((d) => d.total > 0);
+    }).filter((d) => d.total > 0 || d.plannedTotal > 0);
 
     const usedPositionIds = new Set(
       departments.flatMap((d) => d.positions.map((p) => p.id)),

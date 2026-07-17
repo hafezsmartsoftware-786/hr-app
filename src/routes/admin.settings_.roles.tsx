@@ -35,14 +35,15 @@ import {
 
 export const Route = createFileRoute("/admin/settings_/roles")({ component: RolesPage });
 
-const ALL_ROLES = ["admin", "hr", "manager", "employee", "staff", "user"] as const;
+const ALL_ROLES = ["admin", "hr", "finance", "manager", "employee", "staff", "user"] as const;
 type Role = (typeof ALL_ROLES)[number];
-const MANAGED_ROLES = ["hr", "manager", "user"] as const;
+const MANAGED_ROLES = ["hr", "finance", "manager", "user"] as const;
 type ManagedRole = (typeof MANAGED_ROLES)[number];
 
 const roleColor: Record<Role, string> = {
   admin:    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-700",
   hr:       "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 ring-1 ring-purple-300 dark:ring-purple-700",
+  finance:  "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 ring-1 ring-teal-300 dark:ring-teal-700",
   manager:  "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700",
   employee: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 ring-1 ring-emerald-300 dark:ring-emerald-700",
   staff:    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ring-1 ring-amber-300 dark:ring-amber-700",
@@ -52,6 +53,7 @@ const roleColor: Record<Role, string> = {
 const ROLE_DESC: Record<Role, string> = {
   admin: "Full access to every admin surface. Cannot be revoked from this UI.",
   hr: "Manages employees, leaves, payroll and settings.",
+  finance: "Reviews and approves advance payments; manages payroll accounting.",
   manager: "Approves team requests and reviews team performance.",
   employee: "Standard employee panel access only.",
   staff: "Read-only staff view for shared kiosks.",

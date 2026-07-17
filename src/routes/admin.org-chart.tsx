@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Building2, Users, Briefcase, Search, ChevronDown, ChevronRight, Crown, Mail, Phone, ArrowUpRight, BadgeCheck, Pencil, Plus, Trash2, GripVertical, Check, X } from "lucide-react";
+import { Building2, Users, Briefcase, Search, ChevronDown, ChevronRight, Crown, Mail, Phone, ArrowUpRight, BadgeCheck, Pencil, Plus, Trash2, GripVertical, Check, X, UserPlus, ExternalLink, ShieldAlert } from "lucide-react";
 import {
   getOrgChart,
   renameDepartment, renamePosition,
@@ -16,6 +16,7 @@ import { EmployeeAvatar } from "@/components/EmployeeAvatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   DndContext, PointerSensor, useSensor, useSensors,
@@ -26,6 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ManpowerPage } from "./admin.manpower";
 
 export const Route = createFileRoute("/admin/org-chart")({
   component: OrgChartPage,
@@ -71,8 +73,7 @@ function PersonCard({
       style={style}
       className={`group relative flex w-64 flex-col overflow-hidden rounded-2xl border ${tone} backdrop-blur-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1 hover:border-brand/50 hover:shadow-[0_16px_40px_-16px_hsl(var(--brand)/0.4)]"}`}
       onClick={() => !editing && onOpen(person, { title, deptName })}
-      role={editing ? undefined : "button"}
-      {...(editing ? sortable.attributes : {})}
+      {...(editing ? sortable.attributes : { role: "button" })}
       {...(editing ? sortable.listeners : {})}
     >
       {/* Accent stripe */}
@@ -152,6 +153,27 @@ function PersonCard({
   );
 }
 
+function EmptyPositionCard({ title }: { title: string }) {
+  return (
+    <div className="group relative flex w-64 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/80 bg-background/50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <UserPlus className="h-5 w-5 text-muted-foreground group-hover:text-brand" />
+      </div>
+      <div className="text-center">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand">Vacancy</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{title}</p>
+      </div>
+      <button 
+        type="button"
+        onClick={() => toast.info("To assign an employee, drag an Unassigned Employee card and drop it onto this position block.")}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 text-[11px] font-bold text-brand hover:bg-brand hover:text-brand-foreground transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" /> Assign Employee
+      </button>
+    </div>
+  );
+}
+
 function DeptNode({
   dept,
   query,
@@ -222,7 +244,7 @@ function DeptNode({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 items-center gap-3 text-left"
+          className="flex min-w-0 items-center gap-3 text-start"
         >
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand text-brand-foreground shadow-brand">
             <Building2 className="h-5 w-5" />
@@ -234,7 +256,7 @@ function DeptNode({
               <h3 className="truncate text-lg font-black text-foreground">{dept.name}</h3>
             )}
             <p className="text-xs font-medium text-muted-foreground">
-              {dept.total} {dept.total === 1 ? "member" : "members"} · {dept.positions.length} positions
+              {dept.total} Actual · {dept.plannedTotal || 0} Planned · {dept.positions.length} positions
             </p>
           </span>
         </button>
@@ -330,7 +352,7 @@ function PositionGroup({
 }: {
   deptId: string;
   deptName: string;
-  pg: { id: string; name: string; people: OrgPerson[] };
+  pg: { id: string; name: string; people: OrgPerson[]; plannedHeadcount?: number };
   editing: boolean;
   onOpen: (p: OrgPerson, ctx: { title?: string; deptName?: string }) => void;
   onRename: (id: string, name: string) => void;
@@ -368,7 +390,7 @@ function PositionGroup({
           <h4 className="text-sm font-bold text-foreground">{pg.name}</h4>
         )}
         <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-          {pg.people.length}
+          {pg.people.length} / {pg.plannedHeadcount || 0} Planned
         </span>
         {editing && (
           <button
@@ -386,7 +408,10 @@ function PositionGroup({
         {pg.people.map((p) => (
           <PersonCard key={p.id} person={p} accent="head" deptName={deptName} onOpen={onOpen} editing={editing} />
         ))}
-        {pg.people.length === 0 && editing && (
+        {Array.from({ length: Math.max(0, (pg.plannedHeadcount || 0) - pg.people.length) }).map((_, i) => (
+          <EmptyPositionCard key={`empty-${i}`} title={pg.name} />
+        ))}
+        {pg.people.length === 0 && (pg.plannedHeadcount || 0) === 0 && editing && (
           <p className="text-xs text-muted-foreground">Drop an employee here to assign this position.</p>
         )}
       </div>
@@ -572,8 +597,15 @@ function OrgChartPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
+      <Tabs defaultValue="org-chart" className="w-full space-y-6">
+        <TabsList className="bg-muted/50 p-1 rounded-2xl w-full max-w-sm grid grid-cols-2">
+          <TabsTrigger value="org-chart" className="rounded-xl data-[state=active]:bg-card data-[state=active]:text-brand data-[state=active]:shadow-sm">Organization Chart</TabsTrigger>
+          <TabsTrigger value="manpower" className="rounded-xl data-[state=active]:bg-card data-[state=active]:text-brand data-[state=active]:shadow-sm">Manpower Plans</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="org-chart" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
           { icon: Users, label: "Employees", value: stats?.employees ?? "—" },
           { icon: Building2, label: "Departments", value: stats?.departments ?? "—" },
           { icon: Briefcase, label: "Positions", value: stats?.positions ?? "—" },
@@ -642,6 +674,14 @@ function OrgChartPage() {
           </div>
         </SortableContext>
       </DndContext>
+      </TabsContent>
+
+      <TabsContent value="manpower" className="focus-visible:outline-none focus-visible:ring-0">
+        <div className="-mx-4 sm:-mx-6 -my-4 sm:-my-6">
+          <ManpowerPage />
+        </div>
+      </TabsContent>
+      </Tabs>
 
       <PersonDialog
         entry={selected}

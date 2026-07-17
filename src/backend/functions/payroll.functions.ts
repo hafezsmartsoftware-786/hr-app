@@ -25,6 +25,7 @@ export type PayrollRow = {
   leave_days: number;
   penalty: number;
   bonus: number;
+  advance_deduction: number;
   net_pay: number;
   kpi: number;
   target_met: boolean;
@@ -38,6 +39,14 @@ export type PayrollRow = {
   taxable_annual: number;
   employer_cost: number;
   settings_effective_date: string | null;
+  advance_installment_ids?: string[];
+  basic_salary: number;
+  insurance_salary: number;
+  emergency_fund: number;
+  medical_insurance: number;
+  other_deductions: number;
+  external_income: number;
+  external_tax_paid: number;
 };
 
 export type PayrollPeriodResponse = {
@@ -94,11 +103,11 @@ async function computeRows(
   // Use the last day of the period for "active settings on payroll date".
   const periodEndDate = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 
-  const [profRes, deptRes, attRes, leaveRes, settingsRes, bracketsRes] = await Promise.all([
+  const [profRes, deptRes, attRes, leaveRes, settingsRes, bracketsRes, installmentsRes, tripsRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
-        "id, full_name, emp_code, salary_gross, salary_net, salary_type, salary_amount, insurance_applicable, tax_applicable, martyrs_fund_applicable, allowance, target_value, department_id, status",
+        "id, full_name, emp_code, salary_gross, salary_net, salary_type, salary_amount, insurance_applicable, tax_applicable, martyrs_fund_applicable, allowance, target_value, department_id, status, insurance_salary, emergency_fund, external_income, external_tax_paid, medical_insurance, other_deductions",
       )
       .neq("status", "Inactive")
       .limit(5000),
@@ -121,6 +130,17 @@ async function computeRows(
       .limit(5000),
     supabase.from("payroll_settings").select("*"),
     supabase.from("tax_brackets").select("*"),
+    (supabase as any)
+      .from("employee_advance_installments")
+      .select("id, installment_amount, employee_advances!inner(employee_id)")
+      .eq("status", "pending"),
+    supabase
+      .from("trips")
+      .select("id, assignee, calculated_allowance, allowance_status")
+      .eq("status", "done")
+      .eq("allowance_status", "pending")
+      .gte("trip_date", startISO)
+      .lt("trip_date", endISO)
   ]);
   if (profRes.error) throw new Error(profRes.error.message);
   if (deptRes.error) throw new Error(deptRes.error.message);
@@ -128,6 +148,29 @@ async function computeRows(
   if (leaveRes.error) throw new Error(leaveRes.error.message);
   if (settingsRes.error) throw new Error(settingsRes.error.message);
   if (bracketsRes.error) throw new Error(bracketsRes.error.message);
+  if (installmentsRes.error) throw new Error(installmentsRes.error.message);
+
+  if (installmentsRes.error) throw new Error(installmentsRes.error.message);
+  // tripsRes might fail if migration is not run, so we ignore error gracefully for now
+  const tripsData = tripsRes?.data ?? [];
+
+  const tripAllowanceMap = new Map<string, number>();
+  for (const t of tripsData) {
+    if (t.assignee && t.calculated_allowance) {
+      const v = tripAllowanceMap.get(t.assignee) ?? 0;
+      tripAllowanceMap.set(t.assignee, v + Number(t.calculated_allowance));
+    }
+  }
+
+  const installmentMap = new Map<string, { deduction: number; ids: string[] }>();
+  for (const r of installmentsRes.data ?? []) {
+    const empId = (r.employee_advances as any)?.employee_id;
+    if (!empId) continue;
+    const v = installmentMap.get(empId) ?? { deduction: 0, ids: [] };
+    v.deduction += Number(r.installment_amount);
+    v.ids.push(r.id);
+    installmentMap.set(empId, v);
+  }
 
   const settings = pickActive<PayrollSettings>(
     (settingsRes.data ?? []).map((r: any) => ({
@@ -190,6 +233,10 @@ async function computeRows(
       tax: 0,
       taxable_annual: 0,
       employer_cost: salaryAmount,
+      medical_insurance: 0,
+      other_deductions: 0,
+      external_income: 0,
+      external_tax_paid: 0,
     };
     const breakdown =
       settings && brackets.length > 0
@@ -197,11 +244,18 @@ async function computeRows(
             insurance_applicable: p.insurance_applicable !== false,
             tax_applicable: p.tax_applicable !== false,
             martyrs_fund_applicable: p.martyrs_fund_applicable !== false,
+            employee_insurance_salary: p.insurance_salary ? Number(p.insurance_salary) : undefined,
+            external_income: p.external_income ? Number(p.external_income) : undefined,
+            external_tax_paid: p.external_tax_paid ? Number(p.external_tax_paid) : undefined,
+            medical_insurance: p.medical_insurance ? Number(p.medical_insurance) : undefined,
+            other_deductions: p.other_deductions ? Number(p.other_deductions) : undefined,
           })
         : empty;
 
     const salary = breakdown.gross;
-    const allowance = Number(p.allowance ?? 0);
+    const baseAllowance = Number(p.allowance ?? 0);
+    const tripAllowance = tripAllowanceMap.get(p.id) ?? 0;
+    const allowance = baseAllowance + tripAllowance;
     const att = attMap.get(p.id) ?? { p: 0, l: 0, a: 0 };
     const leave = leaveMap.get(p.id) ?? 0;
     const dailyRate = workingDays > 0 ? salary / workingDays : 0;
@@ -211,8 +265,12 @@ async function computeRows(
     const targetMet = effectivePresent >= target;
     const bonus = targetMet ? +(salary * 0.1).toFixed(2) : 0;
     const kpi = workingDays > 0 ? Math.round((effectivePresent / workingDays) * 100) : 0;
-    // Net pay = engine net (after statutory deductions) + allowance + bonus − penalty
-    const net = +(breakdown.net + allowance + bonus - penalty).toFixed(2);
+    
+    const advanceData = installmentMap.get(p.id) ?? { deduction: 0, ids: [] };
+    const advanceDeduction = advanceData.deduction;
+
+    // Net pay = engine net (after statutory deductions) + allowance + bonus − penalty - advance_deduction
+    const net = +(breakdown.net + allowance + bonus - penalty - advanceDeduction).toFixed(2);
     return {
       employee_id: p.id,
       employee_name: p.full_name ?? "—",
@@ -228,10 +286,14 @@ async function computeRows(
       leave_days: leave || 0,
       penalty,
       bonus,
+      advance_deduction: advanceDeduction,
       net_pay: net,
       kpi,
       target_met: targetMet,
       target_value: p.target_value != null ? Number(p.target_value) : null,
+      basic_salary: salary,
+      insurance_salary: Number(p.insurance_salary ?? 0),
+      emergency_fund: Number(p.emergency_fund ?? 0),
       gross_salary: breakdown.gross,
       employee_insurance: breakdown.employee_insurance,
       employer_insurance: breakdown.employer_insurance,
@@ -240,7 +302,12 @@ async function computeRows(
       insurance_wage: breakdown.insurance_wage,
       taxable_annual: breakdown.taxable_annual,
       employer_cost: breakdown.employer_cost,
+      medical_insurance: breakdown.medical_insurance,
+      other_deductions: breakdown.other_deductions,
+      external_income: breakdown.external_income,
+      external_tax_paid: breakdown.external_tax_paid,
       settings_effective_date: settings?.effective_date ?? null,
+      advance_installment_ids: advanceData.ids,
     };
   });
 
@@ -298,6 +365,15 @@ export const getPayrollPeriod = createServerFn({ method: "POST" })
         taxable_annual: Number(i.snapshot?.payroll_engine?.taxable_annual ?? 0),
         employer_cost: Number(i.snapshot?.payroll_engine?.employer_cost ?? i.salary ?? 0),
         settings_effective_date: i.snapshot?.settings_effective_date ?? null,
+        advance_deduction: Number(i.snapshot?.advance_deduction ?? 0),
+        advance_installment_ids: i.snapshot?.advance_installment_ids ?? [],
+        basic_salary: Number(i.basic_salary ?? i.salary ?? 0),
+        insurance_salary: Number(i.insurance_salary ?? 0),
+        emergency_fund: Number(i.emergency_fund ?? 0),
+        medical_insurance: Number(i.snapshot?.payroll_engine?.medical_insurance ?? 0),
+        other_deductions: Number(i.snapshot?.payroll_engine?.other_deductions ?? 0),
+        external_income: Number(i.snapshot?.payroll_engine?.external_income ?? 0),
+        external_tax_paid: Number(i.snapshot?.payroll_engine?.external_tax_paid ?? 0),
       }));
       return {
         year: data.year,
@@ -433,10 +509,17 @@ export const lockPayrollRun = createServerFn({ method: "POST" })
         net_pay: r.net_pay,
         kpi: r.kpi,
         target_met: r.target_met,
+        gross_salary: r.gross_salary,
+        net_salary: r.net_pay,
+        basic_salary: r.basic_salary,
+        insurance_salary: r.insurance_salary,
+        emergency_fund: r.emergency_fund,
         snapshot: {
           emp_code: r.emp_code,
           target_value: r.target_value,
           settings_effective_date: r.settings_effective_date,
+          advance_deduction: r.advance_deduction,
+          advance_installment_ids: r.advance_installment_ids,
           brackets_effective_date: brackets[0]?.effective_date ?? null,
           payroll_engine: {
             gross: r.gross_salary,
@@ -453,8 +536,16 @@ export const lockPayrollRun = createServerFn({ method: "POST" })
           brackets_snapshot: brackets,
         },
       }));
-      const ins = await supabase.from("payroll_run_items").insert(items);
+      const ins = await supabase.from("payroll_run_items").insert(items as any);
       if (ins.error) throw new Error(ins.error.message);
+
+      const installmentIds = rows.flatMap((r) => r.advance_installment_ids ?? []);
+      if (installmentIds.length > 0) {
+        await (supabase as any)
+          .from("employee_advance_installments")
+          .update({ status: "paid" })
+          .in("id", installmentIds);
+      }
     }
 
     return { run_id: runId, locked_at: runUpsert.data.locked_at };
@@ -467,6 +558,17 @@ export const unlockPayrollRun = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    
+    // Fetch run to get items and revert installments
+    const runRes = await supabase.from("payroll_runs").select("id").eq("year", data.year).eq("month", data.month).maybeSingle();
+    if (runRes.data) {
+      const itemsRes = await supabase.from("payroll_run_items").select("snapshot").eq("run_id", runRes.data.id);
+      const installmentIds = (itemsRes.data ?? []).flatMap((i: any) => i.snapshot?.advance_installment_ids ?? []);
+      if (installmentIds.length > 0) {
+        await (supabase as any).from("employee_advance_installments").update({ status: "pending" }).in("id", installmentIds);
+      }
+    }
+
     const del = await supabase
       .from("payroll_runs")
       .delete()
@@ -474,4 +576,102 @@ export const unlockPayrollRun = createServerFn({ method: "POST" })
       .eq("month", data.month);
     if (del.error) throw new Error(del.error.message);
     return { ok: true };
+  });
+
+export const saveAdvancedPayrollSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input: unknown) =>
+    z.object({
+      employee_id: z.string().uuid(),
+      external_income: z.number().min(0),
+      external_tax_paid: z.number().min(0),
+      medical_insurance: z.number().min(0),
+      other_deductions: z.number().min(0),
+      insurance_salary: z.number().min(0),
+      emergency_fund: z.number().min(0),
+      insurance_number: z.string().optional().nullable(),
+      bank_account_name: z.string().optional().nullable(),
+      bank_account_number: z.string().optional().nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await (supabase as any)
+      .from("profiles")
+      .update({
+        external_income: data.external_income,
+        external_tax_paid: data.external_tax_paid,
+        medical_insurance: data.medical_insurance,
+        other_deductions: data.other_deductions,
+        insurance_salary: data.insurance_salary,
+        emergency_fund: data.emergency_fund,
+        insurance_number: data.insurance_number,
+        bank_account_name: data.bank_account_name,
+        bank_account_number: data.bank_account_number,
+      })
+      .eq("id", data.employee_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const saveBulkAdvancedPayrollSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input: unknown) =>
+    z.array(
+      z.object({
+        employee_id: z.string().uuid(),
+        external_income: z.number().min(0),
+        external_tax_paid: z.number().min(0),
+        medical_insurance: z.number().min(0),
+        other_deductions: z.number().min(0),
+        insurance_salary: z.number().min(0),
+        emergency_fund: z.number().min(0),
+        insurance_number: z.string().optional().nullable(),
+        bank_account_name: z.string().optional().nullable(),
+        bank_account_number: z.string().optional().nullable(),
+      })
+    ).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    // We update sequentially or we can use an RPC if available.
+    // For a relatively small number of employees (under 500), sequential updates are okay but Promise.all is better.
+    // Let's batch them in Promise.all chunked.
+    const chunkSize = 20;
+    for (let i = 0; i < data.length; i += chunkSize) {
+      const chunk = data.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map((emp) =>
+          (supabase as any)
+            .from("profiles")
+            .update({
+              external_income: emp.external_income,
+              external_tax_paid: emp.external_tax_paid,
+              medical_insurance: emp.medical_insurance,
+              other_deductions: emp.other_deductions,
+              insurance_salary: emp.insurance_salary,
+              emergency_fund: emp.emergency_fund,
+              insurance_number: emp.insurance_number,
+              bank_account_name: emp.bank_account_name,
+              bank_account_number: emp.bank_account_number,
+            })
+            .eq("id", emp.employee_id)
+        )
+      );
+    }
+    return { ok: true };
+  });
+
+export const getAdvancedPayrollSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input: unknown) => z.object({}).parse(input))
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, emp_code, department_id, external_income, external_tax_paid, medical_insurance, other_deductions, insurance_salary, emergency_fund, insurance_number, bank_account_name, bank_account_number")
+      .neq("status", "Inactive")
+      .order("full_name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });

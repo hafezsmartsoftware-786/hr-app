@@ -11,6 +11,8 @@ import {
   previewSalary,
 } from "@/backend/functions/payroll-settings.functions";
 import { SubTabs } from "@/components/SubTabs";
+import { useI18n } from "@/lib/i18n";
+import { PayrollConfigurationGuide } from "@/components/admin/PayrollConfigurationGuide";
 
 export const Route = createFileRoute("/admin/payroll-settings")({
   component: AdminPayrollSettings,
@@ -23,6 +25,7 @@ function fmt(n: number) {
 }
 
 function AdminPayrollSettings() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const getCfg = useServerFn(getPayrollConfig);
   const saveCfg = useServerFn(savePayrollSettings);
@@ -130,10 +133,11 @@ function AdminPayrollSettings() {
   const [pvAmount, setPvAmount] = useState(10000);
   const [pvMode, setPvMode] = useState<"NET" | "GROSS">("NET");
   const [pvResult, setPvResult] = useState<any>(null);
+  const [pvInsuranceSalary, setPvInsuranceSalary] = useState<number | "">("");
   useEffect(() => {
     const id = setTimeout(async () => {
       try {
-        const r = await preview({ data: { amount: pvAmount, mode: pvMode } });
+        const r = await preview({ data: { amount: pvAmount, mode: pvMode, employee_insurance_salary: pvInsuranceSalary === "" ? undefined : pvInsuranceSalary } });
         setPvResult(r.ok ? r.breakdown : { error: r.error });
       } catch (e: any) {
         setPvResult({ error: e?.message ?? "Preview failed" });
@@ -156,38 +160,41 @@ function AdminPayrollSettings() {
   return (
     <div className="space-y-6">
       <SubTabs items={[
-        { to: "/admin/payroll", label: "Payroll" },
-        { to: "/admin/payroll-settings", label: "Payroll Settings" },
+        { to: "/admin/payroll", label: t("payroll") },
+        { to: "/admin/payroll-settings", label: t("payrollSettingsTitle") },
       ]} />
-      <div>
-        <h1 className="font-display text-2xl font-bold">Payroll Settings</h1>
-        <p className="text-sm text-muted-foreground">Egyptian payroll — all values effective-dated; historical runs reproduce.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold">{t("payrollSettingsTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("payrollSettingsDesc")}</p>
+        </div>
+        <PayrollConfigurationGuide />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-4 font-display text-lg font-semibold">Social Insurance & Martyrs Fund</h2>
+          <h2 className="mb-4 font-display text-lg font-semibold">{t("socialInsuranceMartyrsFund")}</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Employee Insurance %</label>
+              <label className={labelCls}>{t("employeeInsurancePct")}</label>
               <input type="number" step="0.01" className={inputCls}
                 value={form.employee_insurance_rate}
                 onChange={(e) => setForm({ ...form, employee_insurance_rate: Number(e.target.value) })} />
             </div>
             <div>
-              <label className={labelCls}>Employer Insurance %</label>
+              <label className={labelCls}>{t("employerInsurancePct")}</label>
               <input type="number" step="0.01" className={inputCls}
                 value={form.employer_insurance_rate}
                 onChange={(e) => setForm({ ...form, employer_insurance_rate: Number(e.target.value) })} />
             </div>
             <div>
-              <label className={labelCls}>Insurance Ceiling (EGP)</label>
+              <label className={labelCls}>{t("insuranceCeilingAmt")}</label>
               <input type="number" className={inputCls}
                 value={form.insurance_ceiling}
                 onChange={(e) => setForm({ ...form, insurance_ceiling: Number(e.target.value) })} />
             </div>
             <div>
-              <label className={labelCls}>Insurance Floor (EGP)</label>
+              <label className={labelCls}>{t("insuranceFloorAmt")}</label>
               <input type="number" className={inputCls}
                 value={form.insurance_floor}
                 onChange={(e) => setForm({ ...form, insurance_floor: Number(e.target.value) })} />
@@ -195,41 +202,41 @@ function AdminPayrollSettings() {
             <div className="col-span-2 flex items-center gap-2 pt-2">
               <input id="mf" type="checkbox" checked={form.martyrs_fund_enabled}
                 onChange={(e) => setForm({ ...form, martyrs_fund_enabled: e.target.checked })} />
-              <label htmlFor="mf" className="text-sm">Enable Martyrs' Families Fund</label>
+              <label htmlFor="mf" className="text-sm">{t("enableMartyrsFund")}</label>
             </div>
             <div>
-              <label className={labelCls}>Martyrs Fund %</label>
+              <label className={labelCls}>{t("martyrsFundPct")}</label>
               <input type="number" step="0.001" className={inputCls}
                 value={form.martyrs_fund_rate}
                 disabled={!form.martyrs_fund_enabled}
                 onChange={(e) => setForm({ ...form, martyrs_fund_rate: Number(e.target.value) })} />
             </div>
             <div>
-              <label className={labelCls}>Annual Personal Exemption (EGP)</label>
+              <label className={labelCls}>{t("annualPersonalExemption")}</label>
               <input type="number" className={inputCls}
                 value={form.annual_personal_exemption}
                 onChange={(e) => setForm({ ...form, annual_personal_exemption: Number(e.target.value) })} />
             </div>
             <div className="col-span-2">
-              <label className={labelCls}>Effective Date</label>
+              <label className={labelCls}>{t("effectiveDate")}</label>
               <input type="date" className={inputCls}
                 value={form.effective_date}
                 onChange={(e) => setForm({ ...form, effective_date: e.target.value })} />
             </div>
             <div>
-              <label className={labelCls}>Pay Period</label>
+              <label className={labelCls}>{t("payPeriod")}</label>
               <select
                 className={inputCls}
                 value={form.pay_period}
                 onChange={(e) => setForm({ ...form, pay_period: e.target.value as any })}
               >
-                <option value="Weekly">Weekly</option>
-                <option value="Biweekly">Biweekly</option>
-                <option value="Monthly">Monthly</option>
+                <option value="Weekly">{t("weekly")}</option>
+                <option value="Biweekly">{t("biweekly")}</option>
+                <option value="Monthly">{t("monthly")}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Payout Methods</label>
+              <label className={labelCls}>{t("payoutMethods")}</label>
               <div className="flex flex-wrap gap-2 pt-2">
                 {PAYOUT_OPTIONS.map((opt) => {
                   const active = form.payout_methods.includes(opt);
@@ -251,7 +258,7 @@ function AdminPayrollSettings() {
                           : "border-input bg-card text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {opt}
+                      {opt === "Cash" ? t("cash") : opt === "Bank Transfer" ? t("bankTransfer") : opt === "Cheque" ? t("cheque") : opt}
                     </button>
                   );
                 })}
@@ -264,25 +271,31 @@ function AdminPayrollSettings() {
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {settingsMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Settings
+            {t("saveSettings")}
           </button>
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-4 font-display text-lg font-semibold">Salary Preview</h2>
+          <h2 className="mb-4 font-display text-lg font-semibold">{t("salaryPreview")}</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Mode</label>
+              <label className={labelCls}>{t("mode")}</label>
               <select className={inputCls} value={pvMode} onChange={(e) => setPvMode(e.target.value as "NET" | "GROSS")}>
-                <option value="NET">Net → Gross</option>
-                <option value="GROSS">Gross → Net</option>
+                <option value="NET">{t("netToGross")}</option>
+                <option value="GROSS">{t("grossToNet")}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Amount (EGP)</label>
+              <label className={labelCls}>{t("amountEgp")}</label>
               <input type="number" className={inputCls}
                 value={pvAmount}
                 onChange={(e) => setPvAmount(Number(e.target.value))} />
+            </div>
+            <div className="col-span-2">
+              <label className={labelCls}>{t("specificInsuranceCeiling")}</label>
+              <input type="number" className={inputCls} placeholder={t("eg5000")}
+                value={pvInsuranceSalary}
+                onChange={(e) => setPvInsuranceSalary(e.target.value ? Number(e.target.value) : "")} />
             </div>
           </div>
           <div className="mt-4 space-y-1.5 rounded-xl bg-muted/40 p-4 text-sm">
@@ -290,17 +303,17 @@ function AdminPayrollSettings() {
               <div className="text-destructive">{pvResult.error}</div>
             ) : pvResult ? (
               <>
-                <Row label="Gross Salary" value={fmt(pvResult.gross)} bold />
-                <Row label="− Employee Insurance" value={fmt(pvResult.employee_insurance)} />
-                <Row label="− Salary Tax" value={fmt(pvResult.tax)} />
-                <Row label="− Martyrs Fund" value={fmt(pvResult.martyrs_fund)} />
+                <Row label={t("grossSalary")} value={fmt(pvResult.gross)} bold />
+                <Row label={t("minusEmployeeInsurance")} value={fmt(pvResult.employee_insurance)} />
+                <Row label={t("minusSalaryTax")} value={fmt(pvResult.tax)} />
+                <Row label={t("minusMartyrsFund")} value={fmt(pvResult.martyrs_fund)} />
                 <div className="my-2 border-t border-border" />
-                <Row label="Net Salary" value={fmt(pvResult.net)} bold />
-                <Row label="Employer Insurance (company)" value={fmt(pvResult.employer_insurance)} muted />
-                <Row label="Total Employer Cost" value={fmt(pvResult.employer_cost)} muted />
+                <Row label={t("netSalary")} value={fmt(pvResult.net)} bold />
+                <Row label={t("employerInsuranceCompany")} value={fmt(pvResult.employer_insurance)} muted />
+                <Row label={t("totalEmployerCost")} value={fmt(pvResult.employer_cost)} muted />
               </>
             ) : (
-              <div className="text-muted-foreground">Calculating…</div>
+              <div className="text-muted-foreground">{t("calculating")}</div>
             )}
           </div>
         </section>
@@ -308,9 +321,9 @@ function AdminPayrollSettings() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Tax Brackets (Annual)</h2>
+          <h2 className="font-display text-lg font-semibold">{t("taxBracketsAnnual")}</h2>
           <div className="flex items-center gap-2">
-            <label className={labelCls}>Effective Date</label>
+            <label className={labelCls}>{t("effectiveDate")}</label>
             <input type="date" className={inputCls + " w-40"} value={bracketsDate}
               onChange={(e) => setBracketsDate(e.target.value)} />
           </div>
@@ -319,9 +332,9 @@ function AdminPayrollSettings() {
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr className="border-b border-border">
-                <th className="px-2 py-2 text-start">From (EGP)</th>
-                <th className="px-2 py-2 text-start">To (EGP, empty = ∞)</th>
-                <th className="px-2 py-2 text-start">Rate %</th>
+                <th className="px-2 py-2 text-start">{t("fromEgp")}</th>
+                <th className="px-2 py-2 text-start">{t("toEgp")}</th>
+                <th className="px-2 py-2 text-start">{t("ratePct")}</th>
                 <th className="px-2 py-2"></th>
               </tr>
             </thead>
@@ -370,30 +383,30 @@ function AdminPayrollSettings() {
           <button
             onClick={() => setBrackets([...brackets, { from_amount: 0, to_amount: null, tax_rate: 0 }])}
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 text-sm hover:bg-accent">
-            <Plus className="h-4 w-4" /> Add bracket
+            <Plus className="h-4 w-4" /> {t("addBracket")}
           </button>
           <button
             onClick={() => bracketsMut.mutate()}
             disabled={bracketsMut.isPending || brackets.length === 0}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
             {bracketsMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Brackets
+            {t("saveBrackets")}
           </button>
         </div>
       </section>
 
       {data && data.settings.length > 1 && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-display text-lg font-semibold">Settings History</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold">{t("settingsHistory")}</h2>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr className="border-b border-border">
-                <th className="px-2 py-2 text-start">Effective</th>
-                <th className="px-2 py-2 text-start">Emp %</th>
-                <th className="px-2 py-2 text-start">Empr %</th>
-                <th className="px-2 py-2 text-start">Ceiling</th>
-                <th className="px-2 py-2 text-start">Martyrs %</th>
-                <th className="px-2 py-2 text-start">Exemption</th>
+                <th className="px-2 py-2 text-start">{t("effective")}</th>
+                <th className="px-2 py-2 text-start">{t("empPct")}</th>
+                <th className="px-2 py-2 text-start">{t("emprPct")}</th>
+                <th className="px-2 py-2 text-start">{t("ceiling")}</th>
+                <th className="px-2 py-2 text-start">{t("martyrsPct")}</th>
+                <th className="px-2 py-2 text-start">{t("exemption")}</th>
               </tr>
             </thead>
             <tbody>

@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ManagerRouteImport } from './routes/manager'
+import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as EmployeeRouteImport } from './routes/employee'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
+import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as EmployeeIndexRouteImport } from './routes/employee.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as StaffProfileRouteImport } from './routes/staff.profile'
@@ -27,6 +29,12 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerTasksRouteImport } from './routes/manager.tasks'
 import { Route as ManagerProfileRouteImport } from './routes/manager.profile'
 import { Route as ManagerCheckRouteImport } from './routes/manager.check'
+import { Route as ManagerAdvancesRouteImport } from './routes/manager.advances'
+import { Route as FinanceStickyNotesRouteImport } from './routes/finance.sticky-notes'
+import { Route as FinanceProfileRouteImport } from './routes/finance.profile'
+import { Route as FinancePayrollSettingsRouteImport } from './routes/finance.payroll-settings'
+import { Route as FinancePayrollRouteImport } from './routes/finance.payroll'
+import { Route as FinanceAdvancesRouteImport } from './routes/finance.advances'
 import { Route as EmployeeVerifyOtpRouteImport } from './routes/employee.verify-otp'
 import { Route as EmployeeTasksRouteImport } from './routes/employee.tasks'
 import { Route as EmployeeSettingsRouteImport } from './routes/employee.settings'
@@ -36,6 +44,7 @@ import { Route as EmployeeLeavesRouteImport } from './routes/employee.leaves'
 import { Route as EmployeeCheckRouteImport } from './routes/employee.check'
 import { Route as EmployeeBiometricsRouteImport } from './routes/employee.biometrics'
 import { Route as EmployeeAttendanceRouteImport } from './routes/employee.attendance'
+import { Route as EmployeeAdvancesRouteImport } from './routes/employee.advances'
 import { Route as AdminTargetsOvertimeRouteImport } from './routes/admin.targets-overtime'
 import { Route as AdminStickyNotesRouteImport } from './routes/admin.sticky-notes'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
@@ -61,6 +70,7 @@ import { Route as AdminContractsRouteImport } from './routes/admin.contracts'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAllowancesRouteImport } from './routes/admin.allowances'
+import { Route as AdminAdvancesRouteImport } from './routes/admin.advances'
 import { Route as AdminEmployeesIndexRouteImport } from './routes/admin.employees.index'
 import { Route as AdminSettingsRolesRouteImport } from './routes/admin.settings_.roles'
 import { Route as AdminEmployeesIdRouteImport } from './routes/admin.employees.$id'
@@ -75,6 +85,11 @@ const StaffRoute = StaffRouteImport.update({
 const ManagerRoute = ManagerRouteImport.update({
   id: '/manager',
   path: '/manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmployeeRoute = EmployeeRouteImport.update({
@@ -106,6 +121,11 @@ const ManagerIndexRoute = ManagerIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ManagerRoute,
+} as any)
+const FinanceIndexRoute = FinanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceRoute,
 } as any)
 const EmployeeIndexRoute = EmployeeIndexRouteImport.update({
   id: '/',
@@ -157,6 +177,36 @@ const ManagerCheckRoute = ManagerCheckRouteImport.update({
   path: '/check',
   getParentRoute: () => ManagerRoute,
 } as any)
+const ManagerAdvancesRoute = ManagerAdvancesRouteImport.update({
+  id: '/advances',
+  path: '/advances',
+  getParentRoute: () => ManagerRoute,
+} as any)
+const FinanceStickyNotesRoute = FinanceStickyNotesRouteImport.update({
+  id: '/sticky-notes',
+  path: '/sticky-notes',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceProfileRoute = FinanceProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinancePayrollSettingsRoute = FinancePayrollSettingsRouteImport.update({
+  id: '/payroll-settings',
+  path: '/payroll-settings',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinancePayrollRoute = FinancePayrollRouteImport.update({
+  id: '/payroll',
+  path: '/payroll',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceAdvancesRoute = FinanceAdvancesRouteImport.update({
+  id: '/advances',
+  path: '/advances',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const EmployeeVerifyOtpRoute = EmployeeVerifyOtpRouteImport.update({
   id: '/verify-otp',
   path: '/verify-otp',
@@ -200,6 +250,11 @@ const EmployeeBiometricsRoute = EmployeeBiometricsRouteImport.update({
 const EmployeeAttendanceRoute = EmployeeAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeAdvancesRoute = EmployeeAdvancesRouteImport.update({
+  id: '/advances',
+  path: '/advances',
   getParentRoute: () => EmployeeRoute,
 } as any)
 const AdminTargetsOvertimeRoute = AdminTargetsOvertimeRouteImport.update({
@@ -328,6 +383,11 @@ const AdminAllowancesRoute = AdminAllowancesRouteImport.update({
   path: '/allowances',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdvancesRoute = AdminAdvancesRouteImport.update({
+  id: '/advances',
+  path: '/advances',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEmployeesIndexRoute = AdminEmployeesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -360,8 +420,10 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/employee': typeof EmployeeRouteWithChildren
+  '/finance': typeof FinanceRouteWithChildren
   '/manager': typeof ManagerRouteWithChildren
   '/staff': typeof StaffRouteWithChildren
+  '/admin/advances': typeof AdminAdvancesRoute
   '/admin/allowances': typeof AdminAllowancesRoute
   '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -387,6 +449,7 @@ export interface FileRoutesByFullPath {
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
+  '/employee/advances': typeof EmployeeAdvancesRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
   '/employee/check': typeof EmployeeCheckRoute
@@ -396,6 +459,12 @@ export interface FileRoutesByFullPath {
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
   '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
+  '/finance/advances': typeof FinanceAdvancesRoute
+  '/finance/payroll': typeof FinancePayrollRoute
+  '/finance/payroll-settings': typeof FinancePayrollSettingsRoute
+  '/finance/profile': typeof FinanceProfileRoute
+  '/finance/sticky-notes': typeof FinanceStickyNotesRoute
+  '/manager/advances': typeof ManagerAdvancesRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -406,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/staff/profile': typeof StaffProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/employee/': typeof EmployeeIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
@@ -417,6 +487,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin/advances': typeof AdminAdvancesRoute
   '/admin/allowances': typeof AdminAllowancesRoute
   '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -441,6 +512,7 @@ export interface FileRoutesByTo {
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
+  '/employee/advances': typeof EmployeeAdvancesRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
   '/employee/check': typeof EmployeeCheckRoute
@@ -450,6 +522,12 @@ export interface FileRoutesByTo {
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
   '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
+  '/finance/advances': typeof FinanceAdvancesRoute
+  '/finance/payroll': typeof FinancePayrollRoute
+  '/finance/payroll-settings': typeof FinancePayrollSettingsRoute
+  '/finance/profile': typeof FinanceProfileRoute
+  '/finance/sticky-notes': typeof FinanceStickyNotesRoute
+  '/manager/advances': typeof ManagerAdvancesRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -460,6 +538,7 @@ export interface FileRoutesByTo {
   '/staff/profile': typeof StaffProfileRoute
   '/admin': typeof AdminIndexRoute
   '/employee': typeof EmployeeIndexRoute
+  '/finance': typeof FinanceIndexRoute
   '/manager': typeof ManagerIndexRoute
   '/staff': typeof StaffIndexRoute
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
@@ -474,8 +553,10 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/employee': typeof EmployeeRouteWithChildren
+  '/finance': typeof FinanceRouteWithChildren
   '/manager': typeof ManagerRouteWithChildren
   '/staff': typeof StaffRouteWithChildren
+  '/admin/advances': typeof AdminAdvancesRoute
   '/admin/allowances': typeof AdminAllowancesRoute
   '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -501,6 +582,7 @@ export interface FileRoutesById {
   '/admin/shifts': typeof AdminShiftsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
+  '/employee/advances': typeof EmployeeAdvancesRoute
   '/employee/attendance': typeof EmployeeAttendanceRoute
   '/employee/biometrics': typeof EmployeeBiometricsRoute
   '/employee/check': typeof EmployeeCheckRoute
@@ -510,6 +592,12 @@ export interface FileRoutesById {
   '/employee/settings': typeof EmployeeSettingsRoute
   '/employee/tasks': typeof EmployeeTasksRoute
   '/employee/verify-otp': typeof EmployeeVerifyOtpRoute
+  '/finance/advances': typeof FinanceAdvancesRoute
+  '/finance/payroll': typeof FinancePayrollRoute
+  '/finance/payroll-settings': typeof FinancePayrollSettingsRoute
+  '/finance/profile': typeof FinanceProfileRoute
+  '/finance/sticky-notes': typeof FinanceStickyNotesRoute
+  '/manager/advances': typeof ManagerAdvancesRoute
   '/manager/check': typeof ManagerCheckRoute
   '/manager/profile': typeof ManagerProfileRoute
   '/manager/tasks': typeof ManagerTasksRoute
@@ -520,6 +608,7 @@ export interface FileRoutesById {
   '/staff/profile': typeof StaffProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/employee/': typeof EmployeeIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
@@ -535,8 +624,10 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/employee'
+    | '/finance'
     | '/manager'
     | '/staff'
+    | '/admin/advances'
     | '/admin/allowances'
     | '/admin/attendance'
     | '/admin/audit'
@@ -562,6 +653,7 @@ export interface FileRouteTypes {
     | '/admin/shifts'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
+    | '/employee/advances'
     | '/employee/attendance'
     | '/employee/biometrics'
     | '/employee/check'
@@ -571,6 +663,12 @@ export interface FileRouteTypes {
     | '/employee/settings'
     | '/employee/tasks'
     | '/employee/verify-otp'
+    | '/finance/advances'
+    | '/finance/payroll'
+    | '/finance/payroll-settings'
+    | '/finance/profile'
+    | '/finance/sticky-notes'
+    | '/manager/advances'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -581,6 +679,7 @@ export interface FileRouteTypes {
     | '/staff/profile'
     | '/admin/'
     | '/employee/'
+    | '/finance/'
     | '/manager/'
     | '/staff/'
     | '/admin/activity-timeline/$id'
@@ -592,6 +691,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/admin/advances'
     | '/admin/allowances'
     | '/admin/attendance'
     | '/admin/audit'
@@ -616,6 +716,7 @@ export interface FileRouteTypes {
     | '/admin/shifts'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
+    | '/employee/advances'
     | '/employee/attendance'
     | '/employee/biometrics'
     | '/employee/check'
@@ -625,6 +726,12 @@ export interface FileRouteTypes {
     | '/employee/settings'
     | '/employee/tasks'
     | '/employee/verify-otp'
+    | '/finance/advances'
+    | '/finance/payroll'
+    | '/finance/payroll-settings'
+    | '/finance/profile'
+    | '/finance/sticky-notes'
+    | '/manager/advances'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -635,6 +742,7 @@ export interface FileRouteTypes {
     | '/staff/profile'
     | '/admin'
     | '/employee'
+    | '/finance'
     | '/manager'
     | '/staff'
     | '/admin/activity-timeline/$id'
@@ -648,8 +756,10 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/employee'
+    | '/finance'
     | '/manager'
     | '/staff'
+    | '/admin/advances'
     | '/admin/allowances'
     | '/admin/attendance'
     | '/admin/audit'
@@ -675,6 +785,7 @@ export interface FileRouteTypes {
     | '/admin/shifts'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
+    | '/employee/advances'
     | '/employee/attendance'
     | '/employee/biometrics'
     | '/employee/check'
@@ -684,6 +795,12 @@ export interface FileRouteTypes {
     | '/employee/settings'
     | '/employee/tasks'
     | '/employee/verify-otp'
+    | '/finance/advances'
+    | '/finance/payroll'
+    | '/finance/payroll-settings'
+    | '/finance/profile'
+    | '/finance/sticky-notes'
+    | '/manager/advances'
     | '/manager/check'
     | '/manager/profile'
     | '/manager/tasks'
@@ -694,6 +811,7 @@ export interface FileRouteTypes {
     | '/staff/profile'
     | '/admin/'
     | '/employee/'
+    | '/finance/'
     | '/manager/'
     | '/staff/'
     | '/admin/activity-timeline/$id'
@@ -708,6 +826,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   EmployeeRoute: typeof EmployeeRouteWithChildren
+  FinanceRoute: typeof FinanceRouteWithChildren
   ManagerRoute: typeof ManagerRouteWithChildren
   StaffRoute: typeof StaffRouteWithChildren
   ApiPublicCronRunSchedulesRoute: typeof ApiPublicCronRunSchedulesRoute
@@ -727,6 +846,13 @@ declare module '@tanstack/react-router' {
       path: '/manager'
       fullPath: '/manager'
       preLoaderRoute: typeof ManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/employee': {
@@ -770,6 +896,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manager/'
       preLoaderRoute: typeof ManagerIndexRouteImport
       parentRoute: typeof ManagerRoute
+    }
+    '/finance/': {
+      id: '/finance/'
+      path: '/'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof FinanceIndexRouteImport
+      parentRoute: typeof FinanceRoute
     }
     '/employee/': {
       id: '/employee/'
@@ -841,6 +974,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerCheckRouteImport
       parentRoute: typeof ManagerRoute
     }
+    '/manager/advances': {
+      id: '/manager/advances'
+      path: '/advances'
+      fullPath: '/manager/advances'
+      preLoaderRoute: typeof ManagerAdvancesRouteImport
+      parentRoute: typeof ManagerRoute
+    }
+    '/finance/sticky-notes': {
+      id: '/finance/sticky-notes'
+      path: '/sticky-notes'
+      fullPath: '/finance/sticky-notes'
+      preLoaderRoute: typeof FinanceStickyNotesRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/profile': {
+      id: '/finance/profile'
+      path: '/profile'
+      fullPath: '/finance/profile'
+      preLoaderRoute: typeof FinanceProfileRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/payroll-settings': {
+      id: '/finance/payroll-settings'
+      path: '/payroll-settings'
+      fullPath: '/finance/payroll-settings'
+      preLoaderRoute: typeof FinancePayrollSettingsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/payroll': {
+      id: '/finance/payroll'
+      path: '/payroll'
+      fullPath: '/finance/payroll'
+      preLoaderRoute: typeof FinancePayrollRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/advances': {
+      id: '/finance/advances'
+      path: '/advances'
+      fullPath: '/finance/advances'
+      preLoaderRoute: typeof FinanceAdvancesRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/employee/verify-otp': {
       id: '/employee/verify-otp'
       path: '/verify-otp'
@@ -902,6 +1077,13 @@ declare module '@tanstack/react-router' {
       path: '/attendance'
       fullPath: '/employee/attendance'
       preLoaderRoute: typeof EmployeeAttendanceRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/advances': {
+      id: '/employee/advances'
+      path: '/advances'
+      fullPath: '/employee/advances'
+      preLoaderRoute: typeof EmployeeAdvancesRouteImport
       parentRoute: typeof EmployeeRoute
     }
     '/admin/targets-overtime': {
@@ -1079,6 +1261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAllowancesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/advances': {
+      id: '/admin/advances'
+      path: '/advances'
+      fullPath: '/admin/advances'
+      preLoaderRoute: typeof AdminAdvancesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/employees/': {
       id: '/admin/employees/'
       path: '/'
@@ -1132,6 +1321,7 @@ const AdminEmployeesRouteWithChildren = AdminEmployeesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAdvancesRoute: typeof AdminAdvancesRoute
   AdminAllowancesRoute: typeof AdminAllowancesRoute
   AdminAttendanceRoute: typeof AdminAttendanceRoute
   AdminAuditRoute: typeof AdminAuditRoute
@@ -1163,6 +1353,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdvancesRoute: AdminAdvancesRoute,
   AdminAllowancesRoute: AdminAllowancesRoute,
   AdminAttendanceRoute: AdminAttendanceRoute,
   AdminAuditRoute: AdminAuditRoute,
@@ -1196,6 +1387,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface EmployeeRouteChildren {
+  EmployeeAdvancesRoute: typeof EmployeeAdvancesRoute
   EmployeeAttendanceRoute: typeof EmployeeAttendanceRoute
   EmployeeBiometricsRoute: typeof EmployeeBiometricsRoute
   EmployeeCheckRoute: typeof EmployeeCheckRoute
@@ -1209,6 +1401,7 @@ interface EmployeeRouteChildren {
 }
 
 const EmployeeRouteChildren: EmployeeRouteChildren = {
+  EmployeeAdvancesRoute: EmployeeAdvancesRoute,
   EmployeeAttendanceRoute: EmployeeAttendanceRoute,
   EmployeeBiometricsRoute: EmployeeBiometricsRoute,
   EmployeeCheckRoute: EmployeeCheckRoute,
@@ -1225,7 +1418,29 @@ const EmployeeRouteWithChildren = EmployeeRoute._addFileChildren(
   EmployeeRouteChildren,
 )
 
+interface FinanceRouteChildren {
+  FinanceAdvancesRoute: typeof FinanceAdvancesRoute
+  FinancePayrollRoute: typeof FinancePayrollRoute
+  FinancePayrollSettingsRoute: typeof FinancePayrollSettingsRoute
+  FinanceProfileRoute: typeof FinanceProfileRoute
+  FinanceStickyNotesRoute: typeof FinanceStickyNotesRoute
+  FinanceIndexRoute: typeof FinanceIndexRoute
+}
+
+const FinanceRouteChildren: FinanceRouteChildren = {
+  FinanceAdvancesRoute: FinanceAdvancesRoute,
+  FinancePayrollRoute: FinancePayrollRoute,
+  FinancePayrollSettingsRoute: FinancePayrollSettingsRoute,
+  FinanceProfileRoute: FinanceProfileRoute,
+  FinanceStickyNotesRoute: FinanceStickyNotesRoute,
+  FinanceIndexRoute: FinanceIndexRoute,
+}
+
+const FinanceRouteWithChildren =
+  FinanceRoute._addFileChildren(FinanceRouteChildren)
+
 interface ManagerRouteChildren {
+  ManagerAdvancesRoute: typeof ManagerAdvancesRoute
   ManagerCheckRoute: typeof ManagerCheckRoute
   ManagerProfileRoute: typeof ManagerProfileRoute
   ManagerTasksRoute: typeof ManagerTasksRoute
@@ -1235,6 +1450,7 @@ interface ManagerRouteChildren {
 }
 
 const ManagerRouteChildren: ManagerRouteChildren = {
+  ManagerAdvancesRoute: ManagerAdvancesRoute,
   ManagerCheckRoute: ManagerCheckRoute,
   ManagerProfileRoute: ManagerProfileRoute,
   ManagerTasksRoute: ManagerTasksRoute,
@@ -1267,6 +1483,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   EmployeeRoute: EmployeeRouteWithChildren,
+  FinanceRoute: FinanceRouteWithChildren,
   ManagerRoute: ManagerRouteWithChildren,
   StaffRoute: StaffRouteWithChildren,
   ApiPublicCronRunSchedulesRoute: ApiPublicCronRunSchedulesRoute,

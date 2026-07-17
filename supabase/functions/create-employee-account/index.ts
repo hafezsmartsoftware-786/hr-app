@@ -153,6 +153,13 @@ Deno.serve(async (req) => {
       contract_start_date: text(body.contractStartDate) || null,
       contract_end_date: text(body.contractEndDate) || null,
       contract_cancelled: Boolean(body.contractCancelled),
+      extra_email: text(body.extraEmail) || null,
+      medical_insurance_details: text(body.medicalInsuranceDetails) || null,
+      is_insured: Boolean(body.isInsured),
+      military_expire_date: text(body.militaryExpireDate) || null,
+      is_five_percent: Boolean(body.isFivePercent),
+      social_insurance_date: text(body.socialInsuranceDate) || null,
+      custom_field: text(body.customField) || null,
     };
 
     const { error: profileError } = await admin.from("profiles").upsert(profile as any);

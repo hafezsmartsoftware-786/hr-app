@@ -1,7 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "./auth-middleware";
 
-const ADMIN_AREA_ROLES = ["admin", "hr", "manager", "user"] as const;
+const ADMIN_AREA_ROLES = ["admin", "hr", "finance", "manager", "user"] as const;
 
 /**
  * Server-side guard for admin-area server functions.
@@ -42,7 +42,7 @@ export const requireAdminRole = createMiddleware({ type: "function" })
     return next();
   });
 
-const STAFF_AREA_ROLES = ["admin", "hr", "staff"] as const;
+const STAFF_AREA_ROLES = ["admin", "hr", "finance", "staff"] as const;
 
 /**
  * Server-side guard for staff-area server functions.

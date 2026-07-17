@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAdminAccess } from "@/integrations/supabase/admin-auth-middleware";
+import { formatEgPhone } from "@/lib/phone";
 import { z } from "zod";
 
 export type AdminEmployeeRow = {
@@ -25,7 +26,7 @@ export type AdminEmployeeRow = {
 };
 
 const SORT_COLS = ["full_name", "email", "created_at", "status", "contract_end_date", "contract_remaining"] as const;
-const IMPORT_ROLES = ["admin", "hr", "manager", "employee"] as const;
+const IMPORT_ROLES = ["admin", "hr", "manager", "employee", "finance"] as const;
 export const INACTIVE_REASONS = [
   "Resigned",
   "Terminated",
@@ -77,6 +78,7 @@ const CreateEmployeeSchema = z.object({
   phone: z.string().max(40).optional().default(""),
   dept: z.string().max(120).optional().default(""),
   position: z.string().max(120).optional().default(""),
+  gender: z.enum(["male", "female"]).optional().or(z.literal("")),
   role: z.enum(IMPORT_ROLES).optional().default("employee"),
   status: z.enum(["Active", "Inactive"]).optional().default("Active"),
   password: z.string().min(6).max(128),
@@ -90,6 +92,8 @@ const CreateEmployeeSchema = z.object({
   salaryMode: z.enum(["gross", "net"]).optional().default("gross"),
   salaryGross: z.number().min(0).max(10_000_000).optional().default(0),
   salaryNet: z.number().min(0).max(10_000_000).optional().default(0),
+  insuranceSalary: z.number().min(0).max(10_000_000).optional().default(0),
+  emergencyFund: z.number().min(0).max(10_000_000).optional().default(0),
   allowance: z.number().min(0).max(10_000_000).optional().default(0),
   targetValue: z.number().min(0).max(10_000_000).optional().default(0),
   targetDuration: z.enum(["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"]).optional().default("Monthly"),
@@ -97,6 +101,13 @@ const CreateEmployeeSchema = z.object({
   contractStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
   contractEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
   contractCancelled: z.boolean().optional().default(false),
+  extraEmail: z.string().email().max(255).optional().or(z.literal("")).default(""),
+  medicalInsuranceDetails: z.string().max(1000).optional().default(""),
+  isInsured: z.boolean().optional().default(false),
+  militaryExpireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
+  isFivePercent: z.boolean().optional().default(false),
+  socialInsuranceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")).default(""),
+  customField: z.string().max(1000).optional().default(""),
   loginUrl: z.string().min(1).max(500),
   appName: z.string().max(120).optional().default(""),
 });
@@ -176,7 +187,12 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
 
     if (data.q) {
       const term = data.q.replace(/[,%]/g, "");
-      q = q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`);
+      const phoneSearch = (formatEgPhone(term) || term).replace(/\s+/g, "%");
+      let orStr = `full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,phone.ilike.%${phoneSearch}%`;
+      if (/^\d+$/.test(term)) {
+        orStr += `,emp_code.eq.${term}`;
+      }
+      q = q.or(orStr);
     }
     if (data.departmentId) q = q.eq("department_id", data.departmentId);
     if (data.positionId) q = q.eq("position_id", data.positionId);
@@ -188,7 +204,9 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     q = q.order(sortCol, { ascending: data.dir === "asc" }).range(from, to);
 
     const { data: profiles, error: pe, count } = await q;
-    if (pe) throw new Error(pe.message);
+    if (pe) {
+      return { rows: [], total: 0, departments: [], positions: [], roles: [], _error: pe } as any;
+    }
 
     const ids = (profiles ?? []).map((p: any) => p.id);
     const { data: rolesRows } = ids.length
@@ -235,6 +253,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid(),
         full_name: z.string().min(2).max(120).nullable().optional(),
+        gender: z.enum(["male", "female"]).nullable().optional().or(z.literal("")),
         phone: z.string().max(40).nullable().optional(),
         department_id: z.string().uuid().nullable().optional(),
         position_id: z.string().uuid().nullable().optional(),
@@ -246,13 +265,15 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
         id_issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         id_expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         emp_code: z.string().max(40).nullable().optional(),
-        status: z.enum(["Active", "Inactive"]).optional(),
+        status: z.enum(["Active", "Inactive", "Suspended"]).optional(),
         inactive_reason: z.enum(INACTIVE_REASONS).nullable().optional(),
         avatar_url: z.string().max(2_000_000).nullable().optional(),
         allow_past_expiry: z.boolean().optional().default(false),
         salary_mode: z.enum(["gross", "net"]).nullable().optional(),
         salary_gross: z.number().min(0).max(10_000_000).nullable().optional(),
         salary_net: z.number().min(0).max(10_000_000).nullable().optional(),
+        insurance_salary: z.number().min(0).max(10_000_000).nullable().optional(),
+        emergency_fund: z.number().min(0).max(10_000_000).nullable().optional(),
         allowance: z.number().min(0).max(10_000_000).nullable().optional(),
         target_value: z.number().min(0).max(10_000_000).nullable().optional(),
         target_duration: z.enum(["Daily","Weekly","Monthly","Quarterly","Yearly"]).nullable().optional(),
@@ -260,6 +281,14 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
         contract_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         contract_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
         contract_cancelled: z.boolean().optional(),
+        job_grade: z.string().max(100).nullable().optional(),
+        extra_email: z.string().email().max(255).nullable().optional().or(z.literal("")),
+        medical_insurance_details: z.string().max(1000).nullable().optional(),
+        is_insured: z.boolean().optional(),
+        military_expire_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional().or(z.literal("")),
+        is_five_percent: z.boolean().optional(),
+        social_insurance_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional().or(z.literal("")),
+        custom_field: z.string().max(10000).nullable().optional(),
       })
       .parse(input),
   )
@@ -277,6 +306,7 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
     }
     const patch: Record<string, any> = {};
     if (data.full_name !== undefined) patch.full_name = data.full_name;
+    if (data.gender !== undefined) patch.gender = data.gender === "" ? null : data.gender;
     if (data.phone !== undefined) patch.phone = data.phone;
     if (data.department_id !== undefined) patch.department_id = data.department_id;
     if (data.position_id !== undefined) patch.position_id = data.position_id;
@@ -311,6 +341,8 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
     if (data.salary_mode !== undefined) patch.salary_mode = data.salary_mode;
     if (data.salary_gross !== undefined) patch.salary_gross = data.salary_gross;
     if (data.salary_net !== undefined) patch.salary_net = data.salary_net;
+    if (data.insurance_salary !== undefined) patch.insurance_salary = data.insurance_salary;
+    if (data.emergency_fund !== undefined) patch.emergency_fund = data.emergency_fund;
     if (data.allowance !== undefined) patch.allowance = data.allowance;
     if (data.target_value !== undefined) patch.target_value = data.target_value;
     if (data.target_duration !== undefined) patch.target_duration = data.target_duration;
@@ -318,6 +350,14 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
     if (data.contract_start_date !== undefined) patch.contract_start_date = data.contract_start_date;
     if (data.contract_end_date !== undefined) patch.contract_end_date = data.contract_end_date;
     if (data.contract_cancelled !== undefined) patch.contract_cancelled = data.contract_cancelled;
+    if (data.job_grade !== undefined) patch.job_grade = data.job_grade;
+    if (data.extra_email !== undefined) patch.extra_email = data.extra_email === "" ? null : data.extra_email;
+    if (data.medical_insurance_details !== undefined) patch.medical_insurance_details = data.medical_insurance_details;
+    if (data.is_insured !== undefined) patch.is_insured = data.is_insured;
+    if (data.military_expire_date !== undefined) patch.military_expire_date = data.military_expire_date === "" ? null : data.military_expire_date;
+    if (data.is_five_percent !== undefined) patch.is_five_percent = data.is_five_percent;
+    if (data.social_insurance_date !== undefined) patch.social_insurance_date = data.social_insurance_date === "" ? null : data.social_insurance_date;
+    if (data.custom_field !== undefined) patch.custom_field = data.custom_field;
     if (
       patch.contract_start_date &&
       patch.contract_end_date &&
@@ -326,14 +366,18 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
       throw new Error("Contract start date cannot be after the end date");
     }
     if (Object.keys(patch).length === 0) return { ok: true };
-    // Snapshot previous status so we can log a status-change audit row.
+    // Snapshot previous status and custom_field so we can log changes or send notifications.
     let previousStatus: string | null = null;
-    if (patch.status !== undefined) {
+    let previousCustomField: string | null = null;
+    let currentFullName: string | null = null;
+    if (patch.status !== undefined || patch.custom_field !== undefined) {
       const { data: prev } = await (supabase.from("profiles") as any)
-        .select("status")
+        .select("status, custom_field, full_name")
         .eq("id", data.id)
         .maybeSingle();
       previousStatus = (prev as any)?.status ?? null;
+      previousCustomField = (prev as any)?.custom_field ?? null;
+      currentFullName = (prev as any)?.full_name ?? null;
     }
     const { error } = await (supabase.from("profiles") as any).update(patch).eq("id", data.id);
     if (error) {
@@ -351,6 +395,37 @@ export const updateEmployeeAdmin = createServerFn({ method: "POST" })
         source: "update",
         changed_by: userId,
       });
+    }
+
+    if (patch.custom_field !== undefined && patch.custom_field !== previousCustomField) {
+      try {
+        const { loadSmtpConfig } = await import("@/backend/server/smtp-config.server");
+        const { sendEmail } = await import("@/backend/server/smtp-client.server");
+        const smtp = await loadSmtpConfig();
+        if (smtp && smtp.host && smtp.password) {
+          const { data: hrRoles } = await (supabase as any).from("user_roles").select("user_id").in("role", ["admin", "hr"]);
+          if (hrRoles && hrRoles.length > 0) {
+            const hrIds = hrRoles.map((r: any) => r.user_id);
+            const { data: hrProfiles } = await (supabase as any).from("profiles").select("email").in("id", hrIds).not("email", "is", null);
+            const toEmails = (hrProfiles ?? []).map((p: any) => p.email).filter(Boolean);
+            if (toEmails.length > 0) {
+              const empName = patch.full_name || data.full_name || currentFullName || "Employee";
+              await sendEmail(
+                { host: smtp.host, port: smtp.port, secure: smtp.secure, username: smtp.username, password: smtp.password },
+                {
+                  from: smtp.from_name ? `${smtp.from_name} <${smtp.from_email}>` : smtp.from_email,
+                  fromEmail: smtp.from_email,
+                  to: toEmails,
+                  subject: `New Profile Note for ${empName}`,
+                  html: `<p>A new profile note was added for <b>${empName}</b>:</p><blockquote style="border-left: 4px solid #ccc; padding-left: 10px; color: #555;">${patch.custom_field || "<i>Cleared</i>"}</blockquote>`,
+                }
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to send profile note email:", err);
+      }
     }
     return { ok: true };
   });
@@ -778,14 +853,16 @@ export const listCitiesAndDistricts = createServerFn({ method: "GET" })
     cities: CityRow[];
     districts: DistrictRow[];
     departments: { id: string; name_en: string }[];
+    sections: { id: string; department_id: string; name_en: string }[];
     positions: { id: string; name_en: string }[];
     managers: { id: string; name: string }[];
   }> => {
     const { supabase } = context;
-    const [{ data: cities }, { data: districts }, { data: depts }, { data: poss }, { data: mgrs }, { data: mgrRoles }] = await Promise.all([
+    const [{ data: cities }, { data: districts }, { data: depts }, { data: secs }, { data: poss }, { data: mgrs }, { data: mgrRoles }] = await Promise.all([
       supabase.from("cities").select("id, name_en").order("name_en"),
       supabase.from("districts").select("id, city_id, name_en").order("name_en"),
       supabase.from("departments").select("id, name_en").order("name_en"),
+      (supabase as any).from("sections").select("id, department_id, name_en").order("name_en"),
       supabase.from("positions").select("id, name_en").order("name_en"),
       supabase.from("profiles").select("id, full_name, email").eq("status", "Active").order("full_name"),
       supabase.from("user_roles").select("user_id, role").in("role", ["admin", "manager"]),
@@ -796,6 +873,7 @@ export const listCitiesAndDistricts = createServerFn({ method: "GET" })
       cities: (cities ?? []).map((c: any) => ({ id: c.id, name_en: c.name_en })),
       districts: (districts ?? []).map((d: any) => ({ id: d.id, city_id: d.city_id, name_en: d.name_en })),
       departments: (depts ?? []).map((d: any) => ({ id: d.id, name_en: d.name_en })),
+      sections: (secs ?? []).map((s: any) => ({ id: s.id, department_id: s.department_id, name_en: s.name_en })),
       positions: (poss ?? []).map((p: any) => ({ id: p.id, name_en: p.name_en })),
       managers: filteredMgrs.map((m: any) => ({ id: m.id, name: m.full_name ?? m.email ?? "—" })),
     };
@@ -874,6 +952,7 @@ export type EmployeeDetail = {
   full_name: string | null;
   email: string | null;
   phone: string | null;
+  gender: string | null;
   department: string | null;
   position: string | null;
   department_id: string | null;
@@ -901,6 +980,17 @@ export type EmployeeDetail = {
   contract_start_date: string | null;
   contract_end_date: string | null;
   contract_cancelled: boolean;
+  insurance_salary: number | null;
+  emergency_fund: number | null;
+  job_grade: string | null;
+  extra_email: string | null;
+  medical_insurance_details: string | null;
+  is_insured: boolean;
+  military_expire_date: string | null;
+  is_five_percent: boolean;
+  social_insurance_date: string | null;
+  custom_field: string | null;
+  last_action_date: string | null;
   updated_at: string | null;
   created_at: string;
   roles: string[];
@@ -913,7 +1003,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: p, error } = await supabase
       .from("profiles")
-      .select("id, emp_code, full_name, email, phone, department_id, position_id, city_id, district_id, city, district, status, inactive_reason, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, created_at, updated_at")
+      .select("id, emp_code, full_name, email, phone, gender, department_id, position_id, city_id, district_id, city, district, status, inactive_reason, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, job_grade, extra_email, medical_insurance_details, is_insured, military_expire_date, is_five_percent, social_insurance_date, custom_field, last_action_date, created_at, updated_at, insurance_salary, emergency_fund")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -942,6 +1032,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
       full_name: (p as any).full_name,
       email: (p as any).email,
       phone: (p as any).phone,
+      gender: (p as any).gender ?? null,
       department: (dept as any)?.name_en ?? null,
       position: (pos as any)?.name_en ?? null,
       department_id: (p as any).department_id ?? null,
@@ -969,9 +1060,20 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
       contract_start_date: (p as any).contract_start_date ?? null,
       contract_end_date: (p as any).contract_end_date ?? null,
       contract_cancelled: !!(p as any).contract_cancelled,
+      job_grade: (p as any).job_grade ?? null,
+      extra_email: (p as any).extra_email ?? null,
+      medical_insurance_details: (p as any).medical_insurance_details ?? null,
+      is_insured: !!(p as any).is_insured,
+      military_expire_date: (p as any).military_expire_date ?? null,
+      is_five_percent: !!(p as any).is_five_percent,
+      social_insurance_date: (p as any).social_insurance_date ?? null,
+      custom_field: (p as any).custom_field ?? null,
+      last_action_date: (p as any).last_action_date ?? null,
       updated_at: (p as any).updated_at ?? null,
       created_at: (p as any).created_at,
       roles: (roles ?? []).map((r: any) => String(r.role)),
+      insurance_salary: (p as any).insurance_salary !== null && (p as any).insurance_salary !== undefined ? Number((p as any).insurance_salary) : null,
+      emergency_fund: (p as any).emergency_fund !== null && (p as any).emergency_fund !== undefined ? Number((p as any).emergency_fund) : null,
     };
   });
 
@@ -1027,4 +1129,52 @@ export const bulkAssignEmployeeRole = createServerFn({ method: "POST" })
       .upsert(rows, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (error) throw new Error(error.message);
     return { ok: true, count: data.ids.length };
+  });
+
+export const adminTransferEmployee = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((i) => z.object({
+    employee_id: z.string().uuid(),
+    new_department_id: z.string().uuid().optional().nullable(),
+    new_position_id: z.string().uuid().optional().nullable(),
+    new_manager_id: z.string().uuid().optional().nullable(),
+    effective_date: z.string(),
+    note: z.string().optional()
+  }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: profile } = await supabase.from("profiles")
+      .select("department_id, position_id, manager_id")
+      .eq("id", data.employee_id)
+      .single();
+
+    if (!profile) throw new Error("Employee not found");
+
+    const { error: transferErr } = await (supabase as any).from("department_transfers").insert({
+      employee_id: data.employee_id,
+      old_department_id: profile.department_id,
+      new_department_id: data.new_department_id,
+      old_position_id: profile.position_id,
+      new_position_id: data.new_position_id,
+      old_manager_id: profile.manager_id,
+      new_manager_id: data.new_manager_id,
+      effective_date: data.effective_date,
+      note: data.note,
+      created_by: userId,
+    });
+
+    if (transferErr) throw new Error("Failed to create transfer audit log: " + transferErr.message);
+
+    const updates: Record<string, any> = {};
+    if (data.new_department_id !== undefined) updates.department_id = data.new_department_id;
+    if (data.new_position_id !== undefined) updates.position_id = data.new_position_id;
+    if (data.new_manager_id !== undefined) updates.manager_id = data.new_manager_id;
+
+    if (Object.keys(updates).length > 0) {
+      const { error: profErr } = await supabase.from("profiles").update(updates as any).eq("id", data.employee_id);
+      if (profErr) throw new Error("Failed to update employee profile: " + profErr.message);
+    }
+
+    return { ok: true };
   });

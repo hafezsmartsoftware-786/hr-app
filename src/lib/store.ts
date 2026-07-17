@@ -112,6 +112,8 @@ export type ManagerTrip = {
   lat?: number;
   lng?: number;
   radius_m?: number;
+  overnight_nights?: number;
+  transport_type?: string;
   createdBy: string;
   createdAt: number;
   startedAt?: number;

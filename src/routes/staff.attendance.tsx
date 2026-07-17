@@ -35,6 +35,12 @@ function toHM(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+function format12H(iso?: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+}
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -125,7 +131,7 @@ function StaffAttendance() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{r.employee_name}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  {r.date} · in {toHM(r.in_time)} · out {toHM(r.out_time)}
+                  {r.date} · in {format12H(r.in_time)} · out {format12H(r.out_time)}
                 </p>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${tone[r.status] ?? "bg-muted"}`}>

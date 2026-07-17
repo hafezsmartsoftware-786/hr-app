@@ -57,9 +57,8 @@ function CheckInOutCard() {
   const [verified, setVerified] = useState<{ face: boolean; fp: boolean }>({ face: false, fp: false });
 
   const hasFace = !!bioQ.data?.face;
-  const hasFp = (bioQ.data?.fingerprints?.length ?? 0) > 0;
-  const requiresBio = hasFace || hasFp;
-  const bioOk = verified.face || verified.fp || !requiresBio;
+  const requiresBio = true;
+  const bioOk = hasFace && verified.face;
 
   const today = new Date().toISOString().slice(0, 10);
   const todayRow: any = ((attQ.data as any[]) ?? []).find((a) => a.date === today);
@@ -111,7 +110,11 @@ function CheckInOutCard() {
   }
 
   async function go(kind: "in" | "out") {
-    if (requiresBio && !bioOk) {
+    if (!hasFace) {
+      toast.error("Face recognition is required. Please enroll your face in the Biometrics tab first.");
+      return;
+    }
+    if (!bioOk) {
       toast.error(t("verifyBiometricFirst"));
       return;
     }
@@ -210,7 +213,7 @@ function CheckInOutCard() {
             Biometric verification {bioOk ? "· ✓ verified" : "required"}
           </p>
           <div className="flex flex-wrap gap-2">
-            {hasFace && (
+            {hasFace ? (
               <button
                 onClick={() => setShowFace("in")}
                 disabled={verified.face}
@@ -220,17 +223,10 @@ function CheckInOutCard() {
               >
                 <ScanFace className="h-3.5 w-3.5" /> {verified.face ? "Face verified" : "Verify face"}
               </button>
-            )}
-            {hasFp && (
-              <button
-                onClick={verifyFingerprint}
-                disabled={verified.fp}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold ${
-                  verified.fp ? "bg-success/20 text-success" : "bg-gradient-brand text-brand-foreground shadow-brand"
-                }`}
-              >
-                <Fingerprint className="h-3.5 w-3.5" /> {verified.fp ? "Fingerprint verified" : "Verify fingerprint"}
-              </button>
+            ) : (
+              <p className="text-sm font-medium text-destructive">
+                Please enroll your face in the Settings &rarr; Biometrics tab first.
+              </p>
             )}
           </div>
         </div>

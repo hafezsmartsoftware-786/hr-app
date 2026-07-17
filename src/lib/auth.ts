@@ -1,18 +1,20 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type Role = "admin" | "manager" | "staff" | "employee";
+export type Role = "admin" | "manager" | "staff" | "employee" | "finance";
 export type Session = { username: string; role: Role; name: string; employeeId?: string; roles: string[]; avatarUrl?: string | null };
 
 function pickRole(roles: string[]): Role {
   if (roles.includes("admin") || roles.includes("hr")) return "admin";
+  if (roles.includes("finance")) return "finance";
   if (roles.includes("manager")) return "manager";
   if (roles.includes("staff")) return "staff";
   return "employee";
 }
 
-export function pathForRole(role: Role | string): "/admin" | "/manager" | "/staff" | "/employee" {
+export function pathForRole(role: Role | string): "/admin" | "/manager" | "/staff" | "/employee" | "/finance" {
   if (role === "admin" || role === "hr") return "/admin";
+  if (role === "finance") return "/finance";
   if (role === "manager") return "/manager";
   if (role === "staff") return "/staff";
   return "/employee";

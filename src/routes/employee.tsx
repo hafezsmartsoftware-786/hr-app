@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
-import { Home, Clock, Bell, ListChecks, LogIn, MoreHorizontal } from "lucide-react";
+import { Home, Clock, Bell, ListChecks, LogIn, MoreHorizontal, Banknote } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { useSession, useAuthReady } from "@/lib/auth";
@@ -36,6 +36,7 @@ function EmployeeLayout() {
     { to: "/employee", icon: Home, label: t("dashboard") },
     { to: "/employee/attendance", icon: Clock, label: t("attendance") },
     { to: "/employee/check", icon: LogIn, label: "Check" },
+    { to: "/employee/advances", icon: Banknote, label: "Advances" },
     { to: "/employee/tasks", icon: ListChecks, label: t("tasks") },
     { to: "/employee/settings", icon: MoreHorizontal, label: "More" },
   ] as const;

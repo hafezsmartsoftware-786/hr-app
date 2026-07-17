@@ -47,6 +47,12 @@ function toHM(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+function format12H(iso?: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+}
 function calcHours(inIso?: string | null, outIso?: string | null): string {
   if (!inIso || !outIso) return "—";
   const a = new Date(inIso).getTime();
@@ -268,7 +274,7 @@ function exportAttendanceCsv(rows: AttendanceRow[]) {
   const header = ["Employee", "Date", "Check In", "Check Out", "Total", "Branch", "Location", "Status", "Note"];
   const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [header.join(",")].concat(rows.map((r) => [
-    r.employee_name, r.date, toHM(r.in_time), toHM(r.out_time), calcHours(r.in_time, r.out_time),
+    r.employee_name, r.date, format12H(r.in_time), format12H(r.out_time), calcHours(r.in_time, r.out_time),
     r.branch ?? "", [r.street, r.district, r.city].filter(Boolean).join(", "), r.status, r.note ?? "",
   ].map(esc).join(",")));
   const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -280,7 +286,7 @@ function exportAttendanceCsv(rows: AttendanceRow[]) {
 function printAttendancePdf(rows: AttendanceRow[], title: string) {
   const w = window.open("", "_blank", "width=900,height=700");
   if (!w) return;
-  const body = rows.map((r) => `<tr><td>${escapeHtml(r.employee_name)}</td><td>${r.date}</td><td>${toHM(r.in_time)}</td><td>${toHM(r.out_time)}</td><td>${calcHours(r.in_time, r.out_time)}</td><td>${escapeHtml(r.branch ?? "")}</td><td>${escapeHtml([r.street, r.district, r.city].filter(Boolean).join(", "))}</td><td>${escapeHtml(r.status)}</td><td>${escapeHtml(r.note ?? "")}</td></tr>`).join("");
+  const body = rows.map((r) => `<tr><td>${escapeHtml(r.employee_name)}</td><td>${r.date}</td><td>${format12H(r.in_time)}</td><td>${format12H(r.out_time)}</td><td>${calcHours(r.in_time, r.out_time)}</td><td>${escapeHtml(r.branch ?? "")}</td><td>${escapeHtml([r.street, r.district, r.city].filter(Boolean).join(", "))}</td><td>${escapeHtml(r.status)}</td><td>${escapeHtml(r.note ?? "")}</td></tr>`).join("");
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #ddd;padding:6px;text-align:left}th{background:#f5f5f5}@media print{button{display:none}}</style></head><body><h1>${escapeHtml(title)}</h1><table><thead><tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th>Total</th><th>Branch</th><th>Location</th><th>Status</th><th>Note</th></tr></thead><tbody>${body || `<tr><td colspan="9" style="text-align:center">No records</td></tr>`}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
   w.document.close();
 }
@@ -298,10 +304,7 @@ function AdminAttendance() {
   const reverseGeocodeFn = useServerFn(adminReverseGeocode);
 
   const todayIso = new Date().toISOString().slice(0, 10);
-  // Show a wide default window so existing records are visible immediately.
-  const yearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
-  const [fromDate, setFromDate] = useState(yearAgo);
-  const [toDate, setToDate] = useState(todayIso);
+  const [dateFilter, setDateFilter] = useState(todayIso);
   const [empFilter, setEmpFilter] = useState<string>("all");
 
   const [open, setOpen] = useState(false);
@@ -318,10 +321,10 @@ function AdminAttendance() {
   const employees = empQ.data ?? [];
   const empName = useMemo(() => Object.fromEntries(employees.map((e) => [e.id, e.name])), [employees]);
 
-  const queryKey = ["admin", "attendance", { from: fromDate, to: toDate, emp: empFilter }] as const;
+  const queryKey = ["admin", "attendance", { date: dateFilter, emp: empFilter }] as const;
   const listQ = useQuery({
     queryKey,
-    queryFn: () => listFn({ data: { from: fromDate, to: toDate, employeeIds: empFilter === "all" ? undefined : [empFilter] } }),
+    queryFn: () => listFn({ data: { from: dateFilter, to: dateFilter, employeeIds: empFilter === "all" ? undefined : [empFilter] } }),
     refetchInterval: liveOn ? refreshSec * 1000 : false,
   });
   const rows: AttendanceRow[] = (listQ.data as AttendanceRow[] | undefined) ?? [];
@@ -338,7 +341,7 @@ function AdminAttendance() {
           id: r.id,
           lat: r.lat as number,
           lng: r.lng as number,
-          label: `${r.employee_name} · ${r.date} ${toHM(r.in_time)}`,
+          label: `${r.employee_name} · ${r.date} ${format12H(r.in_time)}`,
           color: r.free_check ? "#f59e0b" : "#2563eb",
         })),
     [rows],
@@ -416,8 +419,8 @@ function AdminAttendance() {
       employee_id: r.employee_id,
       employee: r.employee_name,
       date: r.date,
-      in_time: toHM(r.in_time),
-      out_time: toHM(r.out_time),
+      in_time: format12H(r.in_time),
+      out_time: format12H(r.out_time),
       total: calcHours(r.in_time, r.out_time),
       branch: r.branch ?? "",
       status: r.status,
@@ -466,12 +469,12 @@ function AdminAttendance() {
   // ── Task activity (DB-backed) ──
   const activityFn = useServerFn(listActivityRange);
   const activityQ = useQuery({
-    queryKey: ["admin", "task-activity", { from: fromDate, to: toDate, emp: empFilter }],
+    queryKey: ["admin", "task-activity", { date: dateFilter, emp: empFilter }],
     queryFn: () =>
       activityFn({
         data: {
-          from: fromDate,
-          to: toDate,
+          from: dateFilter,
+          to: dateFilter,
           employeeIds: empFilter === "all" ? undefined : [empFilter],
         },
       }),
@@ -515,12 +518,12 @@ function AdminAttendance() {
     return [...remote, ...local]
       .filter((r) => {
         const iso = new Date(r.ts).toISOString().slice(0, 10);
-        if (iso < fromDate || iso > toDate) return false;
+        if (iso !== dateFilter) return false;
         if (empFilter !== "all" && r.employeeId !== empFilter) return false;
         return true;
       })
       .sort((a, b) => b.ts - a.ts);
-  }, [activityQ.data, tasks, empName, t, fromDate, toDate, empFilter]);
+  }, [activityQ.data, tasks, empName, t, dateFilter, empFilter]);
 
   return (
     <div className="space-y-5">
@@ -557,12 +560,8 @@ function AdminAttendance() {
         <TabsContent value="records" className="space-y-5">
           <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-3">
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
-          <span>From</span>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm" />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
-          <span>To</span>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm" />
+          <span>Date</span>
+          <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm" />
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
           <span>{t("filterEmployee")}</span>
@@ -607,7 +606,7 @@ function AdminAttendance() {
                     <td className="px-4 py-3 font-mono tabular-nums">{row.date}</td>
                     <td className="px-4 py-3 font-mono tabular-nums align-top">
                       <div className="flex flex-col">
-                        <span>{toHM(row.in_time)}</span>
+                        <span>{format12H(row.in_time)}</span>
                         {(checkInPlace || (row.lat != null && row.lng != null)) && (
                           <span className="text-[11px] text-muted-foreground font-sans">
                             <LocationName place={checkInPlace} lat={row.lat} lng={row.lng} lookup={reverseGeocodeFn} />
@@ -622,7 +621,7 @@ function AdminAttendance() {
                     </td>
                     <td className="px-4 py-3 font-mono tabular-nums align-top">
                       <div className="flex flex-col">
-                        <span>{toHM(row.out_time)}</span>
+                        <span>{format12H(row.out_time)}</span>
                         {(checkOutPlace || (row.out_lat != null && row.out_lng != null)) && (
                           <span className="text-[11px] text-muted-foreground font-sans">
                             <LocationName place={checkOutPlace} lat={row.out_lat} lng={row.out_lng} lookup={reverseGeocodeFn} />

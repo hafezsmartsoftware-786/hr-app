@@ -39,6 +39,11 @@ import { SubTabs } from "@/components/SubTabs";
 
 
 export const Route = createFileRoute("/admin/employees/")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      q: (search.q as string) || "",
+    };
+  },
   component: EmployeesPage,
 });
 
@@ -47,7 +52,8 @@ function EmployeesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
+  const searchParams = Route.useSearch();
+  const [q, setQ] = useState(searchParams.q || "");
   const [deptFilter, setDeptFilter] = useState("");
   const [posFilter, setPosFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -139,7 +145,7 @@ function EmployeesPage() {
 
   const bulkRoleFn = useServerFn(bulkAssignEmployeeRole);
   const bulkRoleMut = useMutation({
-    mutationFn: (role: "admin" | "hr" | "manager" | "employee") =>
+    mutationFn: (role: "admin" | "hr" | "manager" | "employee" | "finance") =>
       bulkRoleFn({ data: { ids: Array.from(selected), role } }),
     onSuccess: (res, role) => {
       toast.success(`${res.count} employees assigned ${role}`);
@@ -161,7 +167,7 @@ function EmployeesPage() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Employees");
-    XLSX.writeFile(wb, `employees_export_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `employees_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   const allOnPageSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
@@ -282,7 +288,7 @@ function EmployeesPage() {
             </button>
             <select
               onChange={(ev) => {
-                const role = ev.target.value as "admin" | "hr" | "manager" | "employee" | "";
+                const role = ev.target.value as "admin" | "hr" | "manager" | "employee" | "finance" | "";
                 if (!role) return;
                 if (confirm(`Assign role "${role}" to ${selected.size} employee(s)?`)) {
                   bulkRoleMut.mutate(role);
@@ -299,6 +305,7 @@ function EmployeesPage() {
               <option value="hr">hr</option>
               <option value="manager">manager</option>
               <option value="employee">employee</option>
+              <option value="finance">finance</option>
             </select>
             <button
               onClick={() => {
@@ -324,7 +331,7 @@ function EmployeesPage() {
               </th>
               <SortableTh label={t("name")} col="full_name" sort={sort} dir={dir} onSort={toggleSort} />
               <Th>ID</Th>
-              
+
               <Th>{t("position")}</Th>
               <Th>{t("phone")}</Th>
               <SortableTh label="Status" col="status" sort={sort} dir={dir} onSort={toggleSort} />
@@ -380,7 +387,7 @@ function EmployeesPage() {
                     <span className="text-[11px] text-muted-foreground">—</span>
                   )}
                 </td>
-                
+
                 <Td>{e.position ?? "—"}</Td>
                 <Td mono>{e.phone ?? "—"}</Td>
                 <Td>
@@ -404,12 +411,12 @@ function EmployeesPage() {
                     {e.roles.length === 0 && <span className="text-[10px] text-muted-foreground">—</span>}
                     {e.roles.map((r) => {
                       const rc: Record<string, string> = {
-                        admin:    "bg-red-100 text-red-700 ring-1 ring-red-300",
-                        hr:       "bg-purple-100 text-purple-700 ring-1 ring-purple-300",
-                        manager:  "bg-blue-100 text-blue-700 ring-1 ring-blue-300",
+                        admin: "bg-red-100 text-red-700 ring-1 ring-red-300",
+                        hr: "bg-purple-100 text-purple-700 ring-1 ring-purple-300",
+                        manager: "bg-blue-100 text-blue-700 ring-1 ring-blue-300",
                         employee: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300",
-                        staff:    "bg-amber-100 text-amber-700 ring-1 ring-amber-300",
-                        user:     "bg-slate-100 text-slate-600 ring-1 ring-slate-300",
+                        staff: "bg-amber-100 text-amber-700 ring-1 ring-amber-300",
+                        user: "bg-slate-100 text-slate-600 ring-1 ring-slate-300",
                       };
                       return (
                         <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${rc[r] ?? "bg-muted text-muted-foreground"}`}>{r}</span>
@@ -530,7 +537,7 @@ function EditEmployeeDrawer({
   async function onAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; e.currentTarget.value = "";
     if (!f) return;
-    if (!["image/png","image/jpeg","image/jpg","image/webp"].includes(f.type)) {
+    if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(f.type)) {
       toast.error("Only WEBP, PNG or JPEG allowed"); return;
     }
     if (f.size > 500 * 1024) { toast.error("Avatar must be 500 KB or less"); return; }
@@ -551,14 +558,16 @@ function EditEmployeeDrawer({
     setReasonErr(null);
     setBusy(true);
     try {
-      await updateFn({ data: {
-        id: row.id,
-        department_id: departmentId || null,
-        position_id: positionId || null,
-        status,
-        inactive_reason: status === "Active" ? null : (inactiveReason || null),
-        avatar_url: avatarUrl || null,
-      }});
+      await updateFn({
+        data: {
+          id: row.id,
+          department_id: departmentId || null,
+          position_id: positionId || null,
+          status,
+          inactive_reason: status === "Active" ? null : (inactiveReason || null),
+          avatar_url: avatarUrl || null,
+        }
+      });
       toast.success("Employee updated");
       onSaved();
     } catch (e: any) {
@@ -664,7 +673,9 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     name: "",
     email: "",
     phone: "",
-    dept: departments[0]?.name ?? "",
+    dept: "",
+    position: "",
+    gender: "",
     role: "",
     status: "Active",
     branch: locations[0]?.name ?? "Cairo HQ",
@@ -674,7 +685,6 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     targetDuration: "Monthly",
     password: "",
     managerId: "",
-    gender: "",
     country: "Egypt",
     city: "",
     district: "",
@@ -684,9 +694,15 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     nationalId: "",
     isPassport: false,
     nationalIdExpiry: "",
-    position: positions[0]?.name ?? "",
     contractType: "FullTime",
     notes: "",
+    extraEmail: "",
+    medicalInsuranceDetails: "",
+    isInsured: false,
+    militaryExpireDate: "",
+    isFivePercent: false,
+    socialInsuranceDate: "",
+    customField: "",
     manager: "",
     salaryMode: "gross",
     salaryGross: 0,
@@ -737,7 +753,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
     }
   }
 
-  const FIELD_NAMES = ["name","email","phone","password","salary","target","salaryMode","contractType","dept","manager","nationalId","nationalIdExpiry"] as const;
+  const FIELD_NAMES = ["name", "email", "phone", "password", "salary", "target", "salaryMode", "contractType", "dept", "manager", "nationalId", "nationalIdExpiry"] as const;
 
   function validate(f: typeof form = form): Record<string, string> {
     const errs: Record<string, string> = {};
@@ -812,6 +828,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             name: form.name.trim(),
             email: form.email.trim().toLowerCase(),
             phone: formatEgPhone(form.phone),
+            gender: form.gender,
             dept: form.dept,
             position: form.position,
             role: "employee",
@@ -834,6 +851,13 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             contractStartDate,
             contractEndDate,
             contractCancelled,
+            extraEmail: form.extraEmail.trim(),
+            medicalInsuranceDetails: form.medicalInsuranceDetails.trim(),
+            isInsured: form.isInsured,
+            militaryExpireDate: form.militaryExpireDate,
+            isFivePercent: form.isFivePercent,
+            socialInsuranceDate: form.socialInsuranceDate,
+            customField: form.customField.trim(),
             loginUrl: `${window.location.origin}/auth`,
             appName: document.title || "HR Portal",
           },
@@ -901,7 +925,7 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
                       const f = e.target.files?.[0];
                       e.currentTarget.value = "";
                       if (!f) return;
-                      if (!["image/png","image/jpeg","image/jpg","image/webp"].includes(f.type)) {
+                      if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(f.type)) {
                         toast.error("Only PNG, JPEG or WEBP"); return;
                       }
                       if (f.size > 500 * 1024) { toast.error("Image must be 500 KB or less"); return; }
@@ -926,8 +950,9 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
               </div>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <Field label="Email (login)" error={fieldErrors.email}><input type="email" value={form.email} onChange={(e) => upd("email", e.target.value)} onBlur={() => handleBlur("email")} maxLength={120} className={inputCls} /></Field>
+            <Field label="Extra Email (Outlook,Gmail)"><input type="email" value={form.extraEmail} onChange={(e) => upd("extraEmail", e.target.value)} maxLength={120} className={inputCls} /></Field>
             <Field label={t("password")} error={fieldErrors.password}>
               <input type="text" value={form.password} onChange={(e) => upd("password", e.target.value)} onBlur={() => handleBlur("password")} maxLength={64} placeholder="min 6 chars" className={inputCls + " font-mono"} />
             </Field>
@@ -946,19 +971,20 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
                   Auto-generate ID
                 </label>
               </div>
-              <input 
-                value={form.empCode} 
-                onChange={(e) => upd("empCode", e.target.value)} 
-                maxLength={40} 
+              <input
+                value={form.empCode}
+                onChange={(e) => upd("empCode", e.target.value)}
+                maxLength={40}
                 disabled={autoGenId}
-                placeholder={autoGenId ? "Auto-generated on save (e.g. EMP-XXXX)" : "Enter Employee ID..."} 
-                className={inputCls + " font-mono disabled:opacity-50 disabled:bg-muted/50"} 
+                placeholder={autoGenId ? "Auto-generated on save (e.g. EMP-XXXX)" : "Enter Employee ID..."}
+                className={inputCls + " font-mono disabled:opacity-50 disabled:bg-muted/50"}
               />
             </div>
             <Field label="Status">
               <select value={form.status} onChange={(e) => upd("status", e.target.value)} className={inputCls}>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
               </select>
             </Field>
             <Field label="City">
@@ -989,6 +1015,13 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
               <select value={form.position} onChange={(e) => upd("position", e.target.value)} disabled={positions.length === 0} className={inputCls + " disabled:opacity-60"}>
                 <option value="">—</option>
                 {positions.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+              </select>
+            </Field>
+            <Field label={t("gender")}>
+              <select value={form.gender} onChange={(e) => upd("gender", e.target.value)} className={inputCls}>
+                <option value="">—</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
               </select>
             </Field>
             <Field label="Manager" error={fieldErrors.manager}>
@@ -1041,10 +1074,95 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             <Field label="Contract End Date">
               <input type="date" value={contractEndDate} onChange={(e) => setContractEndDate(e.target.value)} className={inputCls + " font-mono"} />
             </Field>
-            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-3">
+            <label className="hidden items-center gap-2 text-xs text-muted-foreground md:col-span-1">
               <input type="checkbox" className="h-4 w-4 accent-brand" checked={contractCancelled} onChange={(e) => setContractCancelled(e.target.checked)} />
               Contract cancelled
             </label>
+
+            <Field label="Medical Insurance Details"><input value={form.medicalInsuranceDetails} onChange={(e) => upd("medicalInsuranceDetails", e.target.value)} className={inputCls} /></Field>
+
+            <Field label="Social Insurance Date">
+              <input type="date" value={form.socialInsuranceDate} onChange={(e) => upd("socialInsuranceDate", e.target.value)} className={inputCls + " font-mono"} />
+            </Field>
+            <Field label="Military Expire Date">
+              <input type="date" value={form.militaryExpireDate} onChange={(e) => upd("militaryExpireDate", e.target.value)} className={inputCls + " font-mono"} />
+            </Field>
+            <div className="md:col-span-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Custom Notes / Fields</label>
+                <button type="button" onClick={() => {
+                  let arr = [];
+                  try { arr = JSON.parse(form.customField || "[]"); if (!Array.isArray(arr)) arr = []; } catch { arr = []; }
+                  arr.push({ id: crypto.randomUUID(), title: "", details: "", type: "text", value: "" });
+                  upd("customField", JSON.stringify(arr));
+                }} className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[10px] font-semibold hover:bg-muted">
+                  <Plus className="h-3 w-3" /> Add Field
+                </button>
+              </div>
+              <div className="space-y-3">
+                {(() => {
+                  let arr = [];
+                  try { 
+                    arr = JSON.parse(form.customField || "[]"); 
+                    if (!Array.isArray(arr)) arr = []; 
+                  } catch { 
+                    if (form.customField) {
+                      arr = [{ id: 'legacy', title: "Legacy Note", details: "", type: "text", value: form.customField }];
+                    }
+                  }
+                  
+                  if (arr.length === 0) return <p className="text-xs text-muted-foreground italic">No custom fields added.</p>;
+
+                  return arr.map((f: any, i: number) => (
+                    <div key={f.id || i} className="flex gap-2 items-start rounded-xl border border-border bg-muted/10 p-3">
+                      <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Title</span>
+                          <input className={inputCls} value={f.title || ""} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].title = e.target.value; upd("customField", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Details</span>
+                          <input className={inputCls} value={f.details || ""} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].details = e.target.value; upd("customField", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Type</span>
+                          <select className={inputCls} value={f.type || "text"} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].type = e.target.value; 
+                            if (newArr[i].type === 'number') newArr[i].value = Number(newArr[i].value) || 0;
+                            upd("customField", JSON.stringify(newArr));
+                          }}>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Value</span>
+                          <input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'} className={inputCls} value={f.value || ""} onChange={(e) => {
+                            const newArr = [...arr]; 
+                            newArr[i].value = f.type === 'number' ? Number(e.target.value) : e.target.value; 
+                            upd("customField", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                      </div>
+                      <button type="button" onClick={() => {
+                        const newArr = arr.filter((_: any, idx: number) => idx !== i);
+                        upd("customField", JSON.stringify(newArr));
+                      }} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive self-center">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+            <div className="col-span-full border-t border-border mt-2 mb-2"></div>
             <Field label="Salary Basis" error={fieldErrors.salaryMode}>
               <select value={form.salaryMode} onChange={(e) => upd("salaryMode", e.target.value as any)} className={inputCls}>
                 <option value="gross">Gross</option>
@@ -1089,10 +1207,22 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             </Field>
             <Field label="Target Duration">
               <select value={form.targetDuration} onChange={(e) => upd("targetDuration", e.target.value)} className={inputCls}>
-                {["Daily","Weekly","Monthly","Quarterly","Yearly"].map((d) => <option key={d} value={d}>{d}</option>)}
+                {["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"].map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </Field>
-            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-3">
+            <div className="flex h-full items-center pt-5">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.isFivePercent} onChange={(e) => upd("isFivePercent", e.target.checked)} />
+                5% Quota (Disability)
+              </label>
+            </div>
+            <div className="flex h-full items-center pt-5">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.isInsured} onChange={(e) => upd("isInsured", e.target.checked)} />
+                Is Insured
+              </label>
+            </div>
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-2">
               <input type="checkbox" className="h-4 w-4 accent-brand" checked={allowPastExpiry} onChange={(e) => setAllowPastExpiry(e.target.checked)} />
               Override: allow expiry date in the past (admin/HR only)
             </label>
@@ -1100,8 +1230,8 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
           {err && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
         </form>
         <div className="mt-4 flex gap-2 border-t border-border pt-3">
-            <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-border bg-card py-2.5 text-sm font-semibold">{t("cancel")}</button>
-            <button type="button" onClick={submit as any} disabled={setupIncomplete} className="flex-1 rounded-xl bg-gradient-brand py-2.5 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-50 disabled:cursor-not-allowed">{t("create")}</button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-border bg-card py-2.5 text-sm font-semibold">{t("cancel")}</button>
+          <button type="button" onClick={submit as any} disabled={setupIncomplete} className="flex-1 rounded-xl bg-gradient-brand py-2.5 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-50 disabled:cursor-not-allowed">{t("create")}</button>
         </div>
       </div>
     </div>
@@ -1153,7 +1283,7 @@ function SearchableSelect({
           type="button"
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
-          className="flex-1 truncate text-left"
+          className="flex-1 truncate text-start"
         >
           {value || <span className="text-muted-foreground">{placeholder || "Select…"}</span>}
         </button>
@@ -1183,7 +1313,7 @@ function SearchableSelect({
                 <button
                   type="button"
                   onClick={() => { onChange(o); setOpen(false); }}
-                  className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-muted ${o === value ? "bg-muted font-semibold" : ""}`}
+                  className={`flex w-full items-center px-3 py-1.5 text-start hover:bg-muted ${o === value ? "bg-muted font-semibold" : ""}`}
                 >
                   {o}
                 </button>
@@ -1235,6 +1365,9 @@ type ExtraHr = {
   contractType: string; notes: string; manager: string;
   salaryMode: "gross" | "net"; salaryGross: number; salaryNet: number;
   empCode: string; idIssueDate: string; idCardAddress: string; avatarUrl: string;
+  extraEmail: string; medicalInsuranceDetails: string; isInsured: boolean;
+  militaryExpireDate: string; isFivePercent: boolean; socialInsuranceDate: string;
+  customField: string;
 };
 type StoredDoc = { name: string; type: string; size: number; dataUrl: string };
 
@@ -1270,7 +1403,7 @@ function ModalDocUpload({ label, doc, onChange }: { label: string; doc?: StoredD
     if (file.size > MAX) {
       const msg = t("fileTooLarge");
       toast.error(msg);
-      setStatus({ kind: "invalid", reason: `File too large (${(file.size/1024/1024).toFixed(2)} MB > 2 MB)` });
+      setStatus({ kind: "invalid", reason: `File too large (${(file.size / 1024 / 1024).toFixed(2)} MB > 2 MB)` });
       return;
     }
     setBusy(true);
@@ -1561,7 +1694,7 @@ function ImportExcelButtonsOnly() {
         setErrors({ fatal: "No data rows found in the file.", missing: [], unknown, mismatched: [], rowIssues: [], totalRows: 0, importedCount: 0 });
         return;
       }
-      const allowedRoles = new Set(["admin", "hr", "manager", "employee"]);
+      const allowedRoles = new Set(["admin", "hr", "manager", "employee", "finance"]);
       const rowIssues: { row: number; name?: string; email?: string; reasons: string[] }[] = [];
       const validRows: Record<string, any>[] = [];
       const validRowNumbers: number[] = [];

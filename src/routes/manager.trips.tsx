@@ -213,12 +213,14 @@ function AddTripModal({ me, team, onClose }: { me: string; team: Array<{ id: str
   const [lng, setLng] = useState<number>();
   const [radius_m, setRadiusM] = useState<number>(500);
   const [showMap, setShowMap] = useState(false);
+  const [overnightNights, setOvernightNights] = useState<number>(0);
+  const [transportType, setTransportType] = useState<string>("");
 
   const submit = () => {
     if (!destination.trim()) return toast.error(t("destination"));
     if (!address.trim()) return toast.error(t("tripAddress"));
     if (!assignee) return toast.error(t("assignedTo"));
-    addTrip({ destination: destination.trim(), address: address.trim(), date, time: time || undefined, purpose: purpose.trim(), notes: notes.trim() || undefined, assignee, status: "pending", createdBy: me, lat, lng, radius_m, cityId: cityId || undefined, district: district || undefined });
+    addTrip({ destination: destination.trim(), address: address.trim(), date, time: time || undefined, purpose: purpose.trim(), notes: notes.trim() || undefined, assignee, status: "pending", createdBy: me, lat, lng, radius_m, cityId: cityId || undefined, district: district || undefined, overnight_nights: overnightNights, transport_type: transportType || undefined });
     toast.success(t("addTrip"));
     onClose();
   };
@@ -277,6 +279,16 @@ function AddTripModal({ me, team, onClose }: { me: string; team: Array<{ id: str
             <Field label={t("assignedTo")}>
               <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="input">
                 {team.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Overnight Nights"><input type="number" min="0" value={overnightNights} onChange={(e) => setOvernightNights(parseInt(e.target.value) || 0)} className="input" /></Field>
+            <Field label="Transport Type">
+              <select value={transportType} onChange={(e) => setTransportType(e.target.value)} className="input">
+                <option value="">—</option>
+                <option value="company_car">Company Car (سيارة الشركة)</option>
+                <option value="expense">Expenses (مصروفات انتقال)</option>
               </select>
             </Field>
           </div>

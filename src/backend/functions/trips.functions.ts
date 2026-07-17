@@ -16,6 +16,21 @@ export const createTrip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => TripCreateSchema.parse(i))
   .handler(async ({ data, context }) => {
+    let calculatedAllowance = 0;
+    if (data.overnight_nights > 0) {
+      const profReq = await context.supabase.from("profiles").select("job_grade").eq("id", data.assignee).single();
+      if (profReq.data?.job_grade && data.city) {
+        const policyReq = await context.supabase.from("trip_allowance_policies")
+          .select("nightly_rate")
+          .eq("city_id", data.city)
+          .eq("job_grade", profReq.data.job_grade)
+          .maybeSingle();
+        if (policyReq.data) {
+          calculatedAllowance = (policyReq.data.nightly_rate || 0) * data.overnight_nights;
+        }
+      }
+    }
+
     const { error, data: row } = await context.supabase.from("trips").insert({
       destination: data.destination,
       address: data.address ?? null,
@@ -31,6 +46,10 @@ export const createTrip = createServerFn({ method: "POST" })
       assignee: data.assignee,
       created_by: context.userId,
       status: "pending",
+      overnight_nights: data.overnight_nights,
+      transport_type: data.transport_type ?? null,
+      calculated_allowance: calculatedAllowance,
+      allowance_status: "pending",
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: row.id };

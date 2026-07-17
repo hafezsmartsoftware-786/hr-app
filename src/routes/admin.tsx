@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { LayoutDashboard, Users, MapPin, Clock, CalendarDays, FileBarChart2, ScrollText, Menu, X, Bell, Search, Wallet, Settings, FileSignature, Shield, Building2, KeyRound, Calculator, UserCog, Network, StickyNote } from "lucide-react";
+import { createFileRoute, Outlet, Link, useRouterState, Navigate, useNavigate } from "@tanstack/react-router";
+import { useState, useRef, useEffect } from "react";
+import { LayoutDashboard, Users, MapPin, Clock, CalendarDays, FileBarChart2, ScrollText, Menu, X, Bell, Search, Wallet, Settings, FileSignature, Shield, Building2, KeyRound, Calculator, UserCog, Network, StickyNote, Banknote, Plane, BarChart3 } from "lucide-react";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { AppLogo } from "@/components/AppLogo";
 import { UserMenu } from "@/components/UserMenu";
@@ -8,6 +8,7 @@ import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { useSession, useAuthReady } from "@/lib/auth";
 import { useExportScheduler } from "@/lib/export-scheduler";
 import { usePermissions } from "@/lib/permissions";
+import { GlobalSearch } from "@/components/admin/GlobalSearch";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -19,13 +20,15 @@ function AdminLayout() {
   const [open, setOpen] = useState(false);
   const session = useSession();
   const ready = useAuthReady();
+  const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   useExportScheduler();
   const { can, isAdmin, loading: permsLoading } = usePermissions();
 
   if (typeof window === "undefined") return null;
   if (!ready) return null;
   if (!session) return <Navigate to="/auth" replace />;
-  const hasAdminAccess = session.roles?.some((r) => ["admin", "hr", "manager", "user"].includes(r));
+  const hasAdminAccess = session.roles?.some((r) => ["admin", "hr", "manager", "user", "finance"].includes(r));
   if (!hasAdminAccess) {
     const target = session.roles?.includes("staff") ? "/staff" : "/employee";
     return <Navigate to={target} replace />;
@@ -36,16 +39,14 @@ function AdminLayout() {
     { to: "/admin/employees", icon: Users, label: t("employees"), page: "employees" },
     { to: "/admin/contracts", icon: FileSignature, label: t("contracts"), page: "contracts" },
     { to: "/admin/geofencing", icon: MapPin, label: t("geofencing"), page: "geofencing" },
-    { to: "/admin/employee-access", icon: KeyRound, label: "Employee Access", page: "employee-access" },
     { to: "/admin/attendance", icon: Clock, label: t("attendance"), page: "attendance" },
     { to: "/admin/leaves", icon: CalendarDays, label: t("leaves"), page: "leaves" },
-    
     { to: "/admin/payroll", icon: Wallet, label: t("payroll"), page: "payroll" },
+    { to: "/admin/advances", icon: Banknote, label: t("advancesTitle"), page: "advances" },
     { to: "/admin/reports", icon: FileBarChart2, label: t("reports"), page: "reports" },
     { to: "/admin/audit", icon: ScrollText, label: t("audit"), page: "audit" },
-    { to: "/admin/directory", icon: Building2, label: "Directory", page: "directory" },
-    { to: "/admin/org-chart", icon: Network, label: "Org Chart", page: "employees" },
-    { to: "/admin/sticky-notes", icon: StickyNote, label: "Sticky Notes", page: null },
+    { to: "/admin/directory", icon: Building2, label: t("directory"), page: "directory" },
+    { to: "/admin/org-chart", icon: Network, label: t("orgChart"), page: "employees" },
     { to: "/admin/settings", icon: Settings, label: t("settings") || "Settings", page: "settings" },
   ] as const;
   const nav = isAdmin || permsLoading
@@ -121,15 +122,12 @@ function AdminLayout() {
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur lg:px-8">
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="rounded-lg p-1.5 hover:bg-muted lg:hidden"><Menu className="h-5 w-5" /></button>
-            <div className="relative hidden md:block">
-              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                placeholder={t("search")}
-                className="w-72 rounded-full border border-input bg-card py-2 ps-9 pe-3 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
-              />
-            </div>
+            <GlobalSearch />
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/admin/sticky-notes" className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title={t("stickyNotes")}>
+              <StickyNote className="h-5 w-5" />
+            </Link>
             <LanguageToggle />
             <NotificationsBell />
             <UserMenu />

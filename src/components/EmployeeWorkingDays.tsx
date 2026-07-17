@@ -304,7 +304,7 @@ export function EmployeeWorkingDays({ employeeId }: { employeeId: string }) {
           Tick a normally-off day (e.g. Fri) to let the employee work that day this month. Counts as a regular working day.
         </p>
 
-        <div className="mt-4 rounded-xl border border-border bg-background/50 p-3">
+        <div className="mt-4 mx-auto max-w-[300px] rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-foreground">{monthLabel}</p>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground">

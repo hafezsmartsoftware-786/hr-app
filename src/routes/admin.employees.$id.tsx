@@ -24,6 +24,7 @@ import {
   setEmployeeDeviceStatus,
   deleteEmployeeDevice,
 } from "@/backend/functions/devices.functions";
+import { listJobGrades } from "@/backend/functions/directory.functions";
 import {
   adminListStickyNotes,
   adminCreateStickyNote,
@@ -32,6 +33,7 @@ import {
   STICKY_COLORS,
   type StickyNote,
 } from "@/backend/functions/sticky-notes.functions";
+import { listAllAdvances } from "@/backend/functions/advances.functions";
 import {
   ArrowLeft,
   Mail,
@@ -52,7 +54,7 @@ import {
   EyeOff,
   Lock,
 } from "lucide-react";
-import { User as UserIcon, ShieldCheck, IdCard, Briefcase, CalendarDays, Plane, AlertCircle, StickyNote as StickyNoteIcon, Plus } from "lucide-react";
+import { User as UserIcon, ShieldCheck, IdCard, Briefcase, CalendarDays, Plane, AlertCircle, StickyNote as StickyNoteIcon, Plus, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -175,6 +177,7 @@ function EmployeeDetail() {
         <div className="grid grid-cols-2 gap-4 p-5 text-sm md:grid-cols-5">
           <Info icon={Mail} label={t("email")} value={employee.email} />
           <Info icon={Phone} label={t("phone")} value={(employee as any).phone ?? "—"} mono />
+          <Info icon={UserIcon} label={t("gender")} value={(employee as any).gender ? ((employee as any).gender.charAt(0).toUpperCase() + (employee as any).gender.slice(1)) : "—"} />
           <Info icon={Building2} label={t("department")} value={employee.dept} />
           <Info icon={MapPin} label={t("branch")} value={employee.branch} />
           <Info icon={Calendar} label="Employee Code" value={(employee as any).emp_code ?? (employee as any).empCode ?? "—"} mono />
@@ -195,9 +198,8 @@ function EmployeeDetail() {
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`flex-1 rounded-full px-3 py-2 font-medium capitalize transition-colors ${
-              tab === k ? "bg-gradient-brand text-brand-foreground shadow-brand" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 rounded-full px-3 py-2 font-medium capitalize transition-colors ${tab === k ? "bg-gradient-brand text-brand-foreground shadow-brand" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             {t(k)}
           </button>
@@ -213,17 +215,108 @@ function EmployeeDetail() {
 }
 
 import type { EmployeeDetail as EmployeeDetailRow } from "@/backend/functions/employees.functions";
+import { adminTransferEmployee } from "@/backend/functions/employees.functions";
+
+function EmployeeTransferModal({ detail, close }: { detail: EmployeeDetailRow, close: () => void }) {
+  const qc = useQueryClient();
+  const transferFn = useServerFn(adminTransferEmployee);
+  const cityFn = useServerFn(listCitiesAndDistricts);
+  const { data: locs } = useQuery({ queryKey: ["cities-districts"], queryFn: () => cityFn(), staleTime: 5 * 60_000 });
+  const [form, setForm] = useState({
+    new_department_id: detail.department_id ?? "",
+    new_position_id: detail.position_id ?? "",
+    new_manager_id: detail.manager_id ?? "",
+    effective_date: new Date().toISOString().slice(0, 10),
+    note: ""
+  });
+  const [saving, setSaving] = useState(false);
+  
+  async function save() {
+    setSaving(true);
+    try {
+      await transferFn({ data: {
+        employee_id: detail.id,
+        new_department_id: form.new_department_id || null,
+        new_position_id: form.new_position_id || null,
+        new_manager_id: form.new_manager_id || null,
+        effective_date: form.effective_date,
+        note: form.note || undefined
+      }});
+      toast.success("Employee transferred successfully");
+      qc.invalidateQueries({ queryKey: ["admin"] });
+      close();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const editInputCls = "w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+        <div className="border-b border-border p-5 pb-4">
+          <h2 className="text-xl font-semibold">Transfer Employee</h2>
+          <p className="text-sm text-muted-foreground">Reassign {detail.full_name} to a new department or manager.</p>
+        </div>
+        <div className="p-5 space-y-4">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            New Department
+            <select className={editInputCls + " mt-1"} value={form.new_department_id} onChange={e => setForm(f => ({...f, new_department_id: e.target.value}))}>
+              <option value="">— Unchanged —</option>
+              {(locs?.departments ?? []).map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            New Position
+            <select className={editInputCls + " mt-1"} value={form.new_position_id} onChange={e => setForm(f => ({...f, new_position_id: e.target.value}))}>
+              <option value="">— Unchanged —</option>
+              {(locs?.positions ?? []).map(p => <option key={p.id} value={p.id}>{p.name_en}</option>)}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            New Manager
+            <select className={editInputCls + " mt-1"} value={form.new_manager_id} onChange={e => setForm(f => ({...f, new_manager_id: e.target.value}))}>
+              <option value="">— Unchanged —</option>
+              {(locs?.managers ?? []).filter(m => m.id !== detail.id).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Effective Date
+            <input type="date" className={editInputCls + " mt-1 font-mono"} value={form.effective_date} onChange={e => setForm(f => ({...f, effective_date: e.target.value}))} />
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Transfer Note
+            <textarea className={editInputCls + " mt-1 min-h-[80px]"} value={form.note} onChange={e => setForm(f => ({...f, note: e.target.value}))} placeholder="Reason for transfer..." />
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border bg-muted/30 p-4">
+          <button onClick={close} className="rounded-xl px-4 py-2 text-sm font-semibold hover:bg-muted">Cancel</button>
+          <button disabled={saving} onClick={save} className="rounded-xl bg-gradient-brand px-5 py-2 text-sm font-semibold text-brand-foreground shadow-brand">
+            {saving ? "Transferring..." : "Transfer"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canEdit: boolean }) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
   const cityFn = useServerFn(listCitiesAndDistricts);
+  const gradesFn = useServerFn(listJobGrades);
   const { data: locs } = useQuery({ queryKey: ["cities-districts"], queryFn: () => cityFn(), enabled: editing, staleTime: 5 * 60_000 });
+  const { data: grades } = useQuery({ queryKey: ["job-grades"], queryFn: () => gradesFn(), enabled: editing, staleTime: 5 * 60_000 });
   const updateFn = useServerFn(updateEmployeeAdmin);
   const initialForm = useMemo(() => ({
     full_name: detail.full_name ?? "",
     phone: detail.phone ?? "",
+    gender: detail.gender ?? "",
     emp_code: detail.emp_code ?? "",
     national_id: detail.national_id ?? "",
     is_passport: detail.national_id ? !/^\d{14}$/.test(detail.national_id) : false,
@@ -232,6 +325,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     city_id: detail.city_id ?? "",
     district_id: detail.district_id ?? "",
     department_id: detail.department_id ?? "",
+    section_id: (detail as any).section_id ?? "",
     position_id: detail.position_id ?? "",
     manager_id: detail.manager_id ?? "",
     status: detail.status as "Active" | "Inactive",
@@ -241,12 +335,22 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     salary_gross: detail.salary_gross ?? 0,
     salary_net: detail.salary_net ?? 0,
     allowance: detail.allowance ?? 0,
+    insurance_salary: (detail as any).insurance_salary ?? 0,
+    emergency_fund: (detail as any).emergency_fund ?? 0,
     target_value: detail.target_value ?? 0,
-    target_duration: (detail.target_duration ?? "Monthly") as "Daily"|"Weekly"|"Monthly"|"Quarterly"|"Yearly",
-    contract_type: (detail.contract_type ?? "FullTime") as "FullTime"|"PartTime"|"Temporary"|"Internship"|"Probation3M",
+    target_duration: (detail.target_duration ?? "Monthly") as "Daily" | "Weekly" | "Monthly" | "Quarterly" | "Yearly",
+    contract_type: (detail.contract_type ?? "FullTime") as "FullTime" | "PartTime" | "Temporary" | "Internship" | "Probation3M",
     contract_start_date: detail.contract_start_date ?? "",
     contract_end_date: detail.contract_end_date ?? "",
     contract_cancelled: !!detail.contract_cancelled,
+    job_grade: detail.job_grade ?? "",
+    extra_email: (detail as any).extra_email ?? "",
+    medical_insurance_details: (detail as any).medical_insurance_details ?? "",
+    is_insured: !!(detail as any).is_insured,
+    military_expire_date: (detail as any).military_expire_date ?? "",
+    is_five_percent: !!(detail as any).is_five_percent,
+    social_insurance_date: (detail as any).social_insurance_date ?? "",
+    custom_field: (detail as any).custom_field ?? "",
   }), [detail]);
   const [form, setForm] = useState(initialForm);
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
@@ -284,20 +388,21 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
-  type SideTab = "overview" | "employment" | "identity" | "roles" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "status";
+  const sectionsForDept = (locs?.sections ?? []).filter((s: any) => !form.department_id || s.department_id === form.department_id);
+  type SideTab = "overview" | "employment" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "advances" | "status" | "offboarding";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
     { id: "employment", label: "Employment", icon: Briefcase },
-    { id: "identity", label: "Identity", icon: IdCard },
-    { id: "roles", label: "Roles", icon: ShieldCheck },
     { id: "assignments", label: "Assignments", icon: Target },
     { id: "attendance", label: "Attendance", icon: CalendarDays },
     { id: "leaves", label: "Leaves", icon: Plane },
     { id: "documents", label: "Documents", icon: FileText },
     { id: "devices", label: "Devices", icon: Smartphone },
     { id: "notes", label: "Notes", icon: StickyNoteIcon },
+    { id: "advances", label: "Advances", icon: Banknote },
     { id: "status", label: "Status history", icon: Clock },
+    { id: "offboarding", label: "Offboarding", icon: Plane },
   ];
 
   async function save() {
@@ -339,6 +444,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
         data: {
           id: detail.id,
           full_name: form.full_name.trim() || null,
+          gender: form.gender || null,
           phone: form.phone.trim() || null,
           emp_code: form.emp_code.trim() || null,
           national_id: form.national_id.trim() || null,
@@ -347,8 +453,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
           city_id: form.city_id || null,
           district_id: form.district_id || null,
           department_id: form.department_id || null,
+          section_id: form.section_id || null,
           position_id: form.position_id || null,
           manager_id: form.manager_id || null,
+          job_grade: form.job_grade || null,
           status: form.status,
           inactive_reason: form.status === "Active" ? null : (form.inactive_reason || null),
           allow_past_expiry: form.allow_past_expiry,
@@ -356,12 +464,21 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
           salary_gross: Number(form.salary_gross) || 0,
           salary_net: Number(form.salary_net) || 0,
           allowance: Number(form.allowance) || 0,
+          insurance_salary: Number(form.insurance_salary) || 0,
+          emergency_fund: Number(form.emergency_fund) || 0,
           target_value: Number(form.target_value) || 0,
           target_duration: form.target_duration,
           contract_type: form.contract_type,
           contract_start_date: form.contract_start_date || null,
           contract_end_date: form.contract_end_date || null,
           contract_cancelled: form.contract_cancelled,
+          extra_email: form.extra_email.trim() || null,
+          medical_insurance_details: form.medical_insurance_details.trim() || null,
+          is_insured: form.is_insured,
+          military_expire_date: form.military_expire_date || null,
+          is_five_percent: form.is_five_percent,
+          social_insurance_date: form.social_insurance_date || null,
+          custom_field: form.custom_field.trim() || null,
         },
       });
       toast.success("Saved");
@@ -411,182 +528,323 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                 </span>
               ) : null}
             </span>
+            {detail.gender && (
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+                {detail.gender}
+              </span>
+            )}
             {canEdit && !editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur hover:bg-white/25"
-              >
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <>
+                <button
+                  onClick={() => setTransferModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur hover:bg-white/25"
+                >
+                  Transfer
+                </button>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur hover:bg-white/25"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
 
+      {transferModalOpen && <EmployeeTransferModal detail={detail} close={() => setTransferModalOpen(false)} />}
+
       {editing ? (
         <div className="overflow-hidden rounded-3xl border border-border bg-card">
-        {isDirty && (
-          <div className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700">
-            <AlertCircle className="h-3.5 w-3.5" /> You have unsaved changes.
-          </div>
-        )}
-        <div className="grid grid-cols-1 gap-3 p-5 text-sm md:grid-cols-3">
-          <EditField label="Full name"><input className={editInputCls} value={form.full_name} onChange={(e) => upd("full_name", e.target.value)} /></EditField>
-          <EditField label="Phone"><input className={editInputCls + " font-mono"} value={form.phone} onChange={(e) => upd("phone", e.target.value)} /></EditField>
-          <EditField label="Employee Code"><input className={editInputCls + " font-mono"} value={form.emp_code} onChange={(e) => upd("emp_code", e.target.value)} /></EditField>
-          <EditField label="Status">
-            <select className={editInputCls} value={form.status} onChange={(e) => upd("status", e.target.value as any)}>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </EditField>
-          {form.status === "Inactive" && (
-            <EditField label="Inactive reason *">
-              <select
-                className={`${editInputCls} ${form.status === "Inactive" && !form.inactive_reason && err ? "border-destructive" : ""}`}
-                value={form.inactive_reason}
-                onChange={(e) => { upd("inactive_reason", e.target.value as any); if (err) setErr(null); }}
-                aria-invalid={form.status === "Inactive" && !form.inactive_reason && !!err}
-              >
-                <option value="">{t("selectReasonPlaceholder")}</option>
-                {INACTIVE_REASONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+          {isDirty && (
+            <div className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700">
+              <AlertCircle className="h-3.5 w-3.5" /> You have unsaved changes.
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-3 p-5 text-sm md:grid-cols-3">
+            <EditField label="Full name"><input className={editInputCls} value={form.full_name} onChange={(e) => upd("full_name", e.target.value)} /></EditField>
+            <EditField label="Phone"><input className={editInputCls + " font-mono"} value={form.phone} onChange={(e) => upd("phone", e.target.value)} /></EditField>
+            <EditField label={t("gender")}>
+              <select className={editInputCls} value={form.gender} onChange={(e) => upd("gender", e.target.value)}>
+                <option value="">—</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </EditField>
+            <EditField label="Employee Code"><input className={editInputCls + " font-mono"} value={form.emp_code} onChange={(e) => upd("emp_code", e.target.value)} /></EditField>
+            <EditField label="Extra Email (Outlook,Gmail)"><input type="email" className={editInputCls} value={form.extra_email} onChange={(e) => upd("extra_email", e.target.value)} /></EditField>
+            <EditField label="Status">
+              <select className={editInputCls} value={form.status} onChange={(e) => upd("status", e.target.value as any)}>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </EditField>
+            {form.status === "Inactive" && (
+              <EditField label="Inactive reason *">
+                <select
+                  className={`${editInputCls} ${form.status === "Inactive" && !form.inactive_reason && err ? "border-destructive" : ""}`}
+                  value={form.inactive_reason}
+                  onChange={(e) => { upd("inactive_reason", e.target.value as any); if (err) setErr(null); }}
+                  aria-invalid={form.status === "Inactive" && !form.inactive_reason && !!err}
+                >
+                  <option value="">{t("selectReasonPlaceholder")}</option>
+                  {INACTIVE_REASONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {form.status === "Inactive" && !form.inactive_reason && err === t("inactiveReasonRequired") && (
+                  <p role="alert" className="mt-1 text-xs font-medium text-destructive">{err}</p>
+                )}
+              </EditField>
+            )}
+            <EditField label="City">
+              <select className={editInputCls} value={form.city_id} onChange={(e) => { upd("city_id", e.target.value); upd("district_id", ""); }}>
+                <option value="">—</option>
+                {(locs?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
+              </select>
+            </EditField>
+            <EditField label="District">
+              <select className={editInputCls} value={form.district_id} onChange={(e) => upd("district_id", e.target.value)} disabled={!form.city_id}>
+                <option value="">—</option>
+                {districtsForCity.map((d) => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Department">
+              <select className={editInputCls} value={form.department_id} onChange={(e) => { upd("department_id", e.target.value); upd("section_id", ""); }}>
+                <option value="">—</option>
+                {(locs?.departments ?? []).map((d) => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Sub-Section">
+              <select className={editInputCls} value={form.section_id} onChange={(e) => {
+                const sec = sectionsForDept.find((s: any) => s.id === e.target.value);
+                upd("section_id", e.target.value);
+                if (sec && !form.department_id) upd("department_id", sec.department_id);
+              }}>
+                <option value="">—</option>
+                {sectionsForDept.map((s: any) => <option key={s.id} value={s.id}>{s.name_en}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Position">
+              <select className={editInputCls} value={form.position_id} onChange={(e) => upd("position_id", e.target.value)}>
+                <option value="">—</option>
+                {(locs?.positions ?? []).map((p) => <option key={p.id} value={p.id}>{p.name_en}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Manager">
+              <select className={editInputCls} value={form.manager_id} onChange={(e) => upd("manager_id", e.target.value)}>
+                <option value="">—</option>
+                {(locs?.managers ?? []).filter((m) => m.id !== detail.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Job Grade (Trips)">
+              <select className={editInputCls} value={form.job_grade} onChange={(e) => upd("job_grade", e.target.value)}>
+                <option value="">(None)</option>
+                {(grades ?? []).filter((g: any) => g.active).map((g: any) => (
+                  <option key={g.name_en} value={g.name_en}>{g.name_en}</option>
                 ))}
               </select>
-              {form.status === "Inactive" && !form.inactive_reason && err === t("inactiveReasonRequired") && (
-                <p role="alert" className="mt-1 text-xs font-medium text-destructive">{err}</p>
-              )}
             </EditField>
-          )}
-          <EditField label="City">
-            <select className={editInputCls} value={form.city_id} onChange={(e) => { upd("city_id", e.target.value); upd("district_id", ""); }}>
-              <option value="">—</option>
-              {(locs?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
-            </select>
-          </EditField>
-          <EditField label="District">
-            <select className={editInputCls} value={form.district_id} onChange={(e) => upd("district_id", e.target.value)} disabled={!form.city_id}>
-              <option value="">—</option>
-              {districtsForCity.map((d) => <option key={d.id} value={d.id}>{d.name_en}</option>)}
-            </select>
-          </EditField>
-          <EditField label="Department">
-            <select className={editInputCls} value={form.department_id} onChange={(e) => upd("department_id", e.target.value)}>
-              <option value="">—</option>
-              {(locs?.departments ?? []).map((d) => <option key={d.id} value={d.id}>{d.name_en}</option>)}
-            </select>
-          </EditField>
-          <EditField label="Position">
-            <select className={editInputCls} value={form.position_id} onChange={(e) => upd("position_id", e.target.value)}>
-              <option value="">—</option>
-              {(locs?.positions ?? []).map((p) => <option key={p.id} value={p.id}>{p.name_en}</option>)}
-            </select>
-          </EditField>
-          <EditField label="Manager">
-            <select className={editInputCls} value={form.manager_id} onChange={(e) => upd("manager_id", e.target.value)}>
-              <option value="">—</option>
-              {(locs?.managers ?? []).filter((m) => m.id !== detail.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </EditField>
-          <label className="block">
-            <span className="mb-1 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              National ID
-              <label className="flex cursor-pointer items-center gap-1.5 normal-case tracking-normal">
-                <input type="checkbox" checked={form.is_passport} onChange={(e) => { upd("is_passport", e.target.checked); setNationalIdErr(validateNationalId(form.national_id, e.target.checked)); }} className="rounded border-input text-brand focus:ring-brand" />
-                Passport
-              </label>
-            </span>
-            <input className={editInputCls + " font-mono" + (nationalIdErr ? " border-destructive" : "")} value={form.national_id} onChange={(e) => { upd("national_id", e.target.value); setNationalIdErr(validateNationalId(e.target.value, form.is_passport)); }} onBlur={() => setNationalIdErr(validateNationalId(form.national_id, form.is_passport))} maxLength={form.is_passport ? 15 : 14} placeholder={form.is_passport ? "Passport Number" : "14-digit National ID"} />
-            {nationalIdErr && <p className="mt-1 text-xs font-medium text-destructive">{nationalIdErr}</p>}
-          </label>
-          <EditField label="ID Issue Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_issue_date} onChange={(e) => {
-            const d = e.target.value;
-            upd("id_issue_date", d);
-            if (d) {
-              const exp = new Date(d);
-              exp.setFullYear(exp.getFullYear() + 7);
-              exp.setDate(exp.getDate() - 1);
-              upd("id_expiry_date", exp.toISOString().slice(0, 10));
-            }
-          }} /></EditField>
-          <EditField label="ID Expiry Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_expiry_date} onChange={(e) => upd("id_expiry_date", e.target.value)} /></EditField>
-          <EditField label="Contract Type">
-            <select className={editInputCls} value={form.contract_type} onChange={(e) => upd("contract_type", e.target.value as any)}>
-              <option value="FullTime">Full-time</option>
-              <option value="PartTime">Part-time</option>
-              <option value="Temporary">Temporary</option>
-              <option value="Internship">Internship</option>
-              <option value="Probation3M">Probation (3 months)</option>
-            </select>
-          </EditField>
-          <EditField label="Contract Start Date">
-            <input type="date" className={editInputCls + " font-mono"} value={form.contract_start_date} onChange={(e) => upd("contract_start_date", e.target.value)} />
-          </EditField>
-          <EditField label="Contract End Date">
-            <div className="space-y-1.5">
-              <input type="date" className={editInputCls + " font-mono"} value={form.contract_end_date} onChange={(e) => upd("contract_end_date", e.target.value)} />
-              {form.contract_end_date && (
-                <ContractDaysBadge endDate={form.contract_end_date} cancelled={form.contract_cancelled} />
-              )}
+            <label className="block">
+              <span className="mb-1 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                National ID
+                <label className="flex cursor-pointer items-center gap-1.5 normal-case tracking-normal">
+                  <input type="checkbox" checked={form.is_passport} onChange={(e) => { upd("is_passport", e.target.checked); setNationalIdErr(validateNationalId(form.national_id, e.target.checked)); }} className="rounded border-input text-brand focus:ring-brand" />
+                  Passport
+                </label>
+              </span>
+              <input className={editInputCls + " font-mono" + (nationalIdErr ? " border-destructive" : "")} value={form.national_id} onChange={(e) => { upd("national_id", e.target.value); setNationalIdErr(validateNationalId(e.target.value, form.is_passport)); }} onBlur={() => setNationalIdErr(validateNationalId(form.national_id, form.is_passport))} maxLength={form.is_passport ? 15 : 14} placeholder={form.is_passport ? "Passport Number" : "14-digit National ID"} />
+              {nationalIdErr && <p className="mt-1 text-xs font-medium text-destructive">{nationalIdErr}</p>}
+            </label>
+            <EditField label="ID Issue Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_issue_date} onChange={(e) => {
+              const d = e.target.value;
+              upd("id_issue_date", d);
+              if (d) {
+                const exp = new Date(d);
+                exp.setFullYear(exp.getFullYear() + 7);
+                exp.setDate(exp.getDate() - 1);
+                upd("id_expiry_date", exp.toISOString().slice(0, 10));
+              }
+            }} /></EditField>
+            <EditField label="ID Expiry Date"><input type="date" className={editInputCls + " font-mono"} value={form.id_expiry_date} onChange={(e) => upd("id_expiry_date", e.target.value)} /></EditField>
+            <EditField label="Contract Type">
+              <select className={editInputCls} value={form.contract_type} onChange={(e) => upd("contract_type", e.target.value as any)}>
+                <option value="FullTime">Full-time</option>
+                <option value="PartTime">Part-time</option>
+                <option value="Temporary">Temporary</option>
+                <option value="Internship">Internship</option>
+                <option value="Probation3M">Probation (3 months)</option>
+              </select>
+            </EditField>
+            <EditField label="Contract Start Date">
+              <input type="date" className={editInputCls + " font-mono"} value={form.contract_start_date} onChange={(e) => upd("contract_start_date", e.target.value)} />
+            </EditField>
+            <EditField label="Contract End Date">
+              <div className="space-y-1.5">
+                <input type="date" className={editInputCls + " font-mono"} value={form.contract_end_date} onChange={(e) => upd("contract_end_date", e.target.value)} />
+                {form.contract_end_date && (
+                  <ContractDaysBadge endDate={form.contract_end_date} cancelled={form.contract_cancelled} />
+                )}
+              </div>
+            </EditField>
+            <label className="hidden items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.contract_cancelled} onChange={(e) => upd("contract_cancelled", e.target.checked)} />
+              Contract cancelled
+            </label>
+
+            <EditField label="Medical Insurance Details"><input className={editInputCls} value={form.medical_insurance_details} onChange={(e) => upd("medical_insurance_details", e.target.value)} /></EditField>
+
+            <EditField label="Social Insurance Date">
+              <input type="date" className={editInputCls + " font-mono"} value={form.social_insurance_date} onChange={(e) => upd("social_insurance_date", e.target.value)} />
+            </EditField>
+            <EditField label="Military Expire Date">
+              <input type="date" className={editInputCls + " font-mono"} value={form.military_expire_date} onChange={(e) => upd("military_expire_date", e.target.value)} />
+            </EditField>
+            <div className="md:col-span-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Custom Notes / Fields</label>
+                <button type="button" onClick={() => {
+                  let arr = [];
+                  try { arr = JSON.parse(form.custom_field || "[]"); if (!Array.isArray(arr)) arr = []; } catch { arr = []; }
+                  arr.push({ id: crypto.randomUUID(), title: "", details: "", type: "text", value: "" });
+                  upd("custom_field", JSON.stringify(arr));
+                }} className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[10px] font-semibold hover:bg-muted">
+                  <Plus className="h-3 w-3" /> Add Field
+                </button>
+              </div>
+              <div className="space-y-3">
+                {(() => {
+                  let arr = [];
+                  try { 
+                    arr = JSON.parse(form.custom_field || "[]"); 
+                    if (!Array.isArray(arr)) arr = []; 
+                  } catch { 
+                    if (form.custom_field) {
+                      arr = [{ id: 'legacy', title: "Legacy Note", details: "", type: "text", value: form.custom_field }];
+                    }
+                  }
+                  
+                  if (arr.length === 0) return <p className="text-xs text-muted-foreground italic">No custom fields added.</p>;
+
+                  return arr.map((f: any, i: number) => (
+                    <div key={f.id || i} className="flex gap-2 items-start rounded-xl border border-border bg-muted/10 p-3">
+                      <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Title</span>
+                          <input className={editInputCls} value={f.title || ""} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].title = e.target.value; upd("custom_field", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Details</span>
+                          <input className={editInputCls} value={f.details || ""} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].details = e.target.value; upd("custom_field", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Type</span>
+                          <select className={editInputCls} value={f.type || "text"} onChange={(e) => {
+                            const newArr = [...arr]; newArr[i].type = e.target.value; 
+                            if (newArr[i].type === 'number') newArr[i].value = Number(newArr[i].value) || 0;
+                            upd("custom_field", JSON.stringify(newArr));
+                          }}>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-medium uppercase text-muted-foreground">Value</span>
+                          <input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'} className={editInputCls} value={f.value || ""} onChange={(e) => {
+                            const newArr = [...arr]; 
+                            newArr[i].value = f.type === 'number' ? Number(e.target.value) : e.target.value; 
+                            upd("custom_field", JSON.stringify(newArr));
+                          }} />
+                        </label>
+                      </div>
+                      <button type="button" onClick={() => {
+                        const newArr = arr.filter((_: any, idx: number) => idx !== i);
+                        upd("custom_field", JSON.stringify(newArr));
+                      }} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive self-center">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
-          </EditField>
-          <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-3">
-            <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.contract_cancelled} onChange={(e) => upd("contract_cancelled", e.target.checked)} />
-            Contract cancelled
-          </label>
-          <EditField label="Salary Basis">
-            <select className={editInputCls} value={form.salary_mode} onChange={(e) => upd("salary_mode", e.target.value as any)}>
-              <option value="gross">Gross</option>
-              <option value="net">Net</option>
-            </select>
-          </EditField>
-          <EditField label="Salary Gross (EGP)">
-            <input
-              type="number"
-              min={0}
-              readOnly={form.salary_mode === "net"}
-              className={editInputCls + " font-mono" + (form.salary_mode === "net" ? " bg-muted/40 text-muted-foreground" : "")}
-              value={form.salary_gross || ""}
-              onChange={(e) => {
-                const { gross, net } = computeSalaryPair(Number(e.target.value), "gross");
-                upd("salary_gross", gross);
-                upd("salary_net", net);
-              }}
-            />
-          </EditField>
-          <EditField label="Salary Net (EGP)">
-            <input
-              type="number"
-              min={0}
-              readOnly={form.salary_mode === "gross"}
-              className={editInputCls + " font-mono" + (form.salary_mode === "gross" ? " bg-muted/40 text-muted-foreground" : "")}
-              value={form.salary_net || ""}
-              onChange={(e) => {
-                const { gross, net } = computeSalaryPair(Number(e.target.value), "net");
-                upd("salary_net", net);
-                upd("salary_gross", gross);
-              }}
-            />
-          </EditField>
-          <EditField label="Allowance (EGP)"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.allowance || ""} onChange={(e) => upd("allowance", Number(e.target.value))} /></EditField>
-          <EditField label="Target Value"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.target_value || ""} onChange={(e) => upd("target_value", Number(e.target.value))} /></EditField>
-          <EditField label="Target Duration">
-            <select className={editInputCls} value={form.target_duration} onChange={(e) => upd("target_duration", e.target.value as any)}>
-              {["Daily","Weekly","Monthly","Quarterly","Yearly"].map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </EditField>
-          <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-3">
-            <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.allow_past_expiry} onChange={(e) => upd("allow_past_expiry", e.target.checked)} />
-            Override: allow expiry date in the past (admin/HR only)
-          </label>
-          {err && <p className="md:col-span-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
-          <div className="md:col-span-3 flex justify-end gap-2">
-            <button onClick={tryCancel} className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold">Cancel</button>
-            <button disabled={saving || !isDirty} onClick={save} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
-              <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
-            </button>
+            <div className="col-span-full border-t border-border mt-2 mb-2"></div>
+            <EditField label="Salary Basis">
+              <select className={editInputCls} value={form.salary_mode} onChange={(e) => upd("salary_mode", e.target.value as any)}>
+                <option value="gross">Gross</option>
+                <option value="net">Net</option>
+              </select>
+            </EditField>
+            <EditField label="Salary Gross (EGP)">
+              <input
+                type="number"
+                min={0}
+                readOnly={form.salary_mode === "net"}
+                className={editInputCls + " font-mono" + (form.salary_mode === "net" ? " bg-muted/40 text-muted-foreground" : "")}
+                value={form.salary_gross || ""}
+                onChange={(e) => {
+                  const { gross, net } = computeSalaryPair(Number(e.target.value), "gross");
+                  upd("salary_gross", gross);
+                  upd("salary_net", net);
+                }}
+              />
+            </EditField>
+            <EditField label="Salary Net (EGP)">
+              <input
+                type="number"
+                min={0}
+                readOnly={form.salary_mode === "gross"}
+                className={editInputCls + " font-mono" + (form.salary_mode === "gross" ? " bg-muted/40 text-muted-foreground" : "")}
+                value={form.salary_net || ""}
+                onChange={(e) => {
+                  const { gross, net } = computeSalaryPair(Number(e.target.value), "net");
+                  upd("salary_net", net);
+                  upd("salary_gross", gross);
+                }}
+              />
+            </EditField>
+            <EditField label="Allowance (EGP)"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.allowance || ""} onChange={(e) => upd("allowance", Number(e.target.value))} /></EditField>
+            <EditField label="Insurance Salary (EGP)"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.insurance_salary || ""} onChange={(e) => upd("insurance_salary", Number(e.target.value))} /></EditField>
+            <EditField label="Emergency Relief Fund (EGP)"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.emergency_fund || ""} onChange={(e) => upd("emergency_fund", Number(e.target.value))} /></EditField>
+            <EditField label="Target Value"><input type="number" min={0} className={editInputCls + " font-mono"} value={form.target_value || ""} onChange={(e) => upd("target_value", Number(e.target.value))} /></EditField>
+            <EditField label="Target Duration">
+              <select className={editInputCls} value={form.target_duration} onChange={(e) => upd("target_duration", e.target.value as any)}>
+                {["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"].map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </EditField>
+            <div className="flex h-full items-center pt-5">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.is_five_percent} onChange={(e) => upd("is_five_percent", e.target.checked)} />
+                5% Quota (Disability)
+              </label>
+            </div>
+            <div className="flex h-full items-center pt-5">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.is_insured} onChange={(e) => upd("is_insured", e.target.checked)} />
+                Is Insured
+              </label>
+            </div>
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground md:col-span-1">
+              <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.allow_past_expiry} onChange={(e) => upd("allow_past_expiry", e.target.checked)} />
+              Override: allow expiry date in the past (admin/HR only)
+            </label>
+            {err && <p className="md:col-span-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
+            <div className="md:col-span-3 flex justify-end gap-2">
+              <button onClick={tryCancel} className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold">Cancel</button>
+              <button disabled={saving || !isDirty} onClick={save} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
+                <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
-        </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-[220px_1fr]">
@@ -598,11 +856,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                   <button
                     key={n.id}
                     onClick={() => setSideTab(n.id)}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                      active
+                    className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${active
                         ? "bg-gradient-brand text-brand-foreground shadow-brand"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <n.icon className="h-4 w-4" />
                     <span>{n.label}</span>
@@ -624,9 +881,50 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                   <Info icon={MapPin} label="District" value={detail.district ?? "—"} />
                   <Info icon={UserIcon} label="Manager" value={detail.manager_name ?? detail.manager_id ?? "—"} />
                   <Info icon={Calendar} label="Locale" value={detail.locale ?? "—"} />
-                  <Info icon={Calendar} label="Status" value={detail.status} />
+                  <Info icon={Plane} label="Job Grade (Trips)" value={detail.job_grade ?? "—"} />
+                  <Info icon={FileText} label="National ID" value={detail.national_id ?? "—"} mono />
+                  <Info icon={Calendar} label="ID Issue Date" value={detail.id_issue_date ?? "—"} />
+                  <Info icon={Calendar} label="ID Expiry Date" value={detail.id_expiry_date ?? "—"} />
                   <Info icon={Calendar} label="Created" value={detail.created_at ? new Date(detail.created_at).toLocaleString() : "—"} />
                   <Info icon={Calendar} label="Updated" value={detail.updated_at ? new Date(detail.updated_at).toLocaleString() : "—"} />
+                  <Info icon={UserIcon} label="5% Quota (Disability)" value={(detail as any).is_five_percent ? "Yes" : "No"} />
+                  <Info icon={UserIcon} label="Is Insured" value={(detail as any).is_insured ? "Yes" : "No"} />
+                  <div className="flex flex-col gap-1 md:col-span-3 mt-2">
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Roles</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detail.roles.length === 0 ? (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      ) : (
+                        detail.roles.map((r) => (
+                          <span key={r} className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">{r}</span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 md:col-span-3 mt-4 border-t border-border pt-4">
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Custom Notes / Fields</span>
+                    {(() => {
+                      let arr = [];
+                      try {
+                        arr = JSON.parse((detail as any).custom_field || "[]");
+                        if (!Array.isArray(arr)) arr = [];
+                      } catch {
+                        if ((detail as any).custom_field) arr = [{ id: 'legacy', title: "Legacy Note", details: "", type: "text", value: (detail as any).custom_field }];
+                      }
+                      if (arr.length === 0) return <span className="text-sm text-muted-foreground">—</span>;
+                      return (
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {arr.map((f: any, i: number) => (
+                            <div key={f.id || i} className="rounded-xl border border-border bg-muted/20 p-3">
+                              <p className="font-semibold text-sm text-foreground truncate" title={f.title || "Untitled"}>{f.title || "Untitled"}</p>
+                              {f.details && <p className="text-xs text-muted-foreground mt-0.5 truncate" title={f.details}>{f.details}</p>}
+                              <p className="mt-2 text-sm text-foreground break-words font-mono bg-background border border-border rounded-lg px-2 py-1">{f.value || "—"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             )}
@@ -654,37 +952,16 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                   <Info icon={Calendar} label="Salary Basis" value={detail.salary_mode ? (detail.salary_mode === "gross" ? "Gross" : "Net") : "—"} />
                   <Info icon={Calendar} label="Salary (Gross)" value={detail.salary_gross != null ? `${detail.salary_gross.toLocaleString()} EGP` : "—"} mono />
                   <Info icon={Calendar} label="Salary (Net)" value={detail.salary_net != null ? `${detail.salary_net.toLocaleString()} EGP` : "—"} mono />
+                  <Info icon={Calendar} label="Insurance Salary" value={(detail as any).insurance_salary != null ? `${(detail as any).insurance_salary.toLocaleString()} EGP` : "—"} mono />
+                  <Info icon={Calendar} label="Emergency Relief Fund" value={(detail as any).emergency_fund != null ? `${(detail as any).emergency_fund.toLocaleString()} EGP` : "—"} mono />
                   <Info icon={Calendar} label="Allowance" value={detail.allowance != null ? `${detail.allowance.toLocaleString()} EGP` : "—"} mono />
+                  <Info icon={Plane} label="Job Grade (Trips)" value={detail.job_grade ?? "—"} />
                   <Info icon={Calendar} label="Target" value={detail.target_value != null ? `${detail.target_value} / ${detail.target_duration ?? "—"}` : "—"} />
                 </div>
               </div>
             )}
 
-            {sideTab === "identity" && (
-              <div className="rounded-3xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-display text-base font-semibold">Identity</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
-                  <Info icon={FileText} label="National ID" value={detail.national_id ?? "—"} mono />
-                  <Info icon={Calendar} label="ID Issue Date" value={detail.id_issue_date ?? "—"} />
-                  <Info icon={Calendar} label="ID Expiry Date" value={detail.id_expiry_date ?? "—"} />
-                </div>
-              </div>
-            )}
 
-            {sideTab === "roles" && (
-              <div className="rounded-3xl border border-border bg-card p-5">
-                <h2 className="mb-3 font-display text-base font-semibold">Roles</h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {detail.roles.length === 0 ? (
-                    <span className="text-sm text-muted-foreground">No roles assigned.</span>
-                  ) : (
-                    detail.roles.map((r) => (
-                      <span key={r} className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">{r}</span>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
 
             {sideTab === "assignments" && (
               <div className="rounded-3xl border border-border bg-card p-5">
@@ -716,8 +993,16 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
               <EmployeeNotesPanel profileId={detail.id} canManage={canEdit} />
             )}
 
+            {sideTab === "advances" && (
+              <AdvancesTab employeeId={detail.id} />
+            )}
+
             {sideTab === "status" && (
               <StatusHistoryPanel profileId={detail.id} />
+            )}
+
+            {sideTab === "offboarding" && (
+              <AdminOffboarding employeeId={detail.id} resignationDate={detail.contract_end_date || new Date().toISOString().slice(0, 10)} />
             )}
           </div>
         </div>
@@ -742,6 +1027,106 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+import { calculateFinalSettlement, saveFinalSettlement } from "@/backend/functions/offboarding.functions";
+
+function AdminOffboarding({ employeeId, resignationDate }: { employeeId: string; resignationDate: string }) {
+  const qc = useQueryClient();
+  const [date, setDate] = useState(resignationDate);
+  const calcFn = useServerFn(calculateFinalSettlement);
+  const saveFn = useServerFn(saveFinalSettlement);
+
+  const { data: settlement, isLoading } = useQuery({
+    queryKey: ["offboarding", employeeId, date],
+    queryFn: () => calcFn({ data: { employee_id: employeeId, resignation_date: date } }),
+    enabled: !!employeeId,
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  async function handleApprove() {
+    if (!settlement) return;
+    setSaving(true);
+    try {
+      await saveFn({
+        data: {
+          employee_id: employeeId,
+          resignation_date: date,
+          worked_days: settlement.worked_days,
+          daily_rate: settlement.daily_rate,
+          unpaid_salary: settlement.unpaid_salary,
+          remaining_leave_days: settlement.remaining_leave_days,
+          leave_cash_out: settlement.leave_cash_out,
+          outstanding_advances: settlement.outstanding_advances,
+          other_additions: 0,
+          other_deductions: 0,
+        }
+      });
+      toast.success("Final settlement approved and saved!");
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="mb-4 flex flex-col gap-1">
+        <h3 className="text-lg font-semibold">Final Settlement</h3>
+        <p className="text-sm text-muted-foreground">Calculate end of service dues based on the resignation date.</p>
+      </div>
+
+      <div className="max-w-xl rounded-2xl border border-border bg-card p-5">
+        <label className="mb-4 block text-sm font-semibold">
+          Resignation Date
+          <input type="date" className="input mt-1 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+
+        {isLoading ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">Calculating...</div>
+        ) : settlement ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 rounded-xl bg-muted/30 p-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Daily Rate</p>
+                <p className="font-mono font-medium">{settlement.daily_rate} EGP</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Worked Days (Current Month)</p>
+                <p className="font-mono font-medium">{settlement.worked_days}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Unpaid Salary</p>
+                <p className="font-mono font-medium text-green-600">+{settlement.unpaid_salary} EGP</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Remaining Leaves ({settlement.remaining_leave_days})</p>
+                <p className="font-mono font-medium text-green-600">+{settlement.leave_cash_out} EGP</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground">Outstanding Advances/Loans</p>
+                <p className="font-mono font-medium text-destructive">-{settlement.outstanding_advances} EGP</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-gradient-brand/10 p-4 border border-brand/20">
+              <span className="font-semibold text-brand">Net Settlement</span>
+              <span className="font-mono text-xl font-bold text-brand">{settlement.net_settlement} EGP</span>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3">
+              <button disabled={saving} onClick={handleApprove} className="rounded-xl bg-gradient-brand px-6 py-2 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
+                {saving ? "Saving..." : "Approve & Mark Resigned"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -1015,11 +1400,10 @@ function DevicesTab({ devices }: { devices: Device[] }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                d.status === "approved" ? "bg-success/15 text-success" :
-                d.status === "pending" ? "bg-warning/20 text-warning-foreground" :
-                "bg-destructive/15 text-destructive"
-              }`}>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${d.status === "approved" ? "bg-success/15 text-success" :
+                  d.status === "pending" ? "bg-warning/20 text-warning-foreground" :
+                    "bg-destructive/15 text-destructive"
+                }`}>
                 {d.status === "approved" ? t("approved") : d.status === "pending" ? t("pending") : t("revoke")}
               </span>
               {d.status !== "approved" && (
@@ -1062,12 +1446,12 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
   const [confirm, setConfirm] = useState<
     | null
     | {
-        kind: "single" | "bulk";
-        title: string;
-        description: string;
-        conflicts: string[];
-        onConfirm: () => Promise<void> | void;
-      }
+      kind: "single" | "bulk";
+      title: string;
+      description: string;
+      conflicts: string[];
+      onConfirm: () => Promise<void> | void;
+    }
   >(null);
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
@@ -1520,11 +1904,10 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
                     {r.dayLabel}
                     {r.holiday && <span className="ms-2 text-[11px] font-medium text-violet-600">· {r.holiday.name}</span>}
                     {r.leave && (
-                      <span className={`ms-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                        r.leave.status === "approved" ? "bg-sky-500/15 text-sky-600"
-                        : r.leave.status === "pending" ? "bg-amber-500/15 text-amber-600"
-                        : "bg-muted text-muted-foreground"
-                      }`}>
+                      <span className={`ms-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r.leave.status === "approved" ? "bg-sky-500/15 text-sky-600"
+                          : r.leave.status === "pending" ? "bg-amber-500/15 text-amber-600"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
                         {r.leave.status === "pending" ? "Pending" : r.leave.status === "approved" ? "Leave" : r.leave.status}
                         {" · "}{r.leave.type}
                         {r.leave.paid === false ? " · unpaid" : r.leave.paid ? " · paid" : ""}
@@ -1647,9 +2030,9 @@ function LeavesHistoryPanel({ employeeId }: { employeeId: string }) {
   const rows = (data ?? []) as any[];
   const tone = (s: string) =>
     s === "approved" ? "bg-emerald-500/10 text-emerald-600" :
-    s === "rejected" ? "bg-destructive/10 text-destructive" :
-    s === "cancelled" ? "bg-muted text-muted-foreground" :
-    "bg-amber-500/10 text-amber-600";
+      s === "rejected" ? "bg-destructive/10 text-destructive" :
+        s === "cancelled" ? "bg-muted text-muted-foreground" :
+          "bg-amber-500/10 text-amber-600";
   return (
     <div className="rounded-3xl border border-border bg-card p-5">
       <h2 className="mb-4 font-display text-base font-semibold">Leaves</h2>
@@ -1696,9 +2079,8 @@ function LeavesTab({ leaves }: { leaves: Array<{ id: number; type: string; start
           <button
             key={k}
             onClick={() => setFilter(k)}
-            className={`rounded-2xl border px-3 py-2.5 text-start transition-colors ${
-              filter === k ? "border-brand bg-gradient-brand text-brand-foreground shadow-brand" : "border-border bg-card hover:bg-muted/50"
-            }`}
+            className={`rounded-2xl border px-3 py-2.5 text-start transition-colors ${filter === k ? "border-brand bg-gradient-brand text-brand-foreground shadow-brand" : "border-border bg-card hover:bg-muted/50"
+              }`}
           >
             <p className={`text-[10px] uppercase tracking-wider ${filter === k ? "text-brand-foreground/80" : "text-muted-foreground"}`}>{labels[k]}</p>
             <p className="font-display text-lg font-semibold tabular-nums">{counts[k]}</p>
@@ -1733,6 +2115,8 @@ function InfoTab({ employee }: { employee: Employee }) {
   const viewerRole = useViewerRole();
   const allowedToSeeSensitive = canViewSensitive(viewerRole);
   const allEmployees = useStore((s) => s.employees);
+  const gradesFn = useServerFn(listJobGrades);
+  const { data: grades } = useQuery({ queryKey: ["job-grades"], queryFn: () => gradesFn(), staleTime: 5 * 60_000 });
   const departments = useMemo(
     () => Array.from(new Set(allEmployees.map((x) => x.dept).filter(Boolean))),
     [allEmployees],
@@ -1758,6 +2142,7 @@ function InfoTab({ employee }: { employee: Employee }) {
     nationalIdExpiry: e.nationalIdExpiry ?? "",
     dept: employee.dept ?? "",
     manager: e.manager ?? "",
+    job_grade: e.job_grade ?? "",
     contractType: e.contractType ?? "FullTime",
     position: e.position ?? employee.role,
     notes: e.notes ?? "",
@@ -1819,11 +2204,10 @@ function InfoTab({ employee }: { employee: Employee }) {
             <button
               key={k.id}
               onClick={() => setSubTab(k.id)}
-              className={`flex-1 min-w-[110px] rounded-xl px-3 py-2 font-semibold transition-colors ${
-                subTab === k.id
+              className={`flex-1 min-w-[110px] rounded-xl px-3 py-2 font-semibold transition-colors ${subTab === k.id
                   ? "bg-gradient-brand text-brand-foreground shadow-brand"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               {t(k.labelKey as any)}
             </button>
@@ -1897,6 +2281,14 @@ function InfoTab({ employee }: { employee: Employee }) {
                 {departments.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </Field>
+            <Field label="Job Grade (For Allowances)">
+              <select value={form.job_grade} onChange={(ev) => upd("job_grade", ev.target.value)} className={inputCls}>
+                <option value="">(None)</option>
+                {(grades ?? []).filter((g: any) => g.active).map((g: any) => (
+                  <option key={g.name_en} value={g.name_en}>{g.name_en}</option>
+                ))}
+              </select>
+            </Field>
             <Field label={t("manager")}>
               <select value={form.manager} onChange={(ev) => upd("manager", ev.target.value)} className={inputCls}>
                 <option value="">{t("noManager")}</option>
@@ -1931,11 +2323,10 @@ function InfoTab({ employee }: { employee: Employee }) {
                 {(["gross", "net"] as const).map((m) => (
                   <label
                     key={m}
-                    className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                      form.salaryMode === m
+                    className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${form.salaryMode === m
                         ? "border-brand bg-gradient-brand text-brand-foreground shadow-brand"
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -2203,10 +2594,10 @@ function AttendanceTab({ employeeName }: { employeeName: string }) {
 
   const statusLabel = (s: string) =>
     s === "present" ? t("present") :
-    s === "late" ? t("late") :
-    s === "absent" ? t("absent") :
-    s === "leave" ? t("onLeave") :
-    s;
+      s === "late" ? t("late") :
+        s === "absent" ? t("absent") :
+          s === "leave" ? t("onLeave") :
+            s;
 
   // Shift policy: 09:00 → 17:00
   const SHIFT_IN = 9 * 60;
@@ -2317,25 +2708,25 @@ function AttendanceTab({ employeeName }: { employeeName: string }) {
                 const lm = lateMin(a.in);
                 const em = earlyMin(a.out);
                 return (
-                <tr key={a.date} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{a.date}</td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">
-                    <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{a.in}</span>
-                  </td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">{a.out}</td>
-                  <td className={`px-4 py-3 text-end font-mono tabular-nums ${lm > 0 ? "text-warning-foreground" : "text-muted-foreground"}`}>
-                    {lm > 0 ? fmtMin(lm) : "—"}
-                  </td>
-                  <td className={`px-4 py-3 text-end font-mono tabular-nums ${em > 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                    {em > 0 ? fmtMin(em) : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-end font-mono tabular-nums">{a.hours}</td>
-                  <td className="px-4 py-3 text-end">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${attTone(a.status)}`}>
-                      {statusLabel(a.status)}
-                    </span>
-                  </td>
-                </tr>
+                  <tr key={a.date} className="hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{a.date}</td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{a.in}</span>
+                    </td>
+                    <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">{a.out}</td>
+                    <td className={`px-4 py-3 text-end font-mono tabular-nums ${lm > 0 ? "text-warning-foreground" : "text-muted-foreground"}`}>
+                      {lm > 0 ? fmtMin(lm) : "—"}
+                    </td>
+                    <td className={`px-4 py-3 text-end font-mono tabular-nums ${em > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                      {em > 0 ? fmtMin(em) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-end font-mono tabular-nums">{a.hours}</td>
+                    <td className="px-4 py-3 text-end">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${attTone(a.status)}`}>
+                        {statusLabel(a.status)}
+                      </span>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -2730,11 +3121,10 @@ function EmployeeDevicesPanel({ userId, canManage }: { userId: string; canManage
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                  d.status === "approved" ? "bg-success/15 text-success" :
-                  d.status === "pending" ? "bg-warning/20 text-warning-foreground" :
-                  "bg-destructive/15 text-destructive"
-                }`}>{d.status}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${d.status === "approved" ? "bg-success/15 text-success" :
+                    d.status === "pending" ? "bg-warning/20 text-warning-foreground" :
+                      "bg-destructive/15 text-destructive"
+                  }`}>{d.status}</span>
                 {canManage && d.status !== "approved" && (
                   <button onClick={() => setStatus(d.id, "approved")} className="inline-flex items-center gap-1 rounded-full bg-gradient-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground shadow-brand">
                     <Check className="h-3 w-3" /> Approve
@@ -2940,6 +3330,49 @@ function StatusHistoryPanel({ profileId }: { profileId: string }) {
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  );
+}
+
+function AdvancesTab({ employeeId }: { employeeId: string }) {
+  const [page, setPage] = useState(1);
+  const advancesFn = useServerFn(listAllAdvances);
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "employee-advances", employeeId, page],
+    queryFn: () => advancesFn({ data: { employee_id: employeeId, page, limit: 15 } })
+  });
+
+  return (
+    <div className="rounded-3xl border border-border bg-card p-5">
+      <h2 className="mb-4 font-display text-base font-semibold">Advances</h2>
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : data?.advances.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No advances found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40 text-xs font-semibold text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-start">Request #</th>
+                <th className="px-3 py-2 text-start">Date</th>
+                <th className="px-3 py-2 text-start">Amount</th>
+                <th className="px-3 py-2 text-start">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data?.advances.map(a => (
+                <tr key={a.id}>
+                  <td className="px-3 py-2 font-mono text-xs text-brand">{a.request_number}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{new Date(a.created_at).toLocaleDateString()}</td>
+                  <td className="px-3 py-2 font-mono font-medium">{a.requested_amount} {a.currency}</td>
+                  <td className="px-3 py-2 capitalize">{a.status.replace(/_/g, " ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

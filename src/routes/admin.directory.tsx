@@ -7,16 +7,19 @@ import { Plus, Trash2, Upload, Download, FileSpreadsheet } from "lucide-react";
 import {
   listDepartments, upsertDepartment, deleteDepartment,
   listPositions, upsertPosition, deletePosition,
+  listJobGrades, upsertJobGrade, deleteJobGrade,
   listCitiesWithDistricts, upsertCity, deleteCity, upsertDistrict, deleteDistrict,
 } from "@/backend/functions/directory.functions";
 import { listCitiesAndDistricts } from "@/backend/functions/employees.functions";
 import { downloadTemplate, parseExcelFile } from "@/lib/excel";
 import { NetworksManager } from "./admin.networks";
+import { DepartmentStructureModal } from "@/components/admin/DepartmentStructureModal";
+import { SectionsManager } from "@/components/admin/SectionsManager";
 
 const ContractTemplatesManager = lazy(() => import("@/components/ContractTemplatesManager").then((mod) => ({ default: mod.ContractTemplatesManager })));
 
-type Tab = "departments" | "positions" | "cities" | "networks" | "contractTemplates";
-const validTabs: Tab[] = ["departments", "positions", "cities", "networks", "contractTemplates"];
+type Tab = "departments" | "sections" | "positions" | "job_grades" | "cities" | "networks" | "contractTemplates";
+const validTabs: Tab[] = ["departments", "sections", "positions", "job_grades", "cities", "networks", "contractTemplates"];
 
 export const Route = createFileRoute("/admin/directory")({
   component: DirectoryPage,
@@ -28,7 +31,9 @@ export const Route = createFileRoute("/admin/directory")({
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "departments", label: "Departments" },
+  { id: "sections", label: "Sections" },
   { id: "positions", label: "Positions" },
+  { id: "job_grades", label: "Job Grades" },
   { id: "cities", label: "Cities & Districts" },
   { id: "networks", label: "Networks" },
   { id: "contractTemplates", label: "Contract Templates" },
@@ -91,7 +96,9 @@ function DirectoryPage() {
       </div>
       <div className="rounded-3xl border border-border bg-card p-5">
         {tab === "departments" && <NamedSection kind="departments" />}
+        {tab === "sections" && <SectionsManager />}
         {tab === "positions" && <NamedSection kind="positions" />}
+        {tab === "job_grades" && <NamedSection kind="job_grades" />}
         {tab === "cities" && <CitiesSection />}
         {tab === "networks" && <NetworksManager />}
         {tab === "contractTemplates" && (
@@ -104,11 +111,11 @@ function DirectoryPage() {
   );
 }
 
-function NamedSection({ kind }: { kind: "departments" | "positions" }) {
+function NamedSection({ kind }: { kind: "departments" | "positions" | "job_grades" }) {
   const qc = useQueryClient();
-  const list = useServerFn(kind === "departments" ? listDepartments : listPositions);
-  const upsert = useServerFn(kind === "departments" ? upsertDepartment : upsertPosition);
-  const del = useServerFn(kind === "departments" ? deleteDepartment : deletePosition);
+  const list = useServerFn(kind === "departments" ? listDepartments : kind === "positions" ? listPositions : listJobGrades);
+  const upsert = useServerFn(kind === "departments" ? upsertDepartment : kind === "positions" ? upsertPosition : upsertJobGrade);
+  const del = useServerFn(kind === "departments" ? deleteDepartment : kind === "positions" ? deletePosition : deleteJobGrade);
   const key = [kind];
   const q = useQuery({ queryKey: key, queryFn: () => list() });
   const isDept = kind === "departments";
@@ -131,6 +138,7 @@ function NamedSection({ kind }: { kind: "departments" | "positions" }) {
     onError: (e: Error) => toast.error(e.message),
   });
   const [draft, setDraft] = useState<{ name_en: string; name_ar: string; responsible_person_id: string }>({ name_en: "", name_ar: "", responsible_person_id: "" });
+  const [structureDept, setStructureDept] = useState<{ id: string; name_en: string } | null>(null);
 
   const headers = ["name_en", "name_ar", "active"];
   const paged = usePaged<any>(q.data ?? []);
@@ -224,14 +232,28 @@ function NamedSection({ kind }: { kind: "departments" | "positions" }) {
               </button>
             </td>
             <td className="px-3 py-2 text-end">
-              <button onClick={() => mDel.mutate(r.id)} className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center justify-end gap-2">
+                {isDept && (
+                  <button onClick={() => setStructureDept(r)} className="rounded-lg bg-brand/10 p-1.5 text-brand hover:bg-brand/20 text-xs font-semibold px-3">
+                    Manage Structure
+                  </button>
+                )}
+                <button onClick={() => mDel.mutate(r.id)} className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </td>
           </tr>
         ))}
       </Table>
       <Pagination page={paged.page} pageCount={paged.pageCount} onChange={paged.setPage} />
+      {structureDept && (
+        <DepartmentStructureModal
+          departmentId={structureDept.id}
+          departmentName={structureDept.name_en}
+          onClose={() => setStructureDept(null)}
+        />
+      )}
     </div>
   );
 }

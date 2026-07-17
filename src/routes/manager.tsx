@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
-import { Home, Users, ListChecks, Route as RouteIcon, LogOut, LogIn, UserCircle } from "lucide-react";
+import { Home, Users, ListChecks, Route as RouteIcon, LogOut, LogIn, UserCircle, Banknote } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { LanguageToggle, useI18n } from "@/lib/i18n";
 import { useSession, useAuthReady, signOut } from "@/lib/auth";
@@ -29,6 +29,7 @@ function ManagerLayout() {
     { to: "/manager", icon: Home, label: t("dashboard"), exact: true },
     { to: "/manager/check", icon: LogIn, label: "Check in/out" },
     { to: "/manager/team", icon: Users, label: t("myTeam") },
+    { to: "/manager/advances", icon: Banknote, label: "Advances" },
     { to: "/manager/tasks", icon: ListChecks, label: t("tasks") },
     { to: "/manager/trips", icon: RouteIcon, label: t("trips") },
     { to: "/manager/profile", icon: UserCircle, label: "Profile" },

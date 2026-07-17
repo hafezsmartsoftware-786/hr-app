@@ -1635,18 +1635,28 @@ export type Database = {
           district: string | null
           district_id: string | null
           email: string | null
+          extra_email: string | null
           emp_code: string | null
           full_name: string | null
+          custom_field: string | null
+          gender: string | null
           id: string
           id_expiry_date: string | null
           id_issue_date: string | null
           inactive_reason: string | null
+          is_five_percent: boolean | null
+          is_insured: boolean | null
           insurance_applicable: boolean
+          job_grade: string | null
           locale: string
           manager_id: string | null
           martyrs_fund_applicable: boolean
           national_id: string | null
+          medical_insurance_details: string | null
+          military_expire_date: string | null
           phone: string | null
+          social_insurance_date: string | null
+          last_action_date: string | null
           position_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           salary_amount: number
@@ -1674,18 +1684,27 @@ export type Database = {
           district?: string | null
           district_id?: string | null
           email?: string | null
+          extra_email?: string | null
           emp_code?: string | null
           full_name?: string | null
+          custom_field?: string | null
+          gender?: string | null
           id: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
           inactive_reason?: string | null
+          is_five_percent?: boolean | null
+          is_insured?: boolean | null
           insurance_applicable?: boolean
           locale?: string
           manager_id?: string | null
           martyrs_fund_applicable?: boolean
           national_id?: string | null
+          medical_insurance_details?: string | null
+          military_expire_date?: string | null
           phone?: string | null
+          social_insurance_date?: string | null
+          last_action_date?: string | null
           position_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           salary_amount?: number
@@ -1713,18 +1732,27 @@ export type Database = {
           district?: string | null
           district_id?: string | null
           email?: string | null
+          extra_email?: string | null
           emp_code?: string | null
           full_name?: string | null
+          custom_field?: string | null
+          gender?: string | null
           id?: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
           inactive_reason?: string | null
+          is_five_percent?: boolean | null
+          is_insured?: boolean | null
           insurance_applicable?: boolean
           locale?: string
           manager_id?: string | null
           martyrs_fund_applicable?: boolean
           national_id?: string | null
+          medical_insurance_details?: string | null
+          military_expire_date?: string | null
           phone?: string | null
+          social_insurance_date?: string | null
+          last_action_date?: string | null
           position_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           salary_amount?: number
@@ -2350,10 +2378,39 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_allowance_policies: {
+        Row: {
+          id: string
+          city_id: string
+          job_grade: string
+          nightly_rate: number
+          transport_expense: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          city_id: string
+          job_grade: string
+          nightly_rate?: number
+          transport_expense?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          city_id?: string
+          job_grade?: string
+          nightly_rate?: number
+          transport_expense?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       trips: {
         Row: {
           address: string | null
           assignee: string
+          allowance_status: string
+          calculated_allowance: number
           city: string | null
           completed_at: string | null
           created_at: string
@@ -2364,10 +2421,12 @@ export type Database = {
           lat: number | null
           lng: number | null
           notes: string | null
+          overnight_nights: number
           purpose: string | null
           radius_m: number | null
           started_at: string | null
           status: string
+          transport_type: string | null
           trip_date: string
           trip_time: string | null
           updated_at: string
@@ -2375,6 +2434,8 @@ export type Database = {
         Insert: {
           address?: string | null
           assignee: string
+          allowance_status?: string
+          calculated_allowance?: number
           city?: string | null
           completed_at?: string | null
           created_at?: string
@@ -2385,10 +2446,12 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           notes?: string | null
+          overnight_nights?: number
           purpose?: string | null
           radius_m?: number | null
           started_at?: string | null
           status?: string
+          transport_type?: string | null
           trip_date: string
           trip_time?: string | null
           updated_at?: string
@@ -2396,6 +2459,8 @@ export type Database = {
         Update: {
           address?: string | null
           assignee?: string
+          allowance_status?: string
+          calculated_allowance?: number
           city?: string | null
           completed_at?: string | null
           created_at?: string
@@ -2406,10 +2471,12 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           notes?: string | null
+          overnight_nights?: number
           purpose?: string | null
           radius_m?: number | null
           started_at?: string | null
           status?: string
+          transport_type?: string | null
           trip_date?: string
           trip_time?: string | null
           updated_at?: string
@@ -2633,7 +2700,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "hr" | "manager" | "employee" | "staff" | "user"
+      app_role: "admin" | "hr" | "manager" | "employee" | "staff" | "user" | "finance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2761,7 +2828,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "hr", "manager", "employee", "staff", "user"],
+      app_role: ["admin", "hr", "manager", "employee", "staff", "user", "finance"],
     },
   },
 } as const
