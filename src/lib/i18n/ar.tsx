@@ -732,6 +732,9 @@ export const ui: Record<UiKey, string> = {
   ceiling: "الحد الأقصى",
   martyrsPct: "الشهداء %",
   exemption: "الإعفاء",
+  insuranceNumber: "رقم التأمين",
+  bankAccountName: "اسم صاحب الحساب",
+  bankAccountNumber: "رقم الحساب البنكي",
 };
 
 // Mock-data dictionaries (Arabic translations of seeded data).
