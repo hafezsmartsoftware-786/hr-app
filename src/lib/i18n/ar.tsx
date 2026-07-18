@@ -634,6 +634,7 @@ export const ui: Record<UiKey, string> = {
   financeDepartment: "القسم المالي",
 
   // Admin Leaves
+  leaveManagement: "إدارة الإجازات",
   leaveRequests: "الطلبات",
   leaveBalances: "الأرصدة",
   leaveTypesAdmin: "أنواع الإجازات",
@@ -641,14 +642,14 @@ export const ui: Record<UiKey, string> = {
   holidayTypes: "أنواع العطلات",
   deductLeaves: "خصم إجازات",
   deductionAmount: "مقدار الخصم (أيام)",
-  reasonOptional: "السبب (اختياري)",
   exporting: "جاري التصدير…",
-  exportCsv: "تصدير CSV",
   tableYear: "السنة",
   tableTotal: "الإجمالي",
   tableRemaining: "المتبقي",
   tableAction: "الإجراء",
   noBalancesYet: "لا توجد أرصدة حتى الآن. يرجى إضافة موظفين وأنواع إجازات نشطة.",
+  cancelApproval: "إلغاء الموافقة",
+  leaveType: "نوع الإجازة",
 
   // إعدادات الرواتب المتقدمة
   advancedPayrollSettings: "إعدادات الرواتب المتقدمة",
