@@ -1,0 +1,122 @@
+# Employee-Related APIs & Methods
+
+All endpoints are TanStack Start server functions (createServerFn), invoked from the client
+via `useServerFn(fn)` or a direct call. Inputs pass as `{ data: ... }`. Auth-guarded
+functions use `requireSupabaseAuth` or `requireAdminAccess` middleware.
+
+--------------------------------------------------------------------------------
+## 1. Employees (admin CRUD & directory)
+File: src/backend/functions/employees.functions.ts
+
+- listEmployeesAdmin        POST   List/search employees with filters (dept, status,
+                                   inactiveReason, contract, salary mode, etc.). Paginated.
+- getEmployeeDetail         POST   Full profile for one employee (by id).
+- createEmployeeAdmin       POST   Create a new employee + linked auth user.
+- updateEmployeeAdmin       POST   Partial update of employee profile fields.
+                                   Requires `inactive_reason` when status=Inactive.
+- deleteEmployeeAdmin       POST   Delete a single employee.
+- bulkDeleteEmployeesAdmin  POST   Delete multiple employees by id[].
+- bulkSetEmployeeStatus     POST   Activate/Deactivate many employees at once
+                                   (reason required when deactivating).
+- listEmployeeStatusAudit   POST   Timeline of Active/Inactive changes for one employee.
+- importEmployeesAdmin      POST   Bulk import from parsed Excel/CSV rows.
+- sendEmployeeWelcomeEmail  POST   (Re)send onboarding email with credentials.
+- listCitiesAndDistricts    GET    Reference lookups for address fields.
+- listEmployeeDocuments     POST   List uploaded documents for an employee.
+- uploadEmployeeDocument    POST   Upload a document (contract, ID, etc.).
+- deleteEmployeeDocument    POST   Remove a document.
+- getEmployeeAttendanceHistory POST Attendance rows for an employee within a range.
+- getEmployeeLeavesHistory  POST   Leaves history for an employee.
+- bulkAssignEmployeeRole    POST   Assign a role to many employees.
+- adminTransferEmployee     POST   Transfer employee between departments/managers.
+
+Client validation helpers (src/lib/employees.functions.ts):
+- validateEmployeesBatch    POST   Zod validation for bulk import rows.
+- validateRehire            POST   Prevents overlapping contracts on rehire.
+
+--------------------------------------------------------------------------------
+## 2. Employee Assignments (KPIs, allowances, targets, shifts)
+File: src/backend/functions/employee-assignments.functions.ts
+
+- listEmployeeAssignments   GET    Current assignments grouped by kind.
+- setEmployeeAssignments    POST   Replace ids of one kind for one employee.
+                                   kind: "kpi" | "allowance" | "targets_overtime" | "shift".
+- bulkAssignToEmployees     POST   Apply assignments to many employees (add | replace).
+
+--------------------------------------------------------------------------------
+## 3. Working Days / Schedule
+File: src/backend/functions/employee-working-days.functions.ts
+
+- getEmployeeWorkingDays        GET    Returns weekly pattern + per-month + per-date overrides.
+- setEmployeeWorkingDaysWeekly  POST   Default weekly working days (0..6).
+- setEmployeeWorkingDaysMonth   POST   Per-month weekday override.
+- setEmployeeWorkingDaysDates   POST   Per-date ON/OFF override for a (year, month).
+- clearEmployeeWorkingDaysMonth POST   Clear both month + per-date overrides.
+
+--------------------------------------------------------------------------------
+## 4. Staff / Manager Operations
+File: src/backend/functions/staff.functions.ts
+
+- staffListEmployees        GET    Employees visible to the current manager.
+- staffListAttendance       POST   Attendance for the manager's team in a range.
+- staffUpsertAttendance     POST   Manager creates/edits attendance row.
+- staffApproveAttendance    POST   Approve a submitted attendance record.
+- staffListLeaves           GET    Team leave requests.
+- staffDecideLeave          POST   Approve/Reject/Reopen/Revoke a leave; triggers
+                                   email + push notifications to the employee.
+
+--------------------------------------------------------------------------------
+## 5. Leaves & Balances
+Files: src/backend/functions/leaves.functions.ts, leave-balances.functions.ts
+
+- submitLeave               POST   Employee submits a leave request.
+- cancelLeave               POST   Employee cancels a pending/approved leave.
+- decideLeave               POST   Approve/reject a leave (admin/manager).
+- listMyLeaves              GET    Current user's leaves.
+- listAllLeaves             GET    All leaves visible to the caller.
+- listAllLeavesAdmin        GET    Admin listing with filters.
+- listActiveLeaveTypes      GET    Available leave types for the form.
+- adminBulkLeaveDeduction   POST   Bulk-deduct leave balances.
+- listLeaveBalancesAdmin    GET    Balances per employee (admin view).
+- listMyLeaveBalances       GET    Current user's balances.
+- updateLeaveBalance        POST   Adjust one balance.
+- bulkUpdateLeaveBalances   POST   Adjust many balances.
+- exportLeaveBalancesAdmin  GET    CSV/XLSX export of balances.
+
+--------------------------------------------------------------------------------
+## 6. Attendance (Check-in/out, admin edits)
+File: src/backend/functions/attendance.functions.ts
+
+- checkIn                   POST   Employee check-in (geo + optional face).
+- checkOut                  POST   Employee check-out.
+- listMyAccess              GET    Current geofence/networks the employee can use.
+- listMyAttendance          GET    Current user's attendance (recent).
+- listAttendanceRange       POST   Attendance in a date range for the user.
+- listEmployeesForAttendance GET   Employees dropdown source for admin views.
+- adminListAttendance       POST   Filtered attendance for admins.
+- adminUpsertAttendance     POST   Admin creates/edits a row.
+- adminDeleteAttendance     POST   Delete a row.
+- adminReverseGeocode       POST   Resolve lat/lng → city/district.
+
+--------------------------------------------------------------------------------
+## 7. Tasks & Trips (assignment surface for employees)
+Files: src/backend/functions/tasks.functions.ts, trips.functions.ts
+
+Tasks:
+- listTasks / createTask / transitionTask / deleteTask / updateTaskAssignees
+- getProfileNames           POST   Resolve profile ids → display names.
+
+Trips:
+- listTrips / createTrip / transitionTrip / deleteTrip
+
+--------------------------------------------------------------------------------
+## Calling pattern (client)
+
+  import { useServerFn } from "@tanstack/react-start";
+  import { updateEmployeeAdmin } from "@/backend/functions/employees.functions";
+
+  const update = useServerFn(updateEmployeeAdmin);
+  await update({ data: { id, patch: { status: "Inactive", inactive_reason: "Resigned" } } });
+
+For queries prefer:
+  useQuery({ queryKey: ["employee", id], queryFn: () => getEmployeeDetail({ data: { id } }) })
