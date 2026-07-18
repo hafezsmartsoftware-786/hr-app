@@ -772,6 +772,9 @@ export const name: Record<string, string> = {
   "Sara Al-Qahtani": "سارة القحطاني",
   "HR Team": "فريق الموارد البشرية",
   Employee: "موظف",
+  insuranceNumber: "رقم التأمين",
+  bankAccountName: "اسم صاحب الحساب",
+  bankAccountNumber: "رقم الحساب البنكي",
 };
 
 export const leaveType: Record<string, string> = {
