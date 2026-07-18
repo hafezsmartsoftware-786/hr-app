@@ -122,6 +122,11 @@ export const ui: Record<UiKey, string> = {
   addNetwork: "إضافة شبكة",
   auditFilter: "تصفية بالاسم أو الفرع أو اسم الشبكة أو السبب…",
   payroll: "الرواتب",
+  monthlyPayroll: "الرواتب الشهرية",
+  payrollRunDesc: "اختر شهرًا لتشغيل رواتب جميع الموظفين أو عرض حساباتها.",
+  monthLabel: "الشهر",
+  yearLabel: "السنة",
+  runPayroll: "تشغيل الرواتب",
   salary: "الراتب",
   allowance: "البدل",
   penalty: "خصم",
@@ -634,6 +639,7 @@ export const ui: Record<UiKey, string> = {
   financeDepartment: "القسم المالي",
 
   // Admin Leaves
+  leaveManagement: "إدارة الإجازات",
   leaveRequests: "الطلبات",
   leaveBalances: "الأرصدة",
   leaveTypesAdmin: "أنواع الإجازات",
@@ -641,14 +647,14 @@ export const ui: Record<UiKey, string> = {
   holidayTypes: "أنواع العطلات",
   deductLeaves: "خصم إجازات",
   deductionAmount: "مقدار الخصم (أيام)",
-  reasonOptional: "السبب (اختياري)",
   exporting: "جاري التصدير…",
-  exportCsv: "تصدير CSV",
   tableYear: "السنة",
   tableTotal: "الإجمالي",
   tableRemaining: "المتبقي",
   tableAction: "الإجراء",
   noBalancesYet: "لا توجد أرصدة حتى الآن. يرجى إضافة موظفين وأنواع إجازات نشطة.",
+  cancelApproval: "إلغاء الموافقة",
+  leaveType: "نوع الإجازة",
 
   // إعدادات الرواتب المتقدمة
   advancedPayrollSettings: "إعدادات الرواتب المتقدمة",
@@ -726,6 +732,9 @@ export const ui: Record<UiKey, string> = {
   ceiling: "الحد الأقصى",
   martyrsPct: "الشهداء %",
   exemption: "الإعفاء",
+  insuranceNumber: "رقم التأمين",
+  bankAccountName: "اسم صاحب الحساب",
+  bankAccountNumber: "رقم الحساب البنكي",
 };
 
 // Mock-data dictionaries (Arabic translations of seeded data).

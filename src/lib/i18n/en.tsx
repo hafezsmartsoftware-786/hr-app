@@ -651,6 +651,7 @@ export const ui = {
   financeDepartment: "Finance Department",
 
   // Admin Leaves
+  leaveManagement: "Leave Management",
   leaveRequests: "Requests",
   leaveBalances: "Balances",
   leaveTypesAdmin: "Leave Types",
@@ -658,14 +659,14 @@ export const ui = {
   holidayTypes: "Holiday Types",
   deductLeaves: "Deduct Leaves",
   deductionAmount: "Deduction Amount (Days)",
-  reasonOptional: "Reason (Optional)",
   exporting: "Exporting…",
-  exportCsv: "Export CSV",
   tableYear: "Year",
   tableTotal: "Total",
   tableRemaining: "Remaining",
   tableAction: "Action",
   noBalancesYet: "No balances yet. Add employees and active leave types.",
+  cancelApproval: "Cancel approval",
+  leaveType: "Leave Type",
 
   // Advanced Payroll Settings
   advancedPayrollSettings: "Advanced Payroll Settings",
