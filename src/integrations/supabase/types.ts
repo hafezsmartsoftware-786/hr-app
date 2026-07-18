@@ -252,6 +252,163 @@ export type Database = {
           },
         ]
       }
+      department_positions: {
+        Row: {
+          created_at: string
+          department_id: string
+          headcount: number
+          id: string
+          job_grade_id: string
+          position_id: string
+          section_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          headcount?: number
+          id?: string
+          job_grade_id: string
+          position_id: string
+          section_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          headcount?: number
+          id?: string
+          job_grade_id?: string
+          position_id?: string
+          section_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_positions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_positions_job_grade_id_fkey"
+            columns: ["job_grade_id"]
+            isOneToOne: false
+            referencedRelation: "job_grades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_positions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_positions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_transfers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          employee_id: string
+          id: string
+          new_department_id: string | null
+          new_manager_id: string | null
+          new_position_id: string | null
+          note: string | null
+          old_department_id: string | null
+          old_manager_id: string | null
+          old_position_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_date: string
+          employee_id: string
+          id?: string
+          new_department_id?: string | null
+          new_manager_id?: string | null
+          new_position_id?: string | null
+          note?: string | null
+          old_department_id?: string | null
+          old_manager_id?: string | null
+          old_position_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          employee_id?: string
+          id?: string
+          new_department_id?: string | null
+          new_manager_id?: string | null
+          new_position_id?: string | null
+          note?: string | null
+          old_department_id?: string | null
+          old_manager_id?: string | null
+          old_position_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_transfers_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_new_department_id_fkey"
+            columns: ["new_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_new_manager_id_fkey"
+            columns: ["new_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_new_position_id_fkey"
+            columns: ["new_position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_old_department_id_fkey"
+            columns: ["old_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_old_manager_id_fkey"
+            columns: ["old_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_transfers_old_position_id_fkey"
+            columns: ["old_position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           active: boolean
@@ -324,6 +481,224 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_advance_approvals: {
+        Row: {
+          action: string
+          advance_id: string
+          approval_level: string
+          approver_id: string | null
+          comments: string | null
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action: string
+          advance_id: string
+          approval_level: string
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          advance_id?: string
+          approval_level?: string
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_advance_approvals_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "employee_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advance_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_advance_installments: {
+        Row: {
+          advance_id: string
+          created_at: string
+          id: string
+          installment_amount: number
+          paid_amount: number
+          payroll_period: string
+          remaining_amount: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          advance_id: string
+          created_at?: string
+          id?: string
+          installment_amount: number
+          paid_amount?: number
+          payroll_period: string
+          remaining_amount?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          advance_id?: string
+          created_at?: string
+          id?: string
+          installment_amount?: number
+          paid_amount?: number
+          payroll_period?: string
+          remaining_amount?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_advance_installments_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "employee_advances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_advances: {
+        Row: {
+          approved_amount: number | null
+          attachment_url: string | null
+          created_at: string
+          currency: string
+          deduction_end_date: string | null
+          deduction_start_date: string | null
+          deleted_at: string | null
+          employee_id: string
+          expected_date: string | null
+          finance_decided_by: string | null
+          hr_decided_by: string | null
+          id: string
+          installment_amount: number | null
+          installment_count: number | null
+          manager_decided_by: string | null
+          paid_amount: number
+          payment_date: string | null
+          previous_balance: number
+          reason: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          remaining_balance: number | null
+          repayment_status: string
+          request_number: string
+          requested_amount: number
+          status: string
+          total_outstanding: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_amount?: number | null
+          attachment_url?: string | null
+          created_at?: string
+          currency?: string
+          deduction_end_date?: string | null
+          deduction_start_date?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          expected_date?: string | null
+          finance_decided_by?: string | null
+          hr_decided_by?: string | null
+          id?: string
+          installment_amount?: number | null
+          installment_count?: number | null
+          manager_decided_by?: string | null
+          paid_amount?: number
+          payment_date?: string | null
+          previous_balance?: number
+          reason?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          remaining_balance?: number | null
+          repayment_status?: string
+          request_number?: string
+          requested_amount: number
+          status?: string
+          total_outstanding?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_amount?: number | null
+          attachment_url?: string | null
+          created_at?: string
+          currency?: string
+          deduction_end_date?: string | null
+          deduction_start_date?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          expected_date?: string | null
+          finance_decided_by?: string | null
+          hr_decided_by?: string | null
+          id?: string
+          installment_amount?: number | null
+          installment_count?: number | null
+          manager_decided_by?: string | null
+          paid_amount?: number
+          payment_date?: string | null
+          previous_balance?: number
+          reason?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          remaining_balance?: number | null
+          repayment_status?: string
+          request_number?: string
+          requested_amount?: number
+          status?: string
+          total_outstanding?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_advances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advances_finance_decided_by_fkey"
+            columns: ["finance_decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advances_hr_decided_by_fkey"
+            columns: ["hr_decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advances_manager_decided_by_fkey"
+            columns: ["manager_decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advances_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -729,6 +1104,74 @@ export type Database = {
           },
         ]
       }
+      final_settlements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          daily_rate: number
+          employee_id: string
+          id: string
+          leave_cash_out: number
+          net_settlement: number | null
+          notes: string | null
+          other_additions: number
+          other_deductions: number
+          outstanding_advances: number
+          remaining_leave_days: number
+          resignation_date: string
+          status: string
+          unpaid_salary: number
+          updated_at: string
+          worked_days: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          daily_rate?: number
+          employee_id: string
+          id?: string
+          leave_cash_out?: number
+          net_settlement?: number | null
+          notes?: string | null
+          other_additions?: number
+          other_deductions?: number
+          outstanding_advances?: number
+          remaining_leave_days?: number
+          resignation_date: string
+          status?: string
+          unpaid_salary?: number
+          updated_at?: string
+          worked_days?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          daily_rate?: number
+          employee_id?: string
+          id?: string
+          leave_cash_out?: number
+          net_settlement?: number | null
+          notes?: string | null
+          other_additions?: number
+          other_deductions?: number
+          outstanding_advances?: number
+          remaining_leave_days?: number
+          resignation_date?: string
+          status?: string
+          unpaid_salary?: number
+          updated_at?: string
+          worked_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "final_settlements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geofence_assignments: {
         Row: {
           assigned_at: string
@@ -884,6 +1327,33 @@ export type Database = {
           notes?: string | null
           recurring?: boolean
           type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      job_grades: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name_ar: string
+          name_en: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name_ar: string
+          name_en: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name_ar?: string
+          name_en?: string
           updated_at?: string
         }
         Relationships: []
@@ -1185,6 +1655,113 @@ export type Database = {
           },
         ]
       }
+      manpower_plans: {
+        Row: {
+          budget_approved: boolean | null
+          budget_available: boolean | null
+          company: string | null
+          cost_center: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          department_id: string | null
+          employment_type: string | null
+          estimated_annual_cost: number | null
+          fiscal_year: number
+          hiring_reason: string | null
+          id: string
+          job_grade_id: string | null
+          planned_headcount: number
+          position_id: string
+          priority: string | null
+          required_date: string | null
+          salary_from: number | null
+          salary_to: number | null
+          section_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget_approved?: boolean | null
+          budget_available?: boolean | null
+          company?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          department_id?: string | null
+          employment_type?: string | null
+          estimated_annual_cost?: number | null
+          fiscal_year: number
+          hiring_reason?: string | null
+          id?: string
+          job_grade_id?: string | null
+          planned_headcount?: number
+          position_id: string
+          priority?: string | null
+          required_date?: string | null
+          salary_from?: number | null
+          salary_to?: number | null
+          section_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_approved?: boolean | null
+          budget_available?: boolean | null
+          company?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          department_id?: string | null
+          employment_type?: string | null
+          estimated_annual_cost?: number | null
+          fiscal_year?: number
+          hiring_reason?: string | null
+          id?: string
+          job_grade_id?: string | null
+          planned_headcount?: number
+          position_id?: string
+          priority?: string | null
+          required_date?: string | null
+          salary_from?: number | null
+          salary_to?: number | null
+          section_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manpower_plans_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manpower_plans_job_grade_id_fkey"
+            columns: ["job_grade_id"]
+            isOneToOne: false
+            referencedRelation: "job_grades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manpower_plans_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manpower_plans_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       network_assignments: {
         Row: {
           assigned_by: string | null
@@ -1367,17 +1944,22 @@ export type Database = {
         Row: {
           absent_days: number
           allowance: number
+          basic_salary: number
           bonus: number
           created_at: string
           daily_rate: number
           department: string | null
+          emergency_fund: number
           employee_id: string
           employee_name: string
+          gross_salary: number
           id: string
+          insurance_salary: number
           kpi: number
           late_days: number
           leave_days: number
           net_pay: number
+          net_salary: number
           penalty: number
           present_days: number
           run_id: string
@@ -1388,17 +1970,22 @@ export type Database = {
         Insert: {
           absent_days?: number
           allowance?: number
+          basic_salary?: number
           bonus?: number
           created_at?: string
           daily_rate?: number
           department?: string | null
+          emergency_fund?: number
           employee_id: string
           employee_name: string
+          gross_salary?: number
           id?: string
+          insurance_salary?: number
           kpi?: number
           late_days?: number
           leave_days?: number
           net_pay?: number
+          net_salary?: number
           penalty?: number
           present_days?: number
           run_id: string
@@ -1409,17 +1996,22 @@ export type Database = {
         Update: {
           absent_days?: number
           allowance?: number
+          basic_salary?: number
           bonus?: number
           created_at?: string
           daily_rate?: number
           department?: string | null
+          emergency_fund?: number
           employee_id?: string
           employee_name?: string
+          gross_salary?: number
           id?: string
+          insurance_salary?: number
           kpi?: number
           late_days?: number
           leave_days?: number
           net_pay?: number
+          net_salary?: number
           penalty?: number
           present_days?: number
           run_id?: string
@@ -1624,6 +2216,8 @@ export type Database = {
         Row: {
           allowance: number | null
           avatar_url: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
           city: string | null
           city_id: string | null
           contract_cancelled: boolean
@@ -1631,32 +2225,38 @@ export type Database = {
           contract_start_date: string | null
           contract_type: string | null
           created_at: string
+          custom_field: string | null
           department_id: string | null
           district: string | null
           district_id: string | null
           email: string | null
-          extra_email: string | null
+          emergency_fund: number
           emp_code: string | null
+          external_income: number | null
+          external_tax_paid: number | null
+          extra_email: string | null
           full_name: string | null
-          custom_field: string | null
           gender: string | null
           id: string
           id_expiry_date: string | null
           id_issue_date: string | null
           inactive_reason: string | null
+          insurance_applicable: boolean
+          insurance_number: string | null
+          insurance_salary: number
           is_five_percent: boolean | null
           is_insured: boolean | null
-          insurance_applicable: boolean
           job_grade: string | null
+          last_action_date: string | null
           locale: string
           manager_id: string | null
           martyrs_fund_applicable: boolean
-          national_id: string | null
+          medical_insurance: number | null
           medical_insurance_details: string | null
           military_expire_date: string | null
+          national_id: string | null
+          other_deductions: number | null
           phone: string | null
-          social_insurance_date: string | null
-          last_action_date: string | null
           position_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           salary_amount: number
@@ -1664,6 +2264,8 @@ export type Database = {
           salary_mode: string | null
           salary_net: number | null
           salary_type: string
+          section_id: string | null
+          social_insurance_date: string | null
           status: string
           target_duration: string | null
           target_value: number | null
@@ -1673,6 +2275,8 @@ export type Database = {
         Insert: {
           allowance?: number | null
           avatar_url?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
           city?: string | null
           city_id?: string | null
           contract_cancelled?: boolean
@@ -1680,31 +2284,38 @@ export type Database = {
           contract_start_date?: string | null
           contract_type?: string | null
           created_at?: string
+          custom_field?: string | null
           department_id?: string | null
           district?: string | null
           district_id?: string | null
           email?: string | null
-          extra_email?: string | null
+          emergency_fund?: number
           emp_code?: string | null
+          external_income?: number | null
+          external_tax_paid?: number | null
+          extra_email?: string | null
           full_name?: string | null
-          custom_field?: string | null
           gender?: string | null
           id: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
           inactive_reason?: string | null
+          insurance_applicable?: boolean
+          insurance_number?: string | null
+          insurance_salary?: number
           is_five_percent?: boolean | null
           is_insured?: boolean | null
-          insurance_applicable?: boolean
+          job_grade?: string | null
+          last_action_date?: string | null
           locale?: string
           manager_id?: string | null
           martyrs_fund_applicable?: boolean
-          national_id?: string | null
+          medical_insurance?: number | null
           medical_insurance_details?: string | null
           military_expire_date?: string | null
+          national_id?: string | null
+          other_deductions?: number | null
           phone?: string | null
-          social_insurance_date?: string | null
-          last_action_date?: string | null
           position_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           salary_amount?: number
@@ -1712,6 +2323,8 @@ export type Database = {
           salary_mode?: string | null
           salary_net?: number | null
           salary_type?: string
+          section_id?: string | null
+          social_insurance_date?: string | null
           status?: string
           target_duration?: string | null
           target_value?: number | null
@@ -1721,6 +2334,8 @@ export type Database = {
         Update: {
           allowance?: number | null
           avatar_url?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
           city?: string | null
           city_id?: string | null
           contract_cancelled?: boolean
@@ -1728,31 +2343,38 @@ export type Database = {
           contract_start_date?: string | null
           contract_type?: string | null
           created_at?: string
+          custom_field?: string | null
           department_id?: string | null
           district?: string | null
           district_id?: string | null
           email?: string | null
-          extra_email?: string | null
+          emergency_fund?: number
           emp_code?: string | null
+          external_income?: number | null
+          external_tax_paid?: number | null
+          extra_email?: string | null
           full_name?: string | null
-          custom_field?: string | null
           gender?: string | null
           id?: string
           id_expiry_date?: string | null
           id_issue_date?: string | null
           inactive_reason?: string | null
+          insurance_applicable?: boolean
+          insurance_number?: string | null
+          insurance_salary?: number
           is_five_percent?: boolean | null
           is_insured?: boolean | null
-          insurance_applicable?: boolean
+          job_grade?: string | null
+          last_action_date?: string | null
           locale?: string
           manager_id?: string | null
           martyrs_fund_applicable?: boolean
-          national_id?: string | null
+          medical_insurance?: number | null
           medical_insurance_details?: string | null
           military_expire_date?: string | null
+          national_id?: string | null
+          other_deductions?: number | null
           phone?: string | null
-          social_insurance_date?: string | null
-          last_action_date?: string | null
           position_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           salary_amount?: number
@@ -1760,6 +2382,8 @@ export type Database = {
           salary_mode?: string | null
           salary_net?: number | null
           salary_type?: string
+          section_id?: string | null
+          social_insurance_date?: string | null
           status?: string
           target_duration?: string | null
           target_value?: number | null
@@ -1800,6 +2424,13 @@ export type Database = {
             columns: ["position_id"]
             isOneToOne: false
             referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
             referencedColumns: ["id"]
           },
         ]
@@ -1917,6 +2548,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sections: {
+        Row: {
+          active: boolean
+          created_at: string
+          department_id: string
+          id: string
+          name_ar: string
+          name_en: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          department_id: string
+          id?: string
+          name_ar: string
+          name_en: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          department_id?: string
+          id?: string
+          name_ar?: string
+          name_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sections_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_audit_events: {
         Row: {
@@ -2380,36 +3049,44 @@ export type Database = {
       }
       trip_allowance_policies: {
         Row: {
-          id: string
           city_id: string
+          created_at: string
+          id: string
           job_grade: string
           nightly_rate: number
           transport_expense: number
-          created_at: string
         }
         Insert: {
-          id?: string
           city_id: string
+          created_at?: string
+          id?: string
           job_grade: string
           nightly_rate?: number
           transport_expense?: number
-          created_at?: string
         }
         Update: {
-          id?: string
           city_id?: string
+          created_at?: string
+          id?: string
           job_grade?: string
           nightly_rate?: number
           transport_expense?: number
-          created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_allowance_policies_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trips: {
         Row: {
           address: string | null
-          assignee: string
           allowance_status: string
+          assignee: string
           calculated_allowance: number
           city: string | null
           completed_at: string | null
@@ -2433,8 +3110,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          assignee: string
           allowance_status?: string
+          assignee: string
           calculated_allowance?: number
           city?: string | null
           completed_at?: string | null
@@ -2458,8 +3135,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          assignee?: string
           allowance_status?: string
+          assignee?: string
           calculated_allowance?: number
           city?: string | null
           completed_at?: string | null
@@ -2651,7 +3328,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_current_headcount: {
+        Row: {
+          current_headcount: number | null
+          department_id: string | null
+          position_id: string | null
+          section_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_permission: {
@@ -2700,7 +3407,14 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "hr" | "manager" | "employee" | "staff" | "user" | "finance"
+      app_role:
+        | "admin"
+        | "hr"
+        | "manager"
+        | "employee"
+        | "staff"
+        | "user"
+        | "finance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2828,7 +3542,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "hr", "manager", "employee", "staff", "user", "finance"],
+      app_role: [
+        "admin",
+        "hr",
+        "manager",
+        "employee",
+        "staff",
+        "user",
+        "finance",
+      ],
     },
   },
 } as const
