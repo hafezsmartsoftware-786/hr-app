@@ -19,8 +19,8 @@ if (typeof process !== "undefined" && process.env?.NODE_ENV !== "production") {
 type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: UiKey) => string;
-  tf: (key: UiKey, params?: Record<string, string | number>) => string;
+  t: (key: UiKey | string) => string;
+  tf: (key: UiKey | string, params?: Record<string, string | number>) => string;
   formatBlocked: (blocked: { code?: string; params?: Record<string, any>; reason?: string }) => string;
   dir: "ltr" | "rtl";
 };
