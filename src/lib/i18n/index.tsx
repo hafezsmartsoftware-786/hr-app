@@ -47,8 +47,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") localStorage.setItem("int-lang", l);
   };
 
-  const t = (key: UiKey) => bundles[lang].ui[key] ?? en.ui[key] ?? String(key);
-  const tf = (key: UiKey, params?: Record<string, string | number>) => {
+  const t = (key: UiKey | string) => bundles[lang].ui[key as UiKey] ?? en.ui[key as UiKey] ?? String(key);
+  const tf = (key: UiKey | string, params?: Record<string, string | number>) => {
     const tmpl = t(key);
     if (!params) return tmpl;
     return tmpl.replace(/\{\{(\w+)\}\}/g, (_, k) =>
