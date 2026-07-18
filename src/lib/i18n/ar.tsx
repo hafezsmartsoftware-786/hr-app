@@ -800,9 +800,6 @@ export const status: Record<string, string> = {
   Rejected: "مرفوض",
   Active: "نشط",
   Inactive: "غير نشط",
-  insuranceNumber: "رقم التأمين",
-  bankAccountName: "اسم صاحب الحساب",
-  bankAccountNumber: "رقم الحساب البنكي",
 };
 
 export const notification: Record<number, { title: string; body: string }> = {
