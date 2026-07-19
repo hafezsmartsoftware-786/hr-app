@@ -132,3 +132,214 @@ Trips:
 
 For queries prefer:
   useQuery({ queryKey: ["employee", id], queryFn: () => getEmployeeDetail({ data: { id } }) })
+
+================================================================================
+## FULL ENDPOINT LIST (server function name — HTTP method)
+================================================================================
+
+All server functions are invoked as same-origin POSTs to the TanStack RPC layer
+(`/_serverFn/<hash>`). The "method" column below is the semantic method declared
+in `createServerFn({ method })` — GET = pure read, POST = mutation/read-with-body.
+Never `fetch` the RPC URL directly; call the exported function via `useServerFn`.
+
+### 1. Employees — src/backend/functions/employees.functions.ts
+- POST  listEmployeesAdmin
+- POST  getEmployeeDetail
+- POST  createEmployeeAdmin
+- POST  updateEmployeeAdmin
+- POST  deleteEmployeeAdmin
+- POST  bulkDeleteEmployeesAdmin
+- POST  bulkSetEmployeeStatus
+- POST  bulkAssignEmployeeRole
+- POST  adminTransferEmployee
+- POST  importEmployeesAdmin
+- POST  sendEmployeeWelcomeEmail
+- POST  listEmployeeStatusAudit
+- GET   listCitiesAndDistricts
+- POST  listEmployeeDocuments
+- POST  uploadEmployeeDocument
+- POST  deleteEmployeeDocument
+- POST  getEmployeeAttendanceHistory
+- POST  getEmployeeLeavesHistory
+
+Client helpers — src/lib/employees.functions.ts
+- POST  validateEmployeesBatch
+- POST  validateRehire
+
+### 2. Employee Assignments — employee-assignments.functions.ts
+- GET   listEmployeeAssignments
+- POST  setEmployeeAssignments
+- POST  bulkAssignToEmployees
+
+### 3. Working Days / Schedule — employee-working-days.functions.ts
+- GET   getEmployeeWorkingDays
+- POST  setEmployeeWorkingDaysWeekly
+- POST  setEmployeeWorkingDaysMonth
+- POST  setEmployeeWorkingDaysDates
+- POST  clearEmployeeWorkingDaysMonth
+
+### 4. Staff / Manager Ops — staff.functions.ts
+- GET   staffListEmployees
+- POST  staffListAttendance
+- POST  staffUpsertAttendance
+- POST  staffApproveAttendance
+- GET   staffListLeaves
+- POST  staffDecideLeave
+
+### 5. Leaves — leaves.functions.ts
+- POST  submitLeave
+- POST  cancelLeave
+- POST  decideLeave
+- GET   listMyLeaves
+- GET   listAllLeaves
+- GET   listAllLeavesAdmin
+- GET   listActiveLeaveTypes
+- POST  adminBulkLeaveDeduction
+
+### 6. Leave Balances — leave-balances.functions.ts
+- GET   listLeaveBalancesAdmin
+- GET   listMyLeaveBalances
+- POST  updateLeaveBalance
+- POST  bulkUpdateLeaveBalances
+- GET   exportLeaveBalancesAdmin
+
+### 7. Attendance — attendance.functions.ts
+- POST  checkIn
+- POST  checkOut
+- GET   listMyAccess
+- GET   listMyAttendance
+- POST  listAttendanceRange
+- GET   listEmployeesForAttendance
+- POST  adminListAttendance
+- POST  adminUpsertAttendance
+- POST  adminDeleteAttendance
+- POST  adminReverseGeocode
+
+### 8. Tasks — tasks.functions.ts
+- GET   listTasks
+- POST  createTask
+- POST  transitionTask
+- POST  updateTaskAssignees
+- POST  deleteTask
+- POST  getProfileNames
+
+### 9. Trips — trips.functions.ts
+- GET   listTrips
+- POST  createTrip
+- POST  transitionTrip
+- POST  deleteTrip
+
+### 10. Onboarding / Offboarding
+- POST  ensureOnboarded              (onboarding.functions.ts)
+- POST  calculateFinalSettlement     (offboarding.functions.ts)
+- POST  saveFinalSettlement          (offboarding.functions.ts)
+
+### 11. Contracts — contracts.functions.ts / contractTemplates.functions.ts
+- GET   listContractsAdmin
+- POST  renewContractAdmin
+- POST  cancelContractAdmin
+- POST  reactivateContractAdmin
+- GET   listContractTemplates
+- POST  upsertContractTemplate
+- POST  deleteContractTemplate
+
+### 12. Advances — advances.functions.ts
+- POST  createAdvanceRequest
+- GET   listMyAdvances
+- POST  cancelMyAdvance
+- GET   listTeamAdvances
+- POST  managerDecideAdvance
+- GET   listAdvancesForHR
+- POST  hrDecideAdvance
+- POST  getEmployeeAdvanceSummary
+- GET   listAdvancesForFinance
+- POST  getEmployeeOutstandingBalance
+- POST  financeApprovePayment
+- POST  financeMarkPaid
+- POST  financeRejectAdvance
+- GET   listAllAdvances
+- POST  getAdvanceAuditLog
+- GET   listAdvanceInstallments
+
+### 13. Comp & Rules
+Allowances (allowances.functions.ts)
+- GET   listAllowances / POST upsertAllowance / POST deleteAllowance
+KPIs (kpis.functions.ts)
+- GET   listKpis / POST upsertKpi / POST deleteKpi
+Targets & Overtime (targets-overtime.functions.ts)
+- GET   listTargetsOvertime / POST upsertTargetsOvertime / POST deleteTargetsOvertime
+Shifts (shifts.functions.ts)
+- GET   listShifts / POST upsertShift / POST deleteShift
+Schedules (schedules.functions.ts)
+- GET   listSchedules / POST upsertSchedule / POST deleteSchedule
+- GET   listScheduleRuns / POST triggerScheduleNow
+Late Penalties (late-penalties.functions.ts)
+- GET   listLatePenalties / POST upsertLatePenalty / POST deleteLatePenalty
+
+### 14. Payroll
+payroll.functions.ts
+- POST  getPayrollPeriod
+- POST  lockPayrollRun
+- POST  unlockPayrollRun
+- POST  getAdvancedPayrollSettings
+- POST  saveAdvancedPayrollSettings
+- POST  saveBulkAdvancedPayrollSettings
+payroll-settings.functions.ts
+- GET   getPayrollConfig
+- POST  savePayrollSettings
+- POST  saveTaxBrackets
+- POST  previewSalary
+
+### 15. Directory (departments, sections, positions, grades, cities, leave types)
+directory.functions.ts
+- GET   listDepartments / POST upsertDepartment / POST deleteDepartment
+- GET   listSections / POST upsertSection / POST deleteSection
+- GET   listDepartmentPositions / POST upsertDepartmentPosition / POST deleteDepartmentPosition
+- GET   listPositions / POST upsertPosition / POST deletePosition
+- GET   listJobGrades / POST upsertJobGrade / POST deleteJobGrade
+- GET   listCitiesWithDistricts / POST upsertCity / POST deleteCity
+- POST  upsertDistrict / POST deleteDistrict
+- GET   listLeaveTypes / POST upsertLeaveType / POST deleteLeaveType
+
+### 16. Holidays — holidays.functions.ts / holiday-types.functions.ts
+- GET   listHolidays / POST upsertHoliday / POST deleteHoliday
+- POST  checkHolidayConflicts
+- GET   listHolidayTypes / POST upsertHolidayType / POST deleteHolidayType
+
+### 17. Biometrics & Devices
+biometrics.functions.ts
+- POST  enrollFace / POST deleteFace / POST verifyFace
+- POST  getFaceDescriptorForLogin / POST faceLogin
+- POST  webauthnRegisterOptions / POST webauthnRegisterVerify
+- POST  webauthnAuthOptions / POST webauthnAuthVerify
+- POST  webauthnAuthOptionsForSelf / POST webauthnAuthVerifyForSelf
+- GET   listMyBiometrics / POST deleteWebauthnCredential
+devices.functions.ts
+- POST  registerMyDevice / GET listMyDevices / POST removeMyDevice
+- GET   listEmployeeDevices / POST setEmployeeDeviceStatus / POST deleteEmployeeDevice
+
+### 18. Access — Geofencing & Networks
+geofencing.functions.ts
+- GET   listGeofencesAdmin / POST createGeofenceAdmin / POST updateGeofenceAdmin / POST deleteGeofenceAdmin
+- GET   listAssignableEmployees / GET listAllAssignableEmployees
+- POST  toggleGeofenceAssignment / POST bulkAssignGeofences
+network-assignments.functions.ts
+- GET   listNetworkAssignmentsForEmployee / POST setEmployeeNetworkAssignment
+- GET   listGeofenceAssignmentsForEmployee / POST setEmployeeGeofenceAssignment
+- GET   listAllNetworks / GET listAllGeofences / GET listEmployeesForAccess
+networks.functions.ts
+- GET   listNetworks / POST upsertNetwork / POST deleteNetwork
+
+### 19. Permissions & Org Chart
+permissions.functions.ts
+- GET   listPages / GET getRoleMatrix / POST setRolePermission
+- GET   getUserOverrides / POST setUserOverride / GET getMyPermissions
+org-chart.functions.ts
+- GET   getOrgChart
+- POST  createDepartment / POST renameDepartment / POST deleteDepartment / POST reorderDepartments
+- POST  createPosition / POST renamePosition / POST deletePosition / POST reorderPositions
+- POST  reassignEmployee
+
+### 20. Notifications — notifications.functions.ts
+- GET   getMyPreferences / POST saveMyPreferences
+- GET   listMyDeliveries / GET listAllDeliveries
