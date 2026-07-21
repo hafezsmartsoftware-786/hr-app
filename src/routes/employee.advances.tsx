@@ -15,6 +15,9 @@ import {
   Loader2,
   Paperclip,
   ChevronRight,
+  CalendarCheck,
+  CalendarClock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   createAdvanceRequest,
@@ -109,20 +112,50 @@ function EmployeeAdvancesPage() {
   ];
   const hasPending = advances.some((a) => pendingStatuses.includes(a.status));
 
+  // Prefer server-computed values; fall back to client date for first render
   const today = new Date();
   const currentDay = today.getDate();
-  const isRequestPeriod = currentDay >= 15 && currentDay <= 20;
+  const isInWindow = eligibilityData?.isInWindow ?? (currentDay >= 15 && currentDay <= 20);
+  const windowStart = eligibilityData?.windowStart ? new Date(eligibilityData.windowStart) : null;
+  const windowEnd = eligibilityData?.windowEnd ? new Date(eligibilityData.windowEnd) : null;
+  const nextWindowStart = eligibilityData?.nextWindowStart ? new Date(eligibilityData.nextWindowStart) : null;
 
   const eligibility = {
     isProbation: eligibilityData?.isProbation ?? false,
     remainingAnnualLimit: eligibilityData?.remainingAnnualLimit ?? 0,
-    hasActiveAdvance: hasPending, // Outstanding check
+    hasActiveAdvance: eligibilityData?.hasActiveAdvance ?? false,
+    hasPendingRequest: eligibilityData?.hasPendingRequest ?? hasPending,
+    outstandingBalance: eligibilityData?.outstandingBalance ?? 0,
   };
 
-  const cannotRequestReason = 
-    !isRequestPeriod ? "Advance requests are only accepted between the 15th and 20th of the month." :
-    eligibility.isProbation ? "You are not eligible for an advance payment during your probation period (first 3 months)." :
-    eligibility.hasActiveAdvance ? "You have an active or unpaid advance request. You must settle it before requesting a new one." : null;
+  // Build a specific, prioritized reason
+  let cannotRequestReason: { title: string; detail: string } | null = null;
+  if (!isInWindow) {
+    cannotRequestReason = {
+      title: "Outside the request window",
+      detail: `Advance requests are only accepted between the 15th and 20th of each month. The next window opens on ${nextWindowStart ? fmtDate(nextWindowStart.toISOString()) : "the 15th of next month"}.`,
+    };
+  } else if (eligibility.isProbation) {
+    cannotRequestReason = {
+      title: "Probation period",
+      detail: "You are not eligible for an advance payment during your probation period (first 3 months of employment).",
+    };
+  } else if (eligibility.hasActiveAdvance) {
+    cannotRequestReason = {
+      title: "Outstanding advance balance",
+      detail: `You have an outstanding balance of ${fmt(eligibility.outstandingBalance)}. Please settle it before requesting a new advance.`,
+    };
+  } else if (eligibility.hasPendingRequest) {
+    cannotRequestReason = {
+      title: "Request already in progress",
+      detail: "You already have an active advance request being reviewed. Wait for it to be decided before submitting another.",
+    };
+  } else if (eligibility.remainingAnnualLimit <= 0) {
+    cannotRequestReason = {
+      title: "Annual limit reached",
+      detail: "You have used your full annual advance limit. A new limit becomes available at the start of next year.",
+    };
+  }
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -169,16 +202,49 @@ function EmployeeAdvancesPage() {
         <button
           onClick={() => setShowForm(true)}
           disabled={!!cannotRequestReason}
-          title={cannotRequestReason || "New request"}
+          title={cannotRequestReason?.detail || "New request"}
           className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <Plus className="h-4 w-4" /> New Request
         </button>
       </div>
 
+      {/* Eligibility window banner */}
+      {!isLoadingEligibility && (
+        <div
+          className={`rounded-xl border p-3 flex items-start gap-2.5 text-xs ${
+            isInWindow
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          {isInWindow ? (
+            <CalendarCheck className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" />
+          ) : (
+            <CalendarClock className="h-4 w-4 mt-0.5 shrink-0 text-slate-500" />
+          )}
+          <div className="space-y-0.5">
+            <p className="font-semibold">
+              {isInWindow
+                ? `Request window is open (until ${windowEnd ? fmtDate(windowEnd.toISOString()) : "the 20th"})`
+                : "Request window is closed"}
+            </p>
+            <p className="opacity-90">
+              {isInWindow
+                ? "You can submit an advance request now, subject to the eligibility rules below."
+                : `Next window: ${windowStart ? fmtDate(windowStart.toISOString()) : "the 15th"} — ${windowEnd ? fmtDate(windowEnd.toISOString()) : "the 20th"}.`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {cannotRequestReason && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-700">
-          {cannotRequestReason}
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 flex items-start gap-2.5 text-xs text-amber-800">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+          <div className="space-y-0.5">
+            <p className="font-semibold">{cannotRequestReason.title}</p>
+            <p className="opacity-90">{cannotRequestReason.detail}</p>
+          </div>
         </div>
       )}
 
@@ -194,7 +260,7 @@ function EmployeeAdvancesPage() {
           <button
             onClick={() => setShowForm(true)}
             disabled={!!cannotRequestReason}
-            title={cannotRequestReason || "Submit your first request"}
+            title={cannotRequestReason?.detail || "Submit your first request"}
             className="mt-3 inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1.5 text-sm font-medium text-brand"
           >
             <Plus className="h-4 w-4" /> Submit your first request
