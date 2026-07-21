@@ -193,6 +193,8 @@ function EmployeeAdvancesPage() {
           <p className="mt-3 text-sm font-medium text-muted-foreground">{t("advancesNoRequestsYet")}</p>
           <button
             onClick={() => setShowForm(true)}
+            disabled={!!cannotRequestReason}
+            title={cannotRequestReason || "Submit your first request"}
             className="mt-3 inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1.5 text-sm font-medium text-brand"
           >
             <Plus className="h-4 w-4" /> Submit your first request
