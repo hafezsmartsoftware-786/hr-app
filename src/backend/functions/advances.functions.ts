@@ -125,6 +125,65 @@ export const createAdvanceRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => AdvanceRequestSchema.parse(i))
   .handler(async ({ data, context }) => {
+    // 1. Request Period Check (15th - 20th)
+    const today = new Date();
+    const currentDay = today.getDate();
+    if (currentDay < 15 || currentDay > 20) {
+      throw new Error("Advance requests are only accepted between the 15th and 20th of the month.");
+    }
+
+    // Fetch employee profile to check probation and limits
+    const { data: profile } = await (context.supabase as any)
+      .from("profiles")
+      .select("contract_start_date, annual_advance_limit")
+      .eq("id", context.userId)
+      .single();
+
+    // 2. Probation Restriction
+    if (profile?.contract_start_date) {
+      const contractStart = new Date(profile.contract_start_date);
+      const diffMonths = (today.getFullYear() - contractStart.getFullYear()) * 12 + (today.getMonth() - contractStart.getMonth());
+      if (diffMonths < 3) {
+        throw new Error("You are not eligible for an advance payment during your probation period (first 3 months).");
+      }
+    }
+
+    // 3. Outstanding Balance Check
+    const activeBalance = await getActiveOutstandingBalance(context.userId);
+    if (activeBalance > 0) {
+      throw new Error("You have an active or unpaid advance request. You must settle it before requesting a new one.");
+    }
+
+    // Check for pending requests
+    const { data: pendingReqs } = await (context.supabase as any)
+      .from("employee_advances")
+      .select("id")
+      .eq("employee_id", context.userId)
+      .in("status", ["pending_manager", "pending_hr", "pending_finance", "approved_for_payment"]);
+    if (pendingReqs && pendingReqs.length > 0) {
+      throw new Error("You already have an active advance request in progress.");
+    }
+
+    // 4. Annual Advance Limit
+    const limit = profile?.annual_advance_limit ?? 10000;
+    const currentYear = today.getFullYear();
+    const { data: thisYearAdvances } = await (context.supabase as any)
+      .from("employee_advances")
+      .select("approved_amount, requested_amount")
+      .eq("employee_id", context.userId)
+      .gte("created_at", `${currentYear}-01-01T00:00:00.000Z`)
+      .lte("created_at", `${currentYear}-12-31T23:59:59.999Z`)
+      .not("status", "in", '("rejected","cancelled","returned")');
+
+    let usedThisYear = 0;
+    for (const adv of (thisYearAdvances ?? [])) {
+      usedThisYear += adv.approved_amount ?? adv.requested_amount ?? 0;
+    }
+    
+    if (usedThisYear + data.requested_amount > limit) {
+      throw new Error(`Your request exceeds your remaining annual advance limit (${limit - usedThisYear} EGP).`);
+    }
+
     const { data: row, error } = await (context.supabase as any)
       .from("employee_advances")
       .insert({
@@ -589,4 +648,62 @@ export const listAdvanceInstallments = createServerFn({ method: "POST" })
       .order("payroll_period", { ascending: true });
     if (error) throw new Error(error.message);
     return (rows ?? []) as AdvanceInstallment[];
+  });
+
+// ─── ELIGIBILITY & LIMITS ──────────────────────────────────────────────
+
+export const getAdvanceEligibility = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: { employee_id?: string } | void) => d)
+  .handler(async ({ data, context }) => {
+    const employeeId = (data as any)?.employee_id || context.userId;
+
+    const { data: profile } = await (context.supabase as any)
+      .from("profiles")
+      .select("contract_start_date, annual_advance_limit")
+      .eq("id", employeeId)
+      .single();
+
+    const limit = profile?.annual_advance_limit ?? 10000;
+
+    const currentYear = new Date().getFullYear();
+    const { data: thisYearAdvances } = await (context.supabase as any)
+      .from("employee_advances")
+      .select("approved_amount, requested_amount")
+      .eq("employee_id", employeeId)
+      .gte("created_at", `${currentYear}-01-01T00:00:00.000Z`)
+      .lte("created_at", `${currentYear}-12-31T23:59:59.999Z`)
+      .not("status", "in", '("rejected","cancelled","returned")');
+
+    let usedThisYear = 0;
+    for (const adv of (thisYearAdvances ?? [])) {
+      usedThisYear += adv.approved_amount ?? adv.requested_amount ?? 0;
+    }
+
+    const today = new Date();
+    let isProbation = false;
+    if (profile?.contract_start_date) {
+      const contractStart = new Date(profile.contract_start_date);
+      const diffMonths = (today.getFullYear() - contractStart.getFullYear()) * 12 + (today.getMonth() - contractStart.getMonth());
+      if (diffMonths < 3) isProbation = true;
+    }
+
+    return {
+      isProbation,
+      annualLimit: limit,
+      remainingAnnualLimit: Math.max(0, limit - usedThisYear),
+      usedThisYear
+    };
+  });
+
+export const updateAnnualAdvanceLimit = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .validator((d: { employee_id: string; limit: number }) => d)
+  .handler(async ({ data }) => {
+    const { error } = await (supabaseAdmin as any)
+      .from("profiles")
+      .update({ annual_advance_limit: data.limit })
+      .eq("id", data.employee_id);
+    if (error) throw new Error(error.message);
+    return { success: true };
   });

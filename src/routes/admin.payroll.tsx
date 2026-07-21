@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Download, Wallet, TrendingUp, AlertTriangle, Search, Filter, Award, Lock, Unlock, FileText, Loader2, RefreshCw, ChevronLeft, ChevronRight, FileDown, ArrowUp, ArrowDown, ArrowUpDown, Columns3 } from "lucide-react";
+import { Download, Wallet, TrendingUp, AlertTriangle, Search, Filter, Award, Lock, Unlock, FileText, Loader2, RefreshCw, ChevronLeft, ChevronRight, FileDown, ArrowUp, ArrowDown, ArrowUpDown, Columns3, Settings2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { getPayrollPeriod, lockPayrollRun, unlockPayrollRun, type PayrollRow } from "@/backend/functions/payroll.functions";
 import { SubTabs } from "@/components/SubTabs";
+import { AdvancedSettingsTab } from "@/components/payroll/AdvancedSettingsTab";
 
 export const Route = createFileRoute("/admin/payroll")({
   component: AdminPayroll,
@@ -22,11 +23,12 @@ function AdminPayroll() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [activeTab, setActiveTab] = useState<"run" | "advanced">("run");
   const [q, setQ] = useState("");
   const [dept, setDept] = useState<string>("All");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  type SortKey = "employee_name" | "salary" | "allowance" | "bonus" | "penalty" | "net_pay" | "kpi" | "daily_rate";
+  type SortKey = "employee_name" | "basic_salary" | "salary" | "insurance_salary" | "emergency_fund" | "allowance" | "bonus" | "penalty" | "advance_deduction" | "net_pay" | "kpi" | "daily_rate";
   const [sortKey, setSortKey] = useState<SortKey>("employee_name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   function toggleSort(k: SortKey) {
@@ -34,14 +36,18 @@ function AdminPayroll() {
     else { setSortKey(k); setSortDir(k === "employee_name" ? "asc" : "desc"); }
   }
 
-  type ColKey = "salary" | "daily_rate" | "attendance" | "allowance" | "bonus" | "penalty" | "net_pay" | "kpi" | "payslip";
+  type ColKey = "basic_salary" | "salary" | "insurance_salary" | "emergency_fund" | "daily_rate" | "attendance" | "allowance" | "bonus" | "penalty" | "advance_deduction" | "net_pay" | "kpi" | "payslip";
   const COLS: { key: ColKey; label: string }[] = [
-    { key: "salary", label: t("grossSalary") || "Salary" },
+    { key: "basic_salary", label: t("basicSalary") || "Basic Salary" },
+    { key: "salary", label: t("grossSalary") || "Gross Salary" },
+    { key: "insurance_salary", label: t("insuranceSalary") || "Insurance Salary" },
+    { key: "emergency_fund", label: t("emergencyFund") || "Emergency Fund" },
     { key: "daily_rate", label: t("dailyRate") || "Daily rate" },
     { key: "attendance", label: t("attendance") || "P / L / A" },
     { key: "allowance", label: t("allowance") || "Allowance" },
     { key: "bonus", label: t("bonus") || "Bonus" },
     { key: "penalty", label: t("penalty") || "Penalty" },
+    { key: "advance_deduction", label: t("advances") || "Advances" },
     { key: "net_pay", label: t("netPay") || "Net pay" },
     { key: "kpi", label: t("kpi") || "KPI" },
     { key: "payslip", label: t("payslip") || "Payslip" },
@@ -133,10 +139,11 @@ function AdminPayroll() {
       allowance: acc.allowance + r.allowance,
       bonus: acc.bonus + r.bonus,
       penalty: acc.penalty + r.penalty,
+      advance_deduction: (acc.advance_deduction || 0) + (r.advance_deduction || 0),
       net: acc.net + r.net_pay,
       kpi: acc.kpi + r.kpi,
     }),
-    { base: 0, allowance: 0, bonus: 0, penalty: 0, net: 0, kpi: 0 },
+    { base: 0, allowance: 0, bonus: 0, penalty: 0, advance_deduction: 0, net: 0, kpi: 0 },
   );
   const avgKpi = filtered.length ? Math.round(totals.kpi / filtered.length) : 0;
   const workingDays = data?.working_days ?? 22;
@@ -158,6 +165,7 @@ function AdminPayroll() {
       "Allowance (EGP)": r.allowance,
       "Bonus (EGP)": r.bonus,
       "Penalty (EGP)": r.penalty,
+      "Advances (EGP)": r.advance_deduction || 0,
       "Net Pay (EGP)": r.net_pay,
       "KPI %": r.kpi,
       "Target Met": r.target_met ? "Yes" : "No",
@@ -176,6 +184,7 @@ function AdminPayroll() {
       ["Total Allowance", totals.allowance],
       ["Total Bonus", totals.bonus],
       ["Total Penalty", totals.penalty],
+      ["Total Advances", totals.advance_deduction],
       ["Total Net Payout", totals.net],
       ["Average KPI %", avgKpi],
     ]);
@@ -186,7 +195,7 @@ function AdminPayroll() {
   function exportCsv() {
     const headers = [
       "Employee Code","Name","Department","Working Days","Present","Late","Absent","Leave",
-      "Daily Rate (EGP)","Base Salary (EGP)","Allowance (EGP)","Bonus (EGP)","Penalty (EGP)","Net Pay (EGP)","KPI %","Target Met","Target (days)",
+      "Daily Rate (EGP)","Base Salary (EGP)","Allowance (EGP)","Bonus (EGP)","Penalty (EGP)","Advances (EGP)","Net Pay (EGP)","KPI %","Target Met","Target (days)",
     ];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
@@ -197,7 +206,7 @@ function AdminPayroll() {
       lines.push([
         r.emp_code ?? "", r.employee_name, r.department ?? "",
         r.working_days, r.present_days, r.late_days, r.absent_days, r.leave_days,
-        r.daily_rate, r.salary, r.allowance, r.bonus, r.penalty, r.net_pay, r.kpi,
+        r.daily_rate, r.salary, r.allowance, r.bonus, r.penalty, r.advance_deduction || 0, r.net_pay, r.kpi,
         r.target_met ? "Yes" : "No", r.target_value ?? "",
       ].map(esc).join(","));
     }
@@ -250,6 +259,7 @@ function AdminPayroll() {
         ["Allowance", `+ ${fmt(r.allowance)}`],
         ["Bonus", `+ ${fmt(r.bonus)}`],
         ["Penalty", `- ${fmt(r.penalty)}`],
+        ...(r.advance_deduction ? [["Advances", `- ${fmt(r.advance_deduction)}`]] : []),
         [{ content: "Net pay", styles: { fontStyle: "bold" } }, { content: fmt(r.net_pay), styles: { fontStyle: "bold" } }],
       ],
       theme: "grid",
@@ -275,6 +285,34 @@ function AdminPayroll() {
         { to: "/admin/payroll", label: "Payroll" },
         { to: "/admin/payroll-settings", label: "Payroll Settings" },
       ]} />
+
+      <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-card p-1">
+        <button
+          onClick={() => setActiveTab("run")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "run"
+              ? "bg-primary text-primary-foreground shadow"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Wallet className="h-4 w-4" /> {t("payrollRun")}
+        </button>
+        <button
+          onClick={() => setActiveTab("advanced")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "advanced"
+              ? "bg-primary text-primary-foreground shadow"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Settings2 className="h-4 w-4" /> {t("advancedSettings")}
+        </button>
+      </div>
+
+      {activeTab === "advanced" ? (
+        <AdvancedSettingsTab />
+      ) : (
+        <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">{t("payroll")}</h1>
@@ -405,12 +443,16 @@ function AdminPayroll() {
           <thead className="border-b border-border bg-muted/40">
             <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
               <SortTh sortKey="employee_name" current={sortKey} dir={sortDir} onClick={toggleSort}>{t("name")}</SortTh>
-              {isOn("salary") && <SortTh sortKey="salary" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("salary")}</SortTh>}
+              {isOn("basic_salary") && <SortTh sortKey="basic_salary" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("basicSalary")}</SortTh>}
+              {isOn("salary") && <SortTh sortKey="salary" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("grossSalary")}</SortTh>}
+              {isOn("insurance_salary") && <SortTh sortKey="insurance_salary" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("insuranceSalary")}</SortTh>}
+              {isOn("emergency_fund") && <SortTh sortKey="emergency_fund" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("emergencyFund")}</SortTh>}
               {isOn("daily_rate") && <SortTh sortKey="daily_rate" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("dailyRate")}</SortTh>}
               {isOn("attendance") && <Th align="center">P / L / A</Th>}
               {isOn("allowance") && <SortTh sortKey="allowance" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("allowance")}</SortTh>}
               {isOn("bonus") && <SortTh sortKey="bonus" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("bonus")}</SortTh>}
               {isOn("penalty") && <SortTh sortKey="penalty" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("penalty")}</SortTh>}
+              {isOn("advance_deduction") && <SortTh sortKey="advance_deduction" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("advances")}</SortTh>}
               {isOn("net_pay") && <SortTh sortKey="net_pay" current={sortKey} dir={sortDir} onClick={toggleSort} align="end">{t("netPay")}</SortTh>}
               {isOn("kpi") && <SortTh sortKey="kpi" current={sortKey} dir={sortDir} onClick={toggleSort} align="center">{t("kpi")}</SortTh>}
               {isOn("payslip") && <Th align="center">Payslip</Th>}
@@ -433,7 +475,10 @@ function AdminPayroll() {
                     </div>
                   </div>
                 </td>
+                {isOn("basic_salary") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(r.basic_salary || 0)}</td>}
                 {isOn("salary") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(r.salary)}</td>}
+                {isOn("insurance_salary") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(r.insurance_salary || 0)}</td>}
+                {isOn("emergency_fund") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(r.emergency_fund || 0)}</td>}
                 {isOn("daily_rate") && <td className="px-4 py-3 text-end font-mono tabular-nums text-muted-foreground">{fmt(r.daily_rate)}</td>}
                 {isOn("attendance") && (
                   <td className="px-4 py-3 text-center font-mono tabular-nums text-xs">
@@ -447,6 +492,7 @@ function AdminPayroll() {
                 {isOn("allowance") && <td className="px-4 py-3 text-end font-mono tabular-nums text-info">+{fmt(r.allowance)}</td>}
                 {isOn("bonus") && <td className="px-4 py-3 text-end font-mono tabular-nums text-success">+{fmt(r.bonus)}</td>}
                 {isOn("penalty") && <td className="px-4 py-3 text-end font-mono tabular-nums text-destructive">-{fmt(r.penalty)}</td>}
+                {isOn("advance_deduction") && <td className="px-4 py-3 text-end font-mono tabular-nums text-destructive">-{fmt(r.advance_deduction || 0)}</td>}
                 {isOn("net_pay") && <td className="px-4 py-3 text-end font-mono tabular-nums font-semibold">{fmt(r.net_pay)}</td>}
                 {isOn("kpi") && (
                   <td className="px-4 py-3 text-center">
@@ -475,12 +521,16 @@ function AdminPayroll() {
             <tfoot className="border-t border-border bg-muted/40 font-semibold">
               <tr>
                 <td className="px-4 py-3" colSpan={1}>Total ({filtered.length})</td>
+                {isOn("basic_salary") && <td className="px-4 py-3" />}
                 {isOn("salary") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(totals.base)}</td>}
+                {isOn("insurance_salary") && <td className="px-4 py-3" />}
+                {isOn("emergency_fund") && <td className="px-4 py-3" />}
                 {isOn("daily_rate") && <td className="px-4 py-3" />}
                 {isOn("attendance") && <td className="px-4 py-3" />}
                 {isOn("allowance") && <td className="px-4 py-3 text-end font-mono tabular-nums text-info">+{fmt(totals.allowance)}</td>}
                 {isOn("bonus") && <td className="px-4 py-3 text-end font-mono tabular-nums text-success">+{fmt(totals.bonus)}</td>}
                 {isOn("penalty") && <td className="px-4 py-3 text-end font-mono tabular-nums text-destructive">-{fmt(totals.penalty)}</td>}
+                {isOn("advance_deduction") && <td className="px-4 py-3 text-end font-mono tabular-nums text-destructive">-{fmt(totals.advance_deduction)}</td>}
                 {isOn("net_pay") && <td className="px-4 py-3 text-end font-mono tabular-nums">{fmt(totals.net)}</td>}
                 {isOn("kpi") && <td className="px-4 py-3 text-center">{avgKpi}%</td>}
                 {isOn("payslip") && <td className="px-4 py-3" />}
@@ -531,6 +581,8 @@ function AdminPayroll() {
         Formulas — Daily rate = Salary ÷ {workingDays}. Penalty = (Late × {data?.late_penalty_ratio ?? 0.25} + Absent × 1) × Daily rate.
         Bonus = 10% of salary when target met. Net = Salary + Allowance + Bonus − Penalty. Working days exclude Fri/Sat by default.
       </p>
+      </>
+      )}
     </div>
   );
 }

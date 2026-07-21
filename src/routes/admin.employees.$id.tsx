@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployeeAvatar } from "@/components/EmployeeAvatar";
+import { EmployeeTripsPanel } from "@/components/employee/EmployeeTripsPanel";
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -101,7 +102,7 @@ export const Route = createFileRoute("/admin/employees/$id")({
   component: EmployeeDetail,
 });
 
-type Tab = "info" | "attendance" | "leaves" | "devices";
+type Tab = "info" | "attendance" | "leaves" | "devices" | "trips";
 
 function EmployeeDetail() {
   const { id } = Route.useParams();
@@ -193,15 +194,15 @@ function EmployeeDetail() {
         currentSalaryMode={((employee as any).salaryMode ?? "gross") as "gross" | "net"}
       />
 
-      <div className="flex gap-1 rounded-full border border-border bg-card p-1 text-sm">
-        {(["info", "attendance", "leaves", "devices"] as Tab[]).map((k) => (
+      <div className="flex gap-1 rounded-full border border-border bg-card p-1 text-sm overflow-x-auto whitespace-nowrap">
+        {(["info", "attendance", "leaves", "devices", "trips"] as Tab[]).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`flex-1 rounded-full px-3 py-2 font-medium capitalize transition-colors ${tab === k ? "bg-gradient-brand text-brand-foreground shadow-brand" : "text-muted-foreground hover:text-foreground"
+            className={`px-4 py-2 rounded-full font-medium capitalize transition-colors ${tab === k ? "bg-gradient-brand text-brand-foreground shadow-brand" : "text-muted-foreground hover:text-foreground"
               }`}
           >
-            {t(k)}
+            {k === "trips" ? (t("tripAllowance") ?? "Trip Allowance") : t(k)}
           </button>
         ))}
       </div>
@@ -210,9 +211,11 @@ function EmployeeDetail() {
       {tab === "attendance" && <AttendanceTab employeeName={employee.name} />}
       {tab === "leaves" && <LeavesTab leaves={leaves} />}
       {tab === "devices" && <DevicesTab devices={devices} />}
+      {tab === "trips" && <EmployeeTripsPanel employeeId={employee.id} />}
     </div>
   );
 }
+
 
 import type { EmployeeDetail as EmployeeDetailRow } from "@/backend/functions/employees.functions";
 import { adminTransferEmployee } from "@/backend/functions/employees.functions";
@@ -389,7 +392,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
   const sectionsForDept = (locs?.sections ?? []).filter((s: any) => !form.department_id || s.department_id === form.department_id);
-  type SideTab = "overview" | "employment" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "advances" | "status" | "offboarding";
+  type SideTab = "overview" | "employment" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "advances" | "status" | "offboarding" | "trips";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
@@ -402,6 +405,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     { id: "notes", label: "Notes", icon: StickyNoteIcon },
     { id: "advances", label: "Advances", icon: Banknote },
     { id: "status", label: "Status history", icon: Clock },
+    { id: "trips", label: t("tripAllowance" as any) ?? "Trip Allowance", icon: MapPin },
     { id: "offboarding", label: "Offboarding", icon: Plane },
   ];
 
@@ -520,7 +524,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                 )}
               </div>
             </div>
-            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm ${detail.status === "Active" ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground"}`}>
               {detail.status === "Active" ? t("active") : t("inactive")}
               {detail.status === "Inactive" && detail.inactive_reason ? (
                 <span className="ms-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal">
@@ -529,8 +533,8 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
               ) : null}
             </span>
             {detail.gender && (
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-                {detail.gender}
+              <span className="rounded-full bg-success text-success-foreground px-3 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm">
+                {detail.gender === "Male" ? (t("male" as any) ?? detail.gender) : detail.gender === "Female" ? (t("female" as any) ?? detail.gender) : detail.gender}
               </span>
             )}
             {canEdit && !editing && (
@@ -539,13 +543,13 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                   onClick={() => setTransferModalOpen(true)}
                   className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur hover:bg-white/25"
                 >
-                  Transfer
+                  {t("transfer" as any) ?? "Transfer"}
                 </button>
                 <button
                   onClick={() => setEditing(true)}
                   className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur hover:bg-white/25"
                 >
-                  <Pencil className="h-3 w-3" /> Edit
+                  <Pencil className="h-3 w-3" /> {t("edit") ?? "Edit"}
                 </button>
               </>
             )}
@@ -617,7 +621,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                 {(locs?.departments ?? []).map((d) => <option key={d.id} value={d.id}>{d.name_en}</option>)}
               </select>
             </EditField>
-            <EditField label="Sub-Section">
+            <EditField label="Level">
               <select className={editInputCls} value={form.section_id} onChange={(e) => {
                 const sec = sectionsForDept.find((s: any) => s.id === e.target.value);
                 upd("section_id", e.target.value);
@@ -862,7 +866,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
                       }`}
                   >
                     <n.icon className="h-4 w-4" />
-                    <span>{n.label}</span>
+                    <span>{t((n.id === "status" ? "status_history" : n.id === "trips" ? "tripAllowance" : n.id) as any) ?? n.label}</span>
                   </button>
                 );
               })}
@@ -1003,6 +1007,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
 
             {sideTab === "offboarding" && (
               <AdminOffboarding employeeId={detail.id} resignationDate={detail.contract_end_date || new Date().toISOString().slice(0, 10)} />
+            )}
+
+            {sideTab === "trips" && (
+              <EmployeeTripsPanel employeeId={detail.id} />
             )}
           </div>
         </div>
@@ -3335,17 +3343,106 @@ function StatusHistoryPanel({ profileId }: { profileId: string }) {
   );
 }
 
+import { getAdvanceEligibility, updateAnnualAdvanceLimit } from "@/backend/functions/advances.functions";
+
 function AdvancesTab({ employeeId }: { employeeId: string }) {
   const [page, setPage] = useState(1);
+  const [editingLimit, setEditingLimit] = useState(false);
+  const [annualLimit, setAnnualLimit] = useState("");
+
   const advancesFn = useServerFn(listAllAdvances);
+  const eligibilityFn = useServerFn(getAdvanceEligibility);
+  const updateLimitFn = useServerFn(updateAnnualAdvanceLimit);
+
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "employee-advances", employeeId, page],
     queryFn: () => advancesFn({ data: { employee_id: employeeId, page, limit: 15 } })
   });
 
+  const { data: eligibility, refetch: refetchEligibility } = useQuery({
+    queryKey: ["admin", "employee-advance-eligibility", employeeId],
+    queryFn: () => eligibilityFn({ data: { employee_id: employeeId } })
+  });
+
+  useEffect(() => {
+    if (eligibility?.annualLimit && !editingLimit) {
+      setAnnualLimit(eligibility.annualLimit.toString());
+    }
+  }, [eligibility, editingLimit]);
+
+  const saveLimit = async () => {
+    try {
+      await updateLimitFn({ data: { employee_id: employeeId, limit: Number(annualLimit) } });
+      toast.success("Annual limit updated successfully");
+      setEditingLimit(false);
+      refetchEligibility();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update limit");
+    }
+  };
+
   return (
-    <div className="rounded-3xl border border-border bg-card p-5">
-      <h2 className="mb-4 font-display text-base font-semibold">Advances</h2>
+    <div className="space-y-4">
+      {/* Annual Limit Settings */}
+      <div className="rounded-3xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-display text-base font-semibold">Advance Eligibility</h2>
+          {!editingLimit ? (
+            <button
+              onClick={() => setEditingLimit(true)}
+              className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand"
+            >
+              Edit Limit
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingLimit(false)}
+                className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveLimit}
+                className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground"
+              >
+                Save
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
+            <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Annual Advance Limit</p>
+            {editingLimit ? (
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="number"
+                  value={annualLimit}
+                  onChange={(e) => setAnnualLimit(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                />
+                <span className="text-sm font-medium text-muted-foreground">EGP</span>
+              </div>
+            ) : (
+              <p className="text-2xl font-display font-semibold text-brand">{Number(annualLimit).toLocaleString()} EGP</p>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">The maximum total amount this employee can request per year.</p>
+          </div>
+          
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
+            <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Used This Year</p>
+            <p className="text-2xl font-display font-semibold text-amber-500">
+              {eligibility?.usedThisYear?.toLocaleString() ?? 0} EGP
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">Total advances approved in the current calendar year.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-card p-5">
+        <h2 className="mb-4 font-display text-base font-semibold">Advances History</h2>
       {isLoading ? (
         <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : data?.advances.length === 0 ? (
@@ -3374,6 +3471,7 @@ function AdvancesTab({ employeeId }: { employeeId: string }) {
           </table>
         </div>
       )}
+    </div>
     </div>
   );
 }

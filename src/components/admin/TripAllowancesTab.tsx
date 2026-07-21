@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Plane, Save, MapPin, Plus, Trash2 } from "lucide-react";
+import { Plane, Save, MapPin, Plus, Trash2, Download, Upload } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export function TripAllowancesTab() {
   const { t } = useI18n();
@@ -35,15 +36,7 @@ export function TripAllowancesTab() {
     },
   });
 
-  const { data: jobGrades } = useQuery({
-    queryKey: ["job-grades"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("job_grades" as any).select("*").order("name_en");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const activeGrades = useMemo(() => (jobGrades ?? []).filter((g: any) => g.active).map((g: any) => g.name_en as string), [jobGrades]);
+  const activeGrades = useMemo(() => ["Manager", "Engineer", "Technician", "Supervisor", "Driver"], []);
 
   // Group policies by city_id
   const groupedPolicies = useMemo(() => {
@@ -105,21 +98,129 @@ export function TripAllowancesTab() {
     }, {
       onSuccess: () => {
         setNewCityId("");
-        setNewRates({ Manager: "", Engineer: "", Supervisor: "", Driver: "" });
+        setNewRates({ Manager: "", Engineer: "", Technician: "", Supervisor: "", Driver: "" });
       }
     });
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownloadTemplate = () => {
+    const header = ["City", "Manager", "Engineer", "Technician", "Supervisor", "Driver"];
+    const data = [
+      header,
+      ["Cairo", 500, 400, 300, 350, 250],
+      ["Alexandria", 600, 450, 350, 400, 300],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Trip_Allowances_Template.xlsx");
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        if (!cities) throw new Error("Cities not loaded yet");
+
+        const rowsToUpsert: { city_id: string; job_grade: string; nightly_rate: number }[] = [];
+        let skippedCities = 0;
+
+        for (const row of data) {
+          const cityName = row["City"];
+          if (!cityName) continue;
+
+          // Find matching city (case insensitive match on name_en or name_ar)
+          const matchedCity = cities.find(
+            (c) =>
+              c.name_en?.toLowerCase() === String(cityName).toLowerCase() ||
+              c.name_ar?.toLowerCase() === String(cityName).toLowerCase()
+          );
+
+          if (!matchedCity) {
+            skippedCities++;
+            continue;
+          }
+
+          for (const grade of activeGrades) {
+            const rate = Number(row[grade]);
+            if (!isNaN(rate) && rate >= 0) {
+              rowsToUpsert.push({
+                city_id: matchedCity.id,
+                job_grade: grade,
+                nightly_rate: rate,
+              });
+            }
+          }
+        }
+
+        if (rowsToUpsert.length === 0) {
+          toast.error("No valid data found to import.");
+          return;
+        }
+
+        const { error } = await supabase
+          .from("trip_allowance_policies")
+          .upsert(rowsToUpsert, { onConflict: "city_id, job_grade" });
+
+        if (error) throw error;
+
+        toast.success(`Imported policies. ${skippedCities > 0 ? `Skipped ${skippedCities} unrecognized cities.` : ""}`);
+        qc.invalidateQueries({ queryKey: ["trip-allowance-policies"] });
+      } catch (err: any) {
+        toast.error("Failed to import: " + err.message);
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   if (loadingPolicies) return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-          <Plane className="h-6 w-6 text-brand" />
-          Trip Allowances Policy
-        </h1>
-        <p className="text-sm text-muted-foreground">Manage the overnight allowance rates based on destination city and job grade.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold flex items-center gap-2">
+            <Plane className="h-6 w-6 text-brand" />
+            Trip Allowances Policy
+          </h1>
+          <p className="text-sm text-muted-foreground">Manage the overnight allowance rates based on destination city and job grade.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            Template
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
+          >
+            <Upload className="h-4 w-4" />
+            Import Excel
+          </button>
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            ref={fileInputRef}
+            onChange={handleImportExcel}
+            className="hidden"
+          />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-border bg-card">
@@ -166,8 +267,7 @@ export function TripAllowancesTab() {
                       onChange={(e) => setNewRates({ ...newRates, [g]: e.target.value })}
                       placeholder="0"
                     />
-                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">EGP</span>
-                  </div>
+                    </div>
                 </td>
               ))}
                 <td className="p-3 text-center">
@@ -221,8 +321,7 @@ function CityPolicyRow({ group, activeGrades, onSave, onDelete }: { group: any; 
               onChange={(e) => setEditedRates({ ...editedRates, [`${group.city_id}-${g}`]: e.target.value })}
               placeholder="0"
             />
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">EGP</span>
-          </div>
+            </div>
         </td>
       ))}
       <td className="p-3">

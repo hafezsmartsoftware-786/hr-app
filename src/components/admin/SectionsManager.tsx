@@ -23,7 +23,7 @@ export function SectionsManager() {
     mutationFn: (data: any) => mUpsertFn({ data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["all-sections"] });
-      toast.success("Section saved successfully");
+      toast.success("Level saved successfully");
       setDraftId(null);
       setDraft({ name_en: "", name_ar: "", department_id: "", active: true });
     },
@@ -34,7 +34,7 @@ export function SectionsManager() {
     mutationFn: (id: string) => mDelFn({ data: { id } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["all-sections"] });
-      toast.success("Section deleted");
+      toast.success("Level deleted");
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -45,15 +45,15 @@ export function SectionsManager() {
     <div className="space-y-6 animate-in fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold">Sub-Sections</h2>
-          <p className="text-sm text-muted-foreground">Manage sections and link them to their parent departments.</p>
+          <h2 className="text-lg font-bold">Levels</h2>
+          <p className="text-sm text-muted-foreground">Manage levels and link them to their parent departments.</p>
         </div>
         {draftId !== "new" && (
           <button 
             onClick={() => { setDraftId("new"); setDraft({ name_en: "", name_ar: "", department_id: "", active: true }); }}
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90 transition-colors"
           >
-            <Plus className="h-4 w-4" /> Add Section
+            <Plus className="h-4 w-4" /> Add Level
           </button>
         )}
       </div>
@@ -62,7 +62,7 @@ export function SectionsManager() {
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/40 font-medium text-muted-foreground">
             <tr>
-              <th className="p-4 w-1/3">Section Name (EN / AR)</th>
+              <th className="p-4 w-1/3">Level Name (EN / AR)</th>
               <th className="p-4 w-1/3">Department</th>
               <th className="p-4">Status</th>
               <th className="p-4 text-end">Actions</th>
@@ -107,7 +107,7 @@ export function SectionsManager() {
             {isLoading ? (
               <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
             ) : !sections || sections.length === 0 ? (
-              draftId !== "new" && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No sections found.</td></tr>
+              draftId !== "new" && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No levels found.</td></tr>
             ) : (
               sections.map((s: any) => draftId === s.id ? (
                 <tr key={s.id} className="bg-brand/5">
@@ -161,7 +161,7 @@ export function SectionsManager() {
                       <button onClick={() => { setDraftId(s.id); setDraft({ name_en: s.name_en, name_ar: s.name_ar, department_id: s.department_id, active: s.active }); }} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted" title="Edit">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button onClick={() => { if (confirm("Delete section?")) mDelete.mutate(s.id); }} className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10" title="Delete">
+                      <button onClick={() => { if (confirm("Delete level?")) mDelete.mutate(s.id); }} className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10" title="Delete">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

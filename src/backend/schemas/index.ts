@@ -148,6 +148,7 @@ export const TripCreateSchema = z.object({
   assignee: z.string().uuid(),
   overnight_nights: z.number().min(0).max(365).optional().default(0),
   transport_type: z.string().max(50).optional().nullable(),
+  manual_allowance: z.number().min(0).max(100000).optional().nullable(),
 });
 export const TransitionSchema = z.object({
   id: z.string().uuid(),

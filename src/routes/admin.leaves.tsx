@@ -215,7 +215,7 @@ function AdminLeaves() {
               tab === tId ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t(TAB_LABELS[tId]) || TAB_LABELS[tId]}
+            {t(TAB_LABELS[tId] as any) || TAB_LABELS[tId]}
           </button>
         ))}
       </div>
@@ -236,7 +236,7 @@ function AdminLeaves() {
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-            {t(s) || s} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
+            {t(s as any) || s} <span className="ml-1 opacity-70">{counts[s] ?? 0}</span>
           </button>
         ))}
       </div>
@@ -248,7 +248,7 @@ function AdminLeaves() {
       )}
       {!isLoading && visible.length === 0 && (
         <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No {filter === "all" ? "" : t(filter) || filter} leave requests.
+          No {filter === "all" ? "" : t(filter as any) || filter} leave requests.
         </div>
       )}
 
@@ -266,7 +266,7 @@ function AdminLeaves() {
                 </div>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone[l.status] ?? "bg-muted text-muted-foreground"}`}>
-                {t(l.status) || l.status}
+                {t(l.status as any) || l.status}
               </span>
             </div>
             <div className="mt-4 rounded-xl bg-muted/60 p-3 text-xs">

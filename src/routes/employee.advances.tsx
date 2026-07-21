@@ -20,6 +20,7 @@ import {
   createAdvanceRequest,
   listMyAdvances,
   cancelMyAdvance,
+  getAdvanceEligibility,
   type EmployeeAdvance,
 } from "@/backend/functions/advances.functions";
 
@@ -79,6 +80,7 @@ function EmployeeAdvancesPage() {
   const listFn = useServerFn(listMyAdvances);
   const createFn = useServerFn(createAdvanceRequest);
   const cancelFn = useServerFn(cancelMyAdvance);
+  const eligibilityFn = useServerFn(getAdvanceEligibility);
 
   const [showForm, setShowForm] = useState(false);
   const [selectedAdv, setSelectedAdv] = useState<EmployeeAdvance | null>(null);
@@ -94,9 +96,33 @@ function EmployeeAdvancesPage() {
     queryFn: () => listFn(),
   });
 
-  const hasPending = advances.some((a) =>
-    ["pending_manager", "pending_hr", "pending_finance", "approved_for_payment"].includes(a.status)
-  );
+  const { data: eligibilityData, isLoading: isLoadingEligibility } = useQuery({
+    queryKey: ["employee", "advance-eligibility"],
+    queryFn: () => eligibilityFn(),
+  });
+
+  const pendingStatuses = [
+    "pending_manager",
+    "pending_hr",
+    "pending_finance",
+    "approved_for_payment",
+  ];
+  const hasPending = advances.some((a) => pendingStatuses.includes(a.status));
+
+  const today = new Date();
+  const currentDay = today.getDate();
+  const isRequestPeriod = currentDay >= 15 && currentDay <= 20;
+
+  const eligibility = {
+    isProbation: eligibilityData?.isProbation ?? false,
+    remainingAnnualLimit: eligibilityData?.remainingAnnualLimit ?? 0,
+    hasActiveAdvance: hasPending, // Outstanding check
+  };
+
+  const cannotRequestReason = 
+    !isRequestPeriod ? "Advance requests are only accepted between the 15th and 20th of the month." :
+    eligibility.isProbation ? "You are not eligible for an advance payment during your probation period (first 3 months)." :
+    eligibility.hasActiveAdvance ? "You have an active or unpaid advance request. You must settle it before requesting a new one." : null;
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -142,17 +168,17 @@ function EmployeeAdvancesPage() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          disabled={hasPending}
-          title={hasPending ? "You have an active advance in progress" : "New request"}
+          disabled={!!cannotRequestReason}
+          title={cannotRequestReason || "New request"}
           className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <Plus className="h-4 w-4" /> New Request
         </button>
       </div>
 
-      {hasPending && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
-          You have an active advance request in progress. You cannot submit a new one until it is resolved.
+      {cannotRequestReason && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-700">
+          {cannotRequestReason}
         </div>
       )}
 
@@ -210,14 +236,16 @@ function EmployeeAdvancesPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Requested Amount (EGP) <span className="text-red-500">*</span>
+                <label className="mb-1 flex justify-between items-center text-xs font-medium text-muted-foreground">
+                  <span>Requested Amount (EGP) <span className="text-red-500">*</span></span>
+                  <span className="text-brand font-semibold">Max: {fmt(eligibility.remainingAnnualLimit)}</span>
                 </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   min={1}
+                  max={eligibility.remainingAnnualLimit}
                   placeholder="e.g. 5000"
                   className="w-full rounded-xl border border-input bg-muted/30 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />

@@ -17,7 +17,9 @@ export const createTrip = createServerFn({ method: "POST" })
   .inputValidator((i) => TripCreateSchema.parse(i))
   .handler(async ({ data, context }) => {
     let calculatedAllowance = 0;
-    if (data.overnight_nights > 0) {
+    if (data.manual_allowance !== undefined && data.manual_allowance !== null) {
+      calculatedAllowance = data.manual_allowance;
+    } else if (data.overnight_nights > 0) {
       const profReq = await context.supabase.from("profiles").select("job_grade").eq("id", data.assignee).single();
       if (profReq.data?.job_grade && data.city) {
         const policyReq = await context.supabase.from("trip_allowance_policies")
@@ -93,6 +95,19 @@ export const deleteTrip = createServerFn({ method: "POST" })
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("trips").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const approveTrip = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("trips").update({
+      status: "done",
+      allowance_status: "approved",
+      completed_at: new Date().toISOString()
+    }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

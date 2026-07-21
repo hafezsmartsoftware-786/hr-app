@@ -31,7 +31,7 @@ export const Route = createFileRoute("/admin/directory")({
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "departments", label: "Departments" },
-  { id: "sections", label: "Sections" },
+  { id: "sections", label: "Levels" },
   { id: "positions", label: "Positions" },
   { id: "job_grades", label: "Job Grades" },
   { id: "cities", label: "Cities & Districts" },

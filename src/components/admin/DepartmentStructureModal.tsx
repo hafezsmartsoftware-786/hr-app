@@ -68,7 +68,7 @@ export function DepartmentStructureModal({
     mutationFn: (data: any) => secUpsertFn({ data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dept-sections", departmentId] });
-      toast.success("Section saved");
+      toast.success("Level saved");
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -77,7 +77,7 @@ export function DepartmentStructureModal({
     mutationFn: (id: string) => secDelFn({ data: { id } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dept-sections", departmentId] });
-      toast.success("Section removed");
+      toast.success("Level removed");
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -97,7 +97,7 @@ export function DepartmentStructureModal({
             </div>
             <div>
               <h2 className="font-semibold">{departmentName} Structure</h2>
-              <p className="text-xs text-muted-foreground">Manage sections, positions, and headcount</p>
+              <p className="text-xs text-muted-foreground">Manage levels, positions, and headcount</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-muted">
@@ -116,7 +116,7 @@ export function DepartmentStructureModal({
             className={`px-6 py-3 text-sm font-medium border-b-2 ${activeTab === 'sections' ? 'border-brand text-brand' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
             onClick={() => setActiveTab('sections')}
           >
-            Sub-Sections
+            Levels
           </button>
         </div>
 
@@ -140,7 +140,7 @@ export function DepartmentStructureModal({
                   value={draft.section_id}
                   onChange={(e) => setDraft({ ...draft, section_id: e.target.value })}
                 >
-                  <option value="">(All Sections)</option>
+                  <option value="">(All Levels)</option>
                   {sections?.map((s: any) => (
                     <option key={s.id} value={s.id}>{s.name_en}</option>
                   ))}
@@ -196,7 +196,7 @@ export function DepartmentStructureModal({
               <thead className="bg-muted/40 font-medium text-muted-foreground">
                 <tr>
                   <th className="p-4">Position</th>
-                  <th className="p-4">Section</th>
+                  <th className="p-4">Level</th>
                   <th className="p-4">Job Grade</th>
                   <th className="p-4 text-center">Headcount</th>
                   <th className="p-4 w-16"></th>
@@ -238,14 +238,14 @@ export function DepartmentStructureModal({
               <div className="mb-6 grid grid-cols-3 gap-3">
                 <input
                   type="text"
-                  placeholder="Section Name (EN)"
+                  placeholder="Level Name (EN)"
                   className={inputCls}
                   value={secDraft.name_en}
                   onChange={(e) => setSecDraft({ ...secDraft, name_en: e.target.value })}
                 />
                 <input
                   type="text"
-                  placeholder="Section Name (AR)"
+                  placeholder="Level Name (AR)"
                   className={inputCls}
                   value={secDraft.name_ar}
                   onChange={(e) => setSecDraft({ ...secDraft, name_ar: e.target.value })}
@@ -264,7 +264,7 @@ export function DepartmentStructureModal({
                   disabled={mSecUpsert.isPending}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
                 >
-                  <Plus className="h-4 w-4" /> Add Section
+                  <Plus className="h-4 w-4" /> Add Level
                 </button>
               </div>
 
@@ -280,7 +280,7 @@ export function DepartmentStructureModal({
                   </thead>
                   <tbody className="divide-y divide-border">
                     {!sections || sections.length === 0 ? (
-                      <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No sections created yet.</td></tr>
+                      <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No levels created yet.</td></tr>
                     ) : (
                       sections.map((s: any) => (
                         <tr key={s.id} className="hover:bg-muted/20">

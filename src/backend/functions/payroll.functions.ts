@@ -133,12 +133,13 @@ async function computeRows(
     (supabase as any)
       .from("employee_advance_installments")
       .select("id, installment_amount, employee_advances!inner(employee_id)")
-      .eq("status", "pending"),
+      .eq("status", "pending")
+      .eq("payroll_period", `${year}-${String(month).padStart(2, "0")}`),
     supabase
       .from("trips")
       .select("id, assignee, calculated_allowance, allowance_status")
       .eq("status", "done")
-      .eq("allowance_status", "pending")
+      .eq("allowance_status", "approved")
       .gte("trip_date", startISO)
       .lt("trip_date", endISO)
   ]);
