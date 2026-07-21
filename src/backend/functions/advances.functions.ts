@@ -688,11 +688,44 @@ export const getAdvanceEligibility = createServerFn({ method: "GET" })
       if (diffMonths < 3) isProbation = true;
     }
 
+    // Request window (15th–20th)
+    const currentDay = today.getDate();
+    const isInWindow = currentDay >= 15 && currentDay <= 20;
+    let windowStart: Date;
+    let windowEnd: Date;
+    if (currentDay < 15) {
+      windowStart = new Date(today.getFullYear(), today.getMonth(), 15);
+      windowEnd = new Date(today.getFullYear(), today.getMonth(), 20);
+    } else if (currentDay > 20) {
+      windowStart = new Date(today.getFullYear(), today.getMonth() + 1, 15);
+      windowEnd = new Date(today.getFullYear(), today.getMonth() + 1, 20);
+    } else {
+      windowStart = new Date(today.getFullYear(), today.getMonth(), 15);
+      windowEnd = new Date(today.getFullYear(), today.getMonth(), 20);
+    }
+
+    // Outstanding balance + pending checks
+    const outstandingBalance = await getActiveOutstandingBalance(employeeId);
+    const { data: pendingReqs } = await (context.supabase as any)
+      .from("employee_advances")
+      .select("id")
+      .eq("employee_id", employeeId)
+      .in("status", ["pending_manager", "pending_hr", "pending_finance", "approved_for_payment"]);
+    const hasPendingRequest = !!(pendingReqs && pendingReqs.length > 0);
+    const hasActiveAdvance = outstandingBalance > 0;
+
     return {
       isProbation,
       annualLimit: limit,
       remainingAnnualLimit: Math.max(0, limit - usedThisYear),
-      usedThisYear
+      usedThisYear,
+      isInWindow,
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      nextWindowStart: (isInWindow ? new Date(today.getFullYear(), today.getMonth() + 1, 15) : windowStart).toISOString(),
+      hasPendingRequest,
+      hasActiveAdvance,
+      outstandingBalance,
     };
   });
 
