@@ -2214,8 +2214,8 @@ export type Database = {
       }
       profiles: {
         Row: {
-          annual_advance_limit: number
           allowance: number | null
+          annual_advance_limit: number
           avatar_url: string | null
           bank_account_name: string | null
           bank_account_number: string | null
@@ -2274,8 +2274,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          annual_advance_limit?: number
           allowance?: number | null
+          annual_advance_limit?: number
           avatar_url?: string | null
           bank_account_name?: string | null
           bank_account_number?: string | null
@@ -2334,8 +2334,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          annual_advance_limit?: number
           allowance?: number | null
+          annual_advance_limit?: number
           avatar_url?: string | null
           bank_account_name?: string | null
           bank_account_number?: string | null
