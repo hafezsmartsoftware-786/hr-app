@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n, useTranslators } from "@/lib/i18n";
-import { ChevronRight, Globe, Bell, MapPin, Wifi, Lock, LogOut, Smartphone, Check, ChevronDown, Shield, Signal, CircleDot, X, Eye, EyeOff, CalendarDays, MessageSquare, IdCard, User, Phone, Mail, Building2, UserCog, Wallet, FileSignature, CalendarClock, Fingerprint } from "lucide-react";
+import { ChevronRight, Globe, Bell, MapPin, Wifi, Lock, LogOut, Smartphone, Check, ChevronDown, Shield, Signal, CircleDot, X, Eye, EyeOff, CalendarDays, MessageSquare, IdCard, User, Phone, Mail, Building2, UserCog, Wallet, FileSignature, CalendarClock, Fingerprint, Banknote } from "lucide-react";
 import { InstallButton } from "@/components/InstallButton";
 import {
   useStore,
@@ -154,8 +154,10 @@ export function SettingsPage() {
         </ExpandableRow>
       </section>
 
-      {/* Quick links */}
       <section className="overflow-hidden rounded-2xl border border-border bg-card">
+        <Link to="/employee/advances" className="block">
+          <Row icon={Banknote} label="Advances" right={<ChevronRight className="h-4 w-4 text-muted-foreground rtl-flip" />} />
+        </Link>
         <Link to="/employee/leaves" className="block">
           <Row icon={CalendarDays} label={t("leaves")} right={<ChevronRight className="h-4 w-4 text-muted-foreground rtl-flip" />} />
         </Link>
@@ -208,9 +210,6 @@ export function SettingsPage() {
                       </span>
                       <div>
                         <p className="text-sm font-semibold">{tBranch(l.name)}</p>
-                        <p className="font-mono text-[10px] text-muted-foreground">
-                          {l.lat.toFixed(4)}, {l.lng.toFixed(4)}
-                        </p>
                       </div>
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
@@ -219,10 +218,7 @@ export function SettingsPage() {
                       {l.active ? t("active") : t("off")}
                     </span>
                   </div>
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span className="inline-flex items-center gap-1"><CircleDot className="h-3 w-3" />{t("radius")}</span>
-                    <span className="font-semibold tabular-nums text-foreground">{l.radius} m</span>
-                  </div>
+
                 </li>
               ))}
             </ul>
@@ -260,10 +256,7 @@ export function SettingsPage() {
                       <Signal className="h-3 w-3" />{n.active ? t("active") : t("off")}
                     </span>
                   </div>
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>IP</span>
-                    <span className="font-mono text-foreground">{n.ip}</span>
-                  </div>
+
                 </li>
               ))}
             </ul>

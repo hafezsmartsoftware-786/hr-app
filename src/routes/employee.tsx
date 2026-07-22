@@ -36,7 +36,6 @@ function EmployeeLayout() {
     { to: "/employee", icon: Home, label: t("dashboard") },
     { to: "/employee/attendance", icon: Clock, label: t("attendance") },
     { to: "/employee/check", icon: LogIn, label: "Check" },
-    { to: "/employee/advances", icon: Banknote, label: "Advances" },
     { to: "/employee/tasks", icon: ListChecks, label: t("tasks") },
     { to: "/employee/settings", icon: MoreHorizontal, label: "More" },
   ] as const;

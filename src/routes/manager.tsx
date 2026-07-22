@@ -25,11 +25,20 @@ function ManagerLayout() {
 
   const doLogout = async () => { await signOut(); window.location.href = "/auth"; };
 
-  const items = [
+  const sidebarItems = [
     { to: "/manager", icon: Home, label: t("dashboard"), exact: true },
     { to: "/manager/check", icon: LogIn, label: "Check in/out" },
     { to: "/manager/team", icon: Users, label: t("myTeam") },
     { to: "/manager/advances", icon: Banknote, label: "Advances" },
+    { to: "/manager/tasks", icon: ListChecks, label: t("tasks") },
+    { to: "/manager/trips", icon: RouteIcon, label: t("trips") },
+    { to: "/manager/profile", icon: UserCircle, label: "Profile" },
+  ] as const;
+
+  const mobileItems = [
+    { to: "/manager", icon: Home, label: t("dashboard"), exact: true },
+    { to: "/manager/check", icon: LogIn, label: "Check in/out" },
+    { to: "/manager/team", icon: Users, label: t("myTeam") },
     { to: "/manager/tasks", icon: ListChecks, label: t("tasks") },
     { to: "/manager/trips", icon: RouteIcon, label: t("trips") },
     { to: "/manager/profile", icon: UserCircle, label: "Profile" },
@@ -46,7 +55,7 @@ function ManagerLayout() {
             <Link to="/"><AppLogo size={28} /></Link>
           </div>
           <nav className="flex-1 space-y-1 p-3">
-            {items.map((it) => {
+            {sidebarItems.map((it) => {
               const active = isActive(it.to, "exact" in it ? it.exact : false);
               return (
                 <Link
@@ -95,7 +104,7 @@ function ManagerLayout() {
           {/* Mobile bottom nav */}
           <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl border-t border-border bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur lg:hidden">
             <ul className="flex items-center justify-between">
-              {items.map((it) => {
+              {mobileItems.map((it) => {
                 const active = isActive(it.to, "exact" in it ? it.exact : false);
                 return (
                   <li key={it.to} className="flex-1">
