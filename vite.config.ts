@@ -47,4 +47,19 @@ export default defineConfig({
       "@tanstack/react-start": startShim,
     },
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [
+        {
+          name: "external-node-builtins",
+          setup(build) {
+            build.onResolve({ filter: /^(cloudflare:sockets|crypto|https|url|util|node:tls|node:events|node:buffer|node:stream)$/ }, (args) => ({
+              path: args.path,
+              external: true,
+            }));
+          },
+        },
+      ],
+    },
+  },
 });

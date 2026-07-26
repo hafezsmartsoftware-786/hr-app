@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
-import { Building2, Users, Briefcase, Search, ChevronDown, ChevronRight, Crown, Mail, Phone, ArrowUpRight, BadgeCheck, Pencil, Plus, Trash2, GripVertical, Check, X, UserPlus, ExternalLink, ShieldAlert } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import { Building2, Users, Briefcase, Search, ChevronDown, ChevronRight, Crown, Mail, Phone, ArrowUpRight, BadgeCheck, Pencil, Plus, Trash2, GripVertical, Check, X, UserPlus, ExternalLink, ShieldAlert, Paintbrush, Download } from "lucide-react";
 import {
   getOrgChart,
   renameDepartment, renamePosition,
@@ -16,6 +16,9 @@ import { EmployeeAvatar } from "@/components/EmployeeAvatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+export type CardVariant = "default" | "minimal" | "badge" | "vibrant";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
@@ -40,6 +43,7 @@ function PersonCard({
   deptName,
   onOpen,
   editing = false,
+  variant = "default",
 }: {
   person: OrgPerson;
   accent?: "primary" | "head" | "ghost";
@@ -47,6 +51,7 @@ function PersonCard({
   deptName?: string;
   onOpen: (p: OrgPerson, ctx: { title?: string; deptName?: string }) => void;
   editing?: boolean;
+  variant?: CardVariant;
 }) {
   const sortable = useSortable({ id: `person:${person.id}`, data: { type: "person", personId: person.id }, disabled: !editing });
   const style = editing ? {
@@ -54,8 +59,99 @@ function PersonCard({
     transition: sortable.transition,
     opacity: sortable.isDragging ? 0.4 : 1,
   } : undefined;
+  
+  const displayTitle = title ?? person.positionName ?? "Team Member";
   const isPrimary = accent === "primary";
   const isHead = accent === "head";
+
+  const sharedProps = {
+    ref: editing ? sortable.setNodeRef : undefined,
+    style,
+    onClick: () => !editing && onOpen(person, { title, deptName }),
+    ...(editing ? sortable.attributes : { role: "button" }),
+    ...(editing ? sortable.listeners : {}),
+  };
+
+  if (variant === "minimal") {
+    const ringColor = isPrimary ? "ring-brand/40" : isHead ? "ring-brand/20" : "ring-border/50";
+    return (
+      <div {...sharedProps} className={`group relative flex w-56 flex-col items-center justify-center p-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
+        <div className="relative">
+          <div className={`absolute -inset-1.5 rounded-full ring-1 ${ringColor} transition-all duration-300 group-hover:ring-brand/60 group-hover:bg-brand/5`} />
+          <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="relative h-20 w-20 rounded-full shadow-sm ring-4 ring-background" />
+          {isPrimary && (
+            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-brand text-brand-foreground shadow-sm">
+              <Crown className="h-3 w-3" />
+            </div>
+          )}
+        </div>
+        <div className="mt-4 text-center w-full">
+          <div className="truncate text-[14px] font-bold tracking-tight text-foreground" title={person.name}>{person.name}</div>
+          <div className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground" title={displayTitle}>{displayTitle}</div>
+          {deptName && (
+            <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              {deptName}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "badge") {
+    const gradient = isPrimary 
+      ? "bg-gradient-to-r from-orange-400 to-pink-500" 
+      : isHead 
+      ? "bg-gradient-to-r from-pink-500 to-fuchsia-600" 
+      : "bg-gradient-to-r from-cyan-400 to-blue-500";
+    const ringColor = isPrimary 
+      ? "border-orange-400" 
+      : isHead 
+      ? "border-pink-500" 
+      : "border-cyan-400";
+      
+    return (
+      <div {...sharedProps} className={`group relative flex w-56 flex-col items-center justify-start pt-2 pb-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
+        <div className={`relative flex h-[100px] w-[100px] items-center justify-center rounded-xl border-[3px] ${ringColor} bg-background p-1 shadow-sm`}>
+          <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-lg object-cover" />
+        </div>
+        
+        <div className="relative z-10 -mt-3 flex w-[90%] flex-col items-center drop-shadow-md transition-all duration-300 group-hover:drop-shadow-lg">
+          <div className={`relative w-full rounded-t-lg pt-2 pb-1.5 text-center ${gradient}`}>
+            <div className={`absolute -top-1.5 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 ${gradient} rounded-tl-[2px]`} />
+            <div className="relative z-10 truncate text-[11px] font-extrabold uppercase tracking-widest text-white px-2" title={person.name}>{person.name}</div>
+          </div>
+          <div className="w-[85%] rounded-b-lg bg-white px-2 py-1.5 text-center shadow-inner">
+            <div className="truncate text-[9px] font-bold uppercase tracking-widest text-gray-800" title={displayTitle}>{displayTitle}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "vibrant") {
+    const gradient = isPrimary 
+      ? "bg-gradient-to-r from-pink-500 to-rose-500" 
+      : isHead 
+      ? "bg-gradient-to-r from-orange-400 to-orange-500" 
+      : "bg-gradient-to-r from-emerald-400 to-teal-500";
+    
+    return (
+      <div {...sharedProps} className={`group relative flex w-52 flex-col items-center justify-start pt-2 pb-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
+        <div className={`relative flex h-[104px] w-[104px] items-center justify-center rounded-full p-[4px] shadow-md ${gradient}`}>
+          <div className="h-full w-full rounded-full border-[3px] border-background bg-background">
+            <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-full object-cover" />
+          </div>
+        </div>
+        
+        <div className={`relative z-10 -mt-5 w-[115%] rounded-lg p-2.5 text-center shadow-lg transition-all duration-300 group-hover:shadow-xl ${gradient}`}>
+          <div className="truncate text-[12px] font-bold uppercase tracking-wider text-white" title={person.name}>{person.name}</div>
+          <div className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-widest text-white/90" title={displayTitle}>( {displayTitle} )</div>
+        </div>
+      </div>
+    );
+  }
+
   const tone = isPrimary
     ? "border-brand/40 bg-gradient-to-br from-brand/10 via-card to-card shadow-[0_8px_24px_-12px_hsl(var(--brand)/0.45)]"
     : isHead
@@ -66,20 +162,13 @@ function PersonCard({
     : isHead
     ? "bg-gradient-to-r from-brand/60 via-brand/30 to-transparent"
     : "bg-gradient-to-r from-border via-border/60 to-transparent";
-  const displayTitle = title ?? person.positionName ?? "Team Member";
+  
   return (
     <div
-      ref={editing ? sortable.setNodeRef : undefined}
-      style={style}
+      {...sharedProps}
       className={`group relative flex w-64 flex-col overflow-hidden rounded-2xl border ${tone} backdrop-blur-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1 hover:border-brand/50 hover:shadow-[0_16px_40px_-16px_hsl(var(--brand)/0.4)]"}`}
-      onClick={() => !editing && onOpen(person, { title, deptName })}
-      {...(editing ? sortable.attributes : { role: "button" })}
-      {...(editing ? sortable.listeners : {})}
     >
-      {/* Accent stripe */}
       <div className={`h-1 w-full ${stripe}`} />
-
-      {/* Lead badge */}
       {isPrimary && (
         <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-foreground shadow-md">
           <Crown className="h-2.5 w-2.5" /> Lead
@@ -90,9 +179,7 @@ function PersonCard({
           <GripVertical className="h-3.5 w-3.5" />
         </span>
       )}
-
       <div className="flex flex-col items-center gap-3 px-4 pb-3 pt-5">
-        {/* Avatar with status dot */}
         <div className="relative">
           <div className={`absolute -inset-1 rounded-full ${isPrimary ? "bg-gradient-to-tr from-brand/40 to-brand/10" : isHead ? "bg-gradient-to-tr from-brand/20 to-transparent" : ""}`} />
           <EmployeeAvatar
@@ -103,8 +190,6 @@ function PersonCard({
           />
           <span className="absolute bottom-0.5 right-0.5 block h-3 w-3 rounded-full border-2 border-card bg-emerald-500 shadow-sm" />
         </div>
-
-        {/* Name + title */}
         <div className="min-w-0 w-full text-center">
           <div className="truncate text-sm font-semibold tracking-tight text-foreground" title={person.name}>
             {person.name}
@@ -123,8 +208,6 @@ function PersonCard({
           )}
         </div>
       </div>
-
-      {/* Contact footer */}
       <div className="mt-auto border-t border-border/60 bg-muted/20 px-4 py-2.5">
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -153,7 +236,20 @@ function PersonCard({
   );
 }
 
-function EmptyPositionCard({ title }: { title: string }) {
+function EmptyPositionCard({ title, variant = "default" }: { title: string; variant?: CardVariant }) {
+  if (variant !== "default") {
+    return (
+      <div className="group relative flex w-48 flex-col items-center justify-center p-3 opacity-60 transition-all hover:opacity-100">
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50 bg-muted/30 text-muted-foreground group-hover:border-brand group-hover:text-brand">
+          <UserPlus className="h-7 w-7" />
+        </div>
+        <div className="mt-4 text-center w-full">
+          <div className="truncate text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Vacancy</div>
+          <div className="mt-1 truncate text-xs font-semibold text-foreground uppercase tracking-wider" title={title}>{title}</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="group relative flex w-64 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/80 bg-background/50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -166,8 +262,7 @@ function EmptyPositionCard({ title }: { title: string }) {
       <button 
         type="button"
         onClick={() => toast.info("To assign an employee, drag an Unassigned Employee card and drop it onto this position block.")}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 text-[11px] font-bold text-brand hover:bg-brand hover:text-brand-foreground transition-colors"
-      >
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 text-[11px] font-bold text-brand hover:bg-brand hover:text-brand-foreground transition-colors">
         <Plus className="h-3.5 w-3.5" /> Assign Employee
       </button>
     </div>
@@ -179,6 +274,7 @@ function DeptNode({
   query,
   onOpen,
   editing,
+  variant,
   onRename,
   onDelete,
   onRenamePosition,
@@ -189,6 +285,7 @@ function DeptNode({
   query: string;
   onOpen: (p: OrgPerson, ctx: { title?: string; deptName?: string }) => void;
   editing: boolean;
+  variant: CardVariant;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onRenamePosition: (id: string, name: string) => void;
@@ -290,6 +387,7 @@ function DeptNode({
                 deptName={dept.name}
                 onOpen={onOpen}
                 editing={editing}
+                variant={variant}
               />
               {(filteredPositions.length > 0 || filteredUnassigned.length > 0) && (
                 <div className="h-6 w-px bg-border" />
@@ -305,6 +403,7 @@ function DeptNode({
                 pg={pg}
                 editing={editing}
                 onOpen={onOpen}
+                variant={variant}
                 onRename={onRenamePosition}
                 onDelete={onDeletePosition}
               />
@@ -330,7 +429,7 @@ function DeptNode({
               </div>
               <div className="flex flex-wrap justify-center gap-4 sm:justify-start">
                 {filteredUnassigned.map((p) => (
-                  <PersonCard key={p.id} person={p} accent="ghost" deptName={dept.name} onOpen={onOpen} editing={editing} />
+                  <PersonCard key={p.id} person={p} accent="ghost" deptName={dept.name} onOpen={onOpen} editing={editing} variant={variant} />
                 ))}
               </div>
             </div>
@@ -346,6 +445,7 @@ function PositionGroup({
   deptName,
   pg,
   editing,
+  variant,
   onOpen,
   onRename,
   onDelete,
@@ -354,6 +454,7 @@ function PositionGroup({
   deptName: string;
   pg: { id: string; name: string; people: OrgPerson[]; plannedHeadcount?: number };
   editing: boolean;
+  variant: CardVariant;
   onOpen: (p: OrgPerson, ctx: { title?: string; deptName?: string }) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
@@ -406,10 +507,10 @@ function PositionGroup({
       </div>
       <div className="flex flex-wrap justify-center gap-4 sm:justify-start">
         {pg.people.map((p) => (
-          <PersonCard key={p.id} person={p} accent="head" deptName={deptName} onOpen={onOpen} editing={editing} />
+          <PersonCard key={p.id} person={p} accent="head" deptName={deptName} onOpen={onOpen} editing={editing} variant={variant} />
         ))}
         {Array.from({ length: Math.max(0, (pg.plannedHeadcount || 0) - pg.people.length) }).map((_, i) => (
-          <EmptyPositionCard key={`empty-${i}`} title={pg.name} />
+          <EmptyPositionCard key={`empty-${i}`} title={pg.name} variant={variant} />
         ))}
         {pg.people.length === 0 && (pg.plannedHeadcount || 0) === 0 && editing && (
           <p className="text-xs text-muted-foreground">Drop an employee here to assign this position.</p>
@@ -474,6 +575,9 @@ function OrgChartPage() {
   });
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const orgChartRef = useRef<HTMLDivElement>(null);
+  const [cardStyle, setCardStyle] = useState<CardVariant>("default");
   const [selected, setSelected] = useState<
     null | { person: OrgPerson; title?: string; deptName?: string }
   >(null);
@@ -487,6 +591,85 @@ function OrgChartPage() {
   const handle = async <T,>(label: string, p: Promise<T>) => {
     try { await p; toast.success(label); refresh(); }
     catch (e) { toast.error((e as Error).message ?? "Failed"); }
+  };
+
+  const exportToPPT = async () => {
+    if (!orgChartRef.current) return;
+    try {
+      setExporting(true);
+      toast.info("Generating snapshot, please wait...");
+      
+      const htmlToImage = await import("html-to-image");
+      const PptxGenJS = (await import("pptxgenjs")).default;
+      
+      const el = orgChartRef.current;
+      // Maximize resolution up to Chrome's hardware canvas limit (~16,384px)
+      const maxCanvas = 16000;
+      const bestRatio = Math.min(5, maxCanvas / Math.max(el.offsetWidth, el.offsetHeight));
+      
+      const dataUrl = await htmlToImage.toPng(el, {
+        quality: 1,
+        pixelRatio: bestRatio,
+        backgroundColor: "#f8fafc",
+        skipFonts: true,
+      });
+
+      const pres = new PptxGenJS();
+      let w = el.offsetWidth / 96;
+      let h = el.offsetHeight / 96;
+      const max = 50;
+      if (w > max || h > max) {
+        const scale = max / Math.max(w, h);
+        w *= scale;
+        h *= scale;
+      }
+      pres.defineLayout({ name: "CUSTOM", width: w, height: h });
+      pres.layout = "CUSTOM";
+      
+      const slide = pres.addSlide();
+      slide.addImage({ data: dataUrl, x: 0, y: 0, w: w, h: h });
+      await pres.writeFile({ fileName: "Organization_Chart.pptx" });
+      toast.success("Exported to PowerPoint!");
+    } catch (err) {
+      toast.error("Failed to export: " + (err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportToPDF = async () => {
+    if (!orgChartRef.current) return;
+    try {
+      setExporting(true);
+      toast.info("Generating PDF snapshot, please wait...");
+      
+      const htmlToImage = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
+      
+      const el = orgChartRef.current;
+      const maxCanvas = 16000;
+      const bestRatio = Math.min(5, maxCanvas / Math.max(el.offsetWidth, el.offsetHeight));
+      
+      const dataUrl = await htmlToImage.toPng(el, {
+        quality: 1,
+        pixelRatio: bestRatio,
+        backgroundColor: "#f8fafc",
+        skipFonts: true,
+      });
+      
+      const pdf = new jsPDF({ 
+        orientation: el.offsetWidth > el.offsetHeight ? "landscape" : "portrait", 
+        unit: "px", 
+        format: [el.offsetWidth, el.offsetHeight] 
+      });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, el.offsetWidth, el.offsetHeight);
+      pdf.save("Organization_Chart.pdf");
+      toast.success("Exported to PDF!");
+    } catch (err) {
+      toast.error("Failed to export: " + (err as Error).message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -507,14 +690,12 @@ function OrgChartPage() {
       return;
     }
     if (aType === "pos" && oType === "pos") {
-      // Reorder within same dept only (positions are global, but we surface dept-scoped order)
       const dept = visibleDepartments.find((d) => d.positions.some((p) => `pos:${p.id}` === active.id));
       if (!dept) return;
       const ids = dept.positions.map((p) => `pos:${p.id}`);
       const from = ids.indexOf(active.id as string);
       const to = ids.indexOf(over.id as string);
       if (from < 0 || to < 0) return;
-      // Build a full global ordering: keep all positions, but reorder this dept's slice
       const allPositions: string[] = [];
       for (const d of visibleDepartments) for (const p of d.positions) allPositions.push(p.id);
       const reorderedDept = arrayMove(dept.positions.map((p) => p.id), from, to);
@@ -583,12 +764,34 @@ function OrgChartPage() {
               disabled={editing}
             />
           </div>
+          <div className="flex items-center gap-2 border-r border-border pr-4 mr-2">
+            <Paintbrush className="h-4 w-4 text-muted-foreground" />
+            <Select value={cardStyle} onValueChange={(v) => setCardStyle(v as CardVariant)}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="Style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default Card</SelectItem>
+                <SelectItem value="minimal">Minimal Theme</SelectItem>
+                <SelectItem value="badge">Badge Theme</SelectItem>
+                <SelectItem value="vibrant">Vibrant Theme</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             variant={editing ? "default" : "outline"}
             onClick={() => { setEditing((v) => !v); setQ(""); }}
           >
             <Pencil className="h-4 w-4" /> {editing ? "Done" : "Edit"}
           </Button>
+          {/* Disabled temporarily due to image quality limitations on massive DOM trees
+          <Button variant="outline" onClick={exportToPPT} disabled={exporting}>
+            <Download className="h-4 w-4" /> {exporting ? "Exporting..." : "PPT"}
+          </Button>
+          <Button variant="outline" onClick={exportToPDF} disabled={exporting}>
+            <Download className="h-4 w-4" /> {exporting ? "Exporting..." : "PDF"}
+          </Button>
+          */}
           {editing && (
             <Button variant="outline" onClick={promptAddDept}>
               <Plus className="h-4 w-4" /> Department
@@ -604,8 +807,9 @@ function OrgChartPage() {
         </TabsList>
 
         <TabsContent value="org-chart" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
+          <div ref={orgChartRef} className="space-y-6 bg-background rounded-xl p-2 sm:p-6 shadow-sm ring-1 ring-border/50">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
           { icon: Users, label: "Employees", value: stats?.employees ?? "—" },
           { icon: Building2, label: "Departments", value: stats?.departments ?? "—" },
           { icon: Briefcase, label: "Positions", value: stats?.positions ?? "—" },
@@ -644,6 +848,7 @@ function OrgChartPage() {
               deptName="Executive"
               onOpen={openPerson}
               editing={editing}
+              variant={cardStyle}
             />
           </div>
         </section>
@@ -659,6 +864,7 @@ function OrgChartPage() {
                 query={q}
                 onOpen={openPerson}
                 editing={editing}
+                variant={cardStyle}
                 onRename={(id, name) => handle("Department renamed", renameDeptFn({ data: { id, name } }))}
                 onDelete={confirmDeleteDept}
                 onRenamePosition={(id, name) => handle("Position renamed", renamePosFn({ data: { id, name } }))}
@@ -674,6 +880,7 @@ function OrgChartPage() {
           </div>
         </SortableContext>
       </DndContext>
+      </div>
       </TabsContent>
 
       <TabsContent value="manpower" className="focus-visible:outline-none focus-visible:ring-0">
