@@ -16,15 +16,26 @@ export const registerMyDevice = createServerFn({ method: "POST" })
     // Use admin client to bypass RLS: lookup must see rows owned by other users
     // so we can return a clean ownership error instead of a unique-constraint crash.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: existing, error: lookupErr } = await supabaseAdmin
+    const { data: existingDevice } = await supabaseAdmin
       .from("employee_devices")
       .select("id,user_id,status")
       .eq("id", data.device_id)
       .maybeSingle();
-    if (lookupErr) throw new Error(lookupErr.message);
-    if (existing && existing.user_id !== userId) {
+
+    if (existingDevice && existingDevice.user_id !== userId) {
       throw new Error("This device is already registered to another account.");
     }
+
+    const { data: userDevices } = await supabaseAdmin
+      .from("employee_devices")
+      .select("id")
+      .eq("user_id", userId);
+
+    if (userDevices && userDevices.length > 0 && !userDevices.some(d => d.id === data.device_id)) {
+      throw new Error("You already have a registered device. Please remove it before registering a new one.");
+    }
+
+    const existing = existingDevice;
     const now = new Date().toISOString();
     const { data: row, error } = await supabaseAdmin
       .from("employee_devices")

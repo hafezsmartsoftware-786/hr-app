@@ -46,6 +46,24 @@ export const checkIn = createServerFn({ method: "POST" })
       };
     }
 
+    if (!data.device_id) {
+      return {
+        ok: false as const, blocked: true as const,
+        code: "device_unauthorized" as const,
+        params: {} as Record<string, any>,
+        reason: "Check-in blocked · device not recognized. Please register it in your profile.",
+      };
+    }
+    const { data: dev } = await supabase.from("employee_devices").select("status").eq("id", data.device_id).eq("user_id", userId).maybeSingle();
+    if (!dev || dev.status !== "approved") {
+      return {
+        ok: false as const, blocked: true as const,
+        code: "device_unauthorized" as const,
+        params: {} as Record<string, any>,
+        reason: "Check-in blocked · this device is not approved.",
+      };
+    }
+
     // Resolve assigned geofences + per-employee authorized networks + branch-level networks
     const [{ data: assigns }, { data: netAssigns }, { data: leaveRow }, { data: holidayRow }, { data: profileRow }] = await Promise.all([
       supabase
@@ -211,6 +229,24 @@ export const checkOut = createServerFn({ method: "POST" })
         code: "check_out_already" as const,
         params: {} as Record<string, any>,
         reason: "Check-out blocked · you have already checked out today.",
+      };
+    }
+
+    if (!data.device_id) {
+      return {
+        ok: false as const, blocked: true as const,
+        code: "device_unauthorized" as const,
+        params: {} as Record<string, any>,
+        reason: "Check-out blocked · device not recognized. Please register it in your profile.",
+      };
+    }
+    const { data: dev } = await supabase.from("employee_devices").select("status").eq("id", data.device_id).eq("user_id", userId).maybeSingle();
+    if (!dev || dev.status !== "approved") {
+      return {
+        ok: false as const, blocked: true as const,
+        code: "device_unauthorized" as const,
+        params: {} as Record<string, any>,
+        reason: "Check-out blocked · this device is not approved.",
       };
     }
 

@@ -73,23 +73,23 @@ function PersonCard({
   };
 
   if (variant === "minimal") {
-    const ringColor = isPrimary ? "ring-brand/40" : isHead ? "ring-brand/20" : "ring-border/50";
+    const ringColor = isPrimary ? "ring-brand/50" : isHead ? "ring-brand/30" : "ring-border/60";
     return (
-      <div {...sharedProps} className={`group relative flex w-56 flex-col items-center justify-center p-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
+      <div {...sharedProps} className={`group relative flex w-52 flex-col items-center justify-center rounded-2xl border border-border/70 bg-card/90 p-4 backdrop-blur-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1.5 hover:border-brand/40 hover:bg-card hover:shadow-lg"}`}>
         <div className="relative">
-          <div className={`absolute -inset-1.5 rounded-full ring-1 ${ringColor} transition-all duration-300 group-hover:ring-brand/60 group-hover:bg-brand/5`} />
-          <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="relative h-20 w-20 rounded-full shadow-sm ring-4 ring-background" />
+          <div className={`absolute -inset-1 rounded-full ring-2 ${ringColor} transition-all duration-300 group-hover:ring-brand/70 group-hover:scale-105`} />
+          <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="relative h-20 w-20 rounded-full shadow-md ring-4 ring-background" />
           {isPrimary && (
-            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-brand text-brand-foreground shadow-sm">
+            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-brand text-brand-foreground shadow-sm" title="Executive Lead">
               <Crown className="h-3 w-3" />
             </div>
           )}
         </div>
-        <div className="mt-4 text-center w-full">
-          <div className="truncate text-[14px] font-bold tracking-tight text-foreground" title={person.name}>{person.name}</div>
-          <div className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground" title={displayTitle}>{displayTitle}</div>
+        <div className="mt-3.5 text-center w-full min-w-0">
+          <div className="truncate text-sm font-bold tracking-tight text-foreground" title={person.name}>{person.name}</div>
+          <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground" title={displayTitle}>{displayTitle}</div>
           {deptName && (
-            <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-muted/70 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground border border-border/40">
               {deptName}
             </div>
           )}
@@ -99,30 +99,40 @@ function PersonCard({
   }
 
   if (variant === "badge") {
-    const gradient = isPrimary 
-      ? "bg-gradient-to-r from-orange-400 to-pink-500" 
+    const badgeColor = isPrimary 
+      ? "from-amber-500/20 via-orange-500/10 to-transparent border-amber-500/30 text-amber-600 dark:text-amber-400" 
       : isHead 
-      ? "bg-gradient-to-r from-pink-500 to-fuchsia-600" 
-      : "bg-gradient-to-r from-cyan-400 to-blue-500";
-    const ringColor = isPrimary 
-      ? "border-orange-400" 
-      : isHead 
-      ? "border-pink-500" 
-      : "border-cyan-400";
-      
+      ? "from-indigo-500/20 via-purple-500/10 to-transparent border-indigo-500/30 text-indigo-600 dark:text-indigo-400" 
+      : "from-brand/20 via-brand/10 to-transparent border-brand/30 text-brand";
+
     return (
-      <div {...sharedProps} className={`group relative flex w-56 flex-col items-center justify-start pt-2 pb-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
-        <div className={`relative flex h-[100px] w-[100px] items-center justify-center rounded-xl border-[3px] ${ringColor} bg-background p-1 shadow-sm`}>
-          <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-lg object-cover" />
+      <div {...sharedProps} className={`group relative flex w-56 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1.5 hover:border-brand/40 hover:shadow-xl"}`}>
+        {/* Lanyard Top Slot Accent */}
+        <div className="flex h-3 w-full items-center justify-center border-b border-border/40 bg-muted/40">
+          <div className="h-1 w-8 rounded-full bg-border/80" />
         </div>
         
-        <div className="relative z-10 -mt-3 flex w-[90%] flex-col items-center drop-shadow-md transition-all duration-300 group-hover:drop-shadow-lg">
-          <div className={`relative w-full rounded-t-lg pt-2 pb-1.5 text-center ${gradient}`}>
-            <div className={`absolute -top-1.5 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 ${gradient} rounded-tl-[2px]`} />
-            <div className="relative z-10 truncate text-[11px] font-extrabold uppercase tracking-widest text-white px-2" title={person.name}>{person.name}</div>
+        <div className="flex flex-col items-center p-4">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-brand/20 bg-muted/20 p-1 shadow-inner group-hover:border-brand/50 transition-colors">
+            <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-xl object-cover shadow-sm" />
+            {isPrimary && (
+              <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md">
+                <Crown className="h-3 w-3" />
+              </span>
+            )}
           </div>
-          <div className="w-[85%] rounded-b-lg bg-white px-2 py-1.5 text-center shadow-inner">
-            <div className="truncate text-[9px] font-bold uppercase tracking-widest text-gray-800" title={displayTitle}>{displayTitle}</div>
+          
+          <div className={`mt-3 w-full rounded-xl border bg-gradient-to-r ${badgeColor} px-2.5 py-1.5 text-center shadow-xs`}>
+            <div className="truncate text-xs font-bold text-foreground" title={person.name}>{person.name}</div>
+          </div>
+
+          <div className="mt-1.5 text-center w-full min-w-0">
+            <div className="truncate text-[11px] font-semibold text-muted-foreground" title={displayTitle}>{displayTitle}</div>
+            {deptName && (
+              <span className="mt-2 inline-block truncate max-w-full rounded-full bg-muted px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground border border-border/50">
+                {deptName}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -130,23 +140,54 @@ function PersonCard({
   }
 
   if (variant === "vibrant") {
-    const gradient = isPrimary 
-      ? "bg-gradient-to-r from-pink-500 to-rose-500" 
+    const bannerGradient = isPrimary 
+      ? "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" 
       : isHead 
-      ? "bg-gradient-to-r from-orange-400 to-orange-500" 
-      : "bg-gradient-to-r from-emerald-400 to-teal-500";
-    
+      ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" 
+      : "bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-600";
+
+    const badgeStyle = isPrimary
+      ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+      : isHead
+      ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
+      : "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30";
+
     return (
-      <div {...sharedProps} className={`group relative flex w-52 flex-col items-center justify-start pt-2 pb-5 transition-all duration-300 ${editing ? "cursor-grab" : "hover:-translate-y-1.5"}`}>
-        <div className={`relative flex h-[104px] w-[104px] items-center justify-center rounded-full p-[4px] shadow-md ${gradient}`}>
-          <div className="h-full w-full rounded-full border-[3px] border-background bg-background">
-            <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-full object-cover" />
-          </div>
+      <div {...sharedProps} className={`group relative flex w-60 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1.5 hover:shadow-xl hover:border-brand/50"}`}>
+        {/* Banner */}
+        <div className={`relative h-20 w-full ${bannerGradient} transition-opacity group-hover:opacity-95`}>
+          {isPrimary && (
+            <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white shadow-sm">
+              <Crown className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {editing && (
+            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/20 backdrop-blur-md p-1 text-white shadow-sm">
+              <GripVertical className="h-3.5 w-3.5" />
+            </span>
+          )}
         </div>
-        
-        <div className={`relative z-10 -mt-5 w-[115%] rounded-lg p-2.5 text-center shadow-lg transition-all duration-300 group-hover:shadow-xl ${gradient}`}>
-          <div className="truncate text-[12px] font-bold uppercase tracking-wider text-white" title={person.name}>{person.name}</div>
-          <div className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-widest text-white/90" title={displayTitle}>( {displayTitle} )</div>
+
+        {/* Avatar Overlapping Header */}
+        <div className="flex flex-col items-center px-4 pb-4">
+          <div className="relative -mt-9 flex h-18 w-18 items-center justify-center rounded-full bg-card p-1 shadow-md ring-4 ring-card transition-transform duration-300 group-hover:scale-105">
+            <EmployeeAvatar id={person.id} name={person.name} url={person.avatarUrl} className="h-full w-full rounded-full object-cover" />
+            <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-emerald-500 shadow-sm" />
+          </div>
+
+          <div className="mt-2.5 text-center w-full min-w-0">
+            <div className="truncate text-sm font-bold tracking-tight text-foreground" title={person.name}>
+              {person.name}
+            </div>
+            <div className="mt-0.5 truncate text-xs font-semibold text-muted-foreground" title={displayTitle}>
+              {displayTitle}
+            </div>
+            <div className="mt-2.5 flex justify-center">
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${badgeStyle}`}>
+                {deptName ?? "Staff"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -166,16 +207,16 @@ function PersonCard({
   return (
     <div
       {...sharedProps}
-      className={`group relative flex w-64 flex-col overflow-hidden rounded-2xl border ${tone} backdrop-blur-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1 hover:border-brand/50 hover:shadow-[0_16px_40px_-16px_hsl(var(--brand)/0.4)]"}`}
+      className={`group relative flex w-64 flex-col overflow-hidden rounded-2xl border ${tone} backdrop-blur-sm transition-all duration-300 ${editing ? "cursor-grab active:cursor-grabbing" : "hover:-translate-y-1.5 hover:border-brand/50 hover:shadow-[0_16px_40px_-16px_hsl(var(--brand)/0.4)]"}`}
     >
-      <div className={`h-1 w-full ${stripe}`} />
+      <div className={`h-1.5 w-full ${stripe}`} />
       {isPrimary && (
-        <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-foreground shadow-md">
+        <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-foreground shadow-md">
           <Crown className="h-2.5 w-2.5" /> Lead
         </span>
       )}
       {editing && (
-        <span className="absolute left-2 top-2 z-10 rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm">
+        <span className="absolute left-2.5 top-2.5 z-10 rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm">
           <GripVertical className="h-3.5 w-3.5" />
         </span>
       )}
@@ -188,10 +229,10 @@ function PersonCard({
             url={person.avatarUrl}
             className="relative h-16 w-16 ring-2 ring-background shadow-lg"
           />
-          <span className="absolute bottom-0.5 right-0.5 block h-3 w-3 rounded-full border-2 border-card bg-emerald-500 shadow-sm" />
+          <span className="absolute bottom-0.5 right-0.5 block h-3.5 w-3.5 rounded-full border-2 border-card bg-emerald-500 shadow-sm" />
         </div>
         <div className="min-w-0 w-full text-center">
-          <div className="truncate text-sm font-semibold tracking-tight text-foreground" title={person.name}>
+          <div className="truncate text-sm font-bold tracking-tight text-foreground" title={person.name}>
             {person.name}
           </div>
           <div
@@ -201,7 +242,7 @@ function PersonCard({
             {displayTitle}
           </div>
           {deptName && (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="mt-2.5 inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-muted-foreground">
               <Building2 className="h-2.5 w-2.5" />
               <span className="truncate max-w-[140px]">{deptName}</span>
             </div>
@@ -237,27 +278,32 @@ function PersonCard({
 }
 
 function EmptyPositionCard({ title, variant = "default" }: { title: string; variant?: CardVariant }) {
+  const widthClass = 
+    variant === "minimal" ? "w-52" :
+    variant === "badge" ? "w-56" :
+    variant === "vibrant" ? "w-60" : "w-64";
+
   if (variant !== "default") {
     return (
-      <div className="group relative flex w-48 flex-col items-center justify-center p-3 opacity-60 transition-all hover:opacity-100">
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50 bg-muted/30 text-muted-foreground group-hover:border-brand group-hover:text-brand">
-          <UserPlus className="h-7 w-7" />
+      <div className={`group relative flex ${widthClass} flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/70 bg-card/40 p-4 transition-all hover:border-brand/50 hover:bg-brand/5 hover:shadow-md`}>
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40 bg-muted/30 text-muted-foreground group-hover:border-brand group-hover:text-brand transition-colors">
+          <UserPlus className="h-6 w-6" />
         </div>
-        <div className="mt-4 text-center w-full">
-          <div className="truncate text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Vacancy</div>
-          <div className="mt-1 truncate text-xs font-semibold text-foreground uppercase tracking-wider" title={title}>{title}</div>
+        <div className="mt-3 text-center w-full min-w-0">
+          <span className="inline-block rounded-full bg-brand/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand">Vacancy</span>
+          <div className="mt-1 truncate text-xs font-bold text-foreground" title={title}>{title}</div>
         </div>
       </div>
     );
   }
   return (
-    <div className="group relative flex w-64 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/80 bg-background/50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5">
+    <div className={`group relative flex ${widthClass} flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/80 bg-background/50 p-6 transition-all hover:border-brand/40 hover:bg-brand/5`}>
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <UserPlus className="h-5 w-5 text-muted-foreground group-hover:text-brand" />
       </div>
-      <div className="text-center">
+      <div className="text-center min-w-0 w-full">
         <p className="text-xs font-semibold uppercase tracking-wider text-brand">Vacancy</p>
-        <p className="mt-1 text-sm font-medium text-foreground">{title}</p>
+        <p className="mt-1 truncate text-sm font-bold text-foreground" title={title}>{title}</p>
       </div>
       <button 
         type="button"

@@ -6,11 +6,12 @@ import { toast } from "sonner";
 import { useI18n, useTranslators } from "@/lib/i18n";
 import { getMe } from "@/backend/functions/auth.functions";
 import { checkIn, checkOut, listMyAttendance, listMyAccess } from "@/backend/functions/attendance.functions";
+import { listMyDevices } from "@/backend/functions/devices.functions";
 import { listMyLeaves } from "@/backend/functions/leaves.functions";
 import { listHolidays } from "@/backend/functions/holidays.functions";
 import { listTasks } from "@/backend/functions/tasks.functions";
 import { mapTaskRow, type TaskRow } from "@/lib/task-mapping";
-import { useStore } from "@/lib/store";
+import { useStore, getCurrentDeviceId } from "@/lib/store";
 import { useSession } from "@/lib/auth";
 
 export function EmployeeDashboard() {
@@ -30,17 +31,22 @@ export function EmployeeDashboard() {
   const inFn = useServerFn(checkIn);
   const outFn = useServerFn(checkOut);
   const accessFn = useServerFn(listMyAccess);
+  const devicesFn = useServerFn(listMyDevices);
 
   const meQ = useQuery({ queryKey: ["me"], queryFn: () => meFn() });
   const attQ = useQuery({ queryKey: ["my-attendance"], queryFn: () => attFn() });
   const lvQ = useQuery({ queryKey: ["my-leaves"], queryFn: () => lvFn() });
   const holQ = useQuery({ queryKey: ["holidays"], queryFn: () => holFn() });
   const accessQ = useQuery({ queryKey: ["my-access"], queryFn: () => accessFn() });
+  const devQ = useQuery({ queryKey: ["my-devices"], queryFn: () => devicesFn() });
 
   const session = useSession();
   const employees = useStore((s) => s.employees);
   const currentEmpId = useStore((s) => s.currentEmployeeId);
   const meId = session?.employeeId ?? employees.find((e) => e.name === session?.name)?.id ?? currentEmpId;
+
+  const currentDevice = devQ.data?.find((d: any) => d.id === getCurrentDeviceId());
+  const deviceApproved = currentDevice?.status === "approved";
 
   const listTasksFn = useServerFn(listTasks);
   const { data: taskRows = [] } = useQuery({
@@ -175,7 +181,7 @@ export function EmployeeDashboard() {
         }
       }
       const geo = coords.lat != null && coords.lng != null ? await reverseGeocode(coords.lat, coords.lng) : {};
-      const payload = { branch: profile?.branch ?? "HQ", lat: coords.lat, lng: coords.lng, network_ok: online, ...geo };
+      const payload = { branch: profile?.branch ?? "HQ", lat: coords.lat, lng: coords.lng, network_ok: online, device_id: getCurrentDeviceId(), ...geo };
       if (kind === "in") {
         const res: any = await inFn({ data: payload });
         if (res?.blocked) { toast.error(res.reason); return; }
@@ -194,7 +200,7 @@ export function EmployeeDashboard() {
   }
 
   const submitting = busy !== null;
-  const loading = meQ.isLoading || attQ.isLoading;
+  const loading = meQ.isLoading || attQ.isLoading || devQ.isLoading;
 
   return (
     <div className="space-y-5">
@@ -252,14 +258,14 @@ export function EmployeeDashboard() {
 
         <button
           onClick={handleAction}
-          disabled={submitting || loading || dayComplete}
+          disabled={submitting || loading || dayComplete || !deviceApproved}
           className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-display text-base font-semibold shadow-brand transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
-            isCheckedIn ? "bg-white text-foreground" : "bg-gradient-brand text-brand-foreground"
+            !deviceApproved ? "bg-black/30 text-white/50 shadow-none backdrop-blur-sm" : isCheckedIn ? "bg-white text-foreground" : "bg-gradient-brand text-brand-foreground"
           }`}
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {!submitting && (isCheckedIn ? <LogOut className="h-4 w-4" /> : <LogIn className="h-4 w-4" />)}
-          {dayComplete ? t("checkOut") + " ✓" : isCheckedIn ? t("checkOut") : t("checkIn")}
+          {!deviceApproved ? "Device Not Approved" : dayComplete ? t("checkOut") + " ✓" : isCheckedIn ? t("checkOut") : t("checkIn")}
         </button>
         {todayRow?.in_time && (
           <p className="mt-2 text-center text-[11px] text-white/70">

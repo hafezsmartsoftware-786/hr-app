@@ -5,9 +5,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { LogIn, LogOut, MapPin, Plus, X, Wifi, WifiOff, Radio, ShieldCheck, ListChecks } from "lucide-react";
 import { checkIn, checkOut, listMyAttendance, listMyAccess } from "@/backend/functions/attendance.functions";
+import { listMyDevices } from "@/backend/functions/devices.functions";
 import { listTasks } from "@/backend/functions/tasks.functions";
 import { mapTaskRow, type TaskRow } from "@/lib/task-mapping";
-import { useStore } from "@/lib/store";
+import { useStore, getCurrentDeviceId } from "@/lib/store";
 import { useSession } from "@/lib/auth";
 import { submitLeave, listMyLeaves, cancelLeave } from "@/backend/functions/leaves.functions";
 import { Fingerprint, ScanFace } from "lucide-react";
@@ -43,12 +44,14 @@ function CheckInOutCard() {
   const attFn = useServerFn(listMyAttendance);
   const accessFn = useServerFn(listMyAccess);
   const bioFn = useServerFn(listMyBiometrics);
+  const devicesFn = useServerFn(listMyDevices);
   const verifyFaceFn = useServerFn(verifyFace);
   const fpOptsFn = useServerFn(webauthnAuthOptionsForSelf);
   const fpVerifyFn = useServerFn(webauthnAuthVerifyForSelf);
   const attQ = useQuery({ queryKey: ["my-attendance"], queryFn: () => attFn() });
   const accessQ = useQuery({ queryKey: ["my-access"], queryFn: () => accessFn() });
   const bioQ = useQuery({ queryKey: ["biometrics"], queryFn: () => bioFn() });
+  const devQ = useQuery({ queryKey: ["my-devices"], queryFn: () => devicesFn() });
   const [busy, setBusy] = useState<"in" | "out" | null>(null);
   const [note, setNote] = useState("");
   const [branch, setBranch] = useState("HQ");
@@ -59,6 +62,9 @@ function CheckInOutCard() {
   const hasFace = !!bioQ.data?.face;
   const requiresBio = true;
   const bioOk = hasFace && verified.face;
+
+  const currentDevice = devQ.data?.find((d: any) => d.id === getCurrentDeviceId());
+  const deviceApproved = currentDevice?.status === "approved";
 
   const today = new Date().toISOString().slice(0, 10);
   const todayRow: any = ((attQ.data as any[]) ?? []).find((a) => a.date === today);
@@ -135,7 +141,7 @@ function CheckInOutCard() {
       }
       const online = typeof navigator !== "undefined" ? navigator.onLine : true;
       const geo = coords.lat != null && coords.lng != null ? await reverseGeocode(coords.lat, coords.lng) : {};
-      const payload = { branch, lat: coords.lat, lng: coords.lng, network_ok: online, note: note.trim() || undefined, ...geo };
+      const payload = { branch, lat: coords.lat, lng: coords.lng, network_ok: online, note: note.trim() || undefined, device_id: getCurrentDeviceId(), ...geo };
       const addr = [geo.street, geo.district, geo.city].filter(Boolean).join(", ");
       if (kind === "in") {
         const res: any = await inFn({ data: payload });
@@ -196,12 +202,20 @@ function CheckInOutCard() {
       )}
 
       <div className="flex gap-2">
-        <button disabled={busy !== null || hasCheckedIn} onClick={() => go("in")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-brand py-3 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
-          <LogIn className="h-4 w-4" /> {busy === "in" ? "Checking in…" : hasCheckedIn ? "Checked in" : "Check in"}
-        </button>
-        <button disabled={busy !== null || !hasCheckedIn || hasCheckedOut} onClick={() => go("out")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-3 text-sm font-semibold disabled:opacity-60">
-          <LogOut className="h-4 w-4" /> {busy === "out" ? "Checking out…" : hasCheckedOut ? "Checked out" : "Check out"}
-        </button>
+        {!deviceApproved ? (
+          <button disabled className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-black/5 py-3 text-sm font-semibold text-muted-foreground disabled:opacity-60">
+            <ShieldCheck className="h-4 w-4" /> Device Not Approved
+          </button>
+        ) : (
+          <>
+            <button disabled={busy !== null || hasCheckedIn} onClick={() => go("in")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-brand py-3 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
+              <LogIn className="h-4 w-4" /> {busy === "in" ? "Checking in…" : hasCheckedIn ? "Checked in" : "Check in"}
+            </button>
+            <button disabled={busy !== null || !hasCheckedIn || hasCheckedOut} onClick={() => go("out")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-3 text-sm font-semibold disabled:opacity-60">
+              <LogOut className="h-4 w-4" /> {busy === "out" ? "Checking out…" : hasCheckedOut ? "Checked out" : "Check out"}
+            </button>
+          </>
+        )}
       </div>
       {requiresBio && (
         <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2">

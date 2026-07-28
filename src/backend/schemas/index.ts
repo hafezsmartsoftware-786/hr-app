@@ -97,6 +97,7 @@ export const AttendanceCheckSchema = z.object({
   city: z.string().max(120).optional().nullable(),
   district: z.string().max(120).optional().nullable(),
   street: z.string().max(255).optional().nullable(),
+  device_id: z.string().optional(),
 });
 
 // ── Leaves ────────────────────────────────────────────────

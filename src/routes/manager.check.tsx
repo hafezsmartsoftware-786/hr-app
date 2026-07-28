@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { LogIn, LogOut, MapPin, Plus, X, Wifi, WifiOff, Paperclip, FileText } from "lucide-react";
+import { LogIn, LogOut, MapPin, Plus, X, Wifi, WifiOff, Paperclip, FileText, ShieldCheck } from "lucide-react";
 import { checkIn, checkOut, listMyAttendance } from "@/backend/functions/attendance.functions";
+import { listMyDevices } from "@/backend/functions/devices.functions";
 import { submitLeave, listMyLeaves, cancelLeave, listActiveLeaveTypes } from "@/backend/functions/leaves.functions";
 import { useSession, useAuthReady } from "@/lib/auth";
+import { getCurrentDeviceId } from "@/lib/store";
 
 export const Route = createFileRoute("/manager/check")({ component: CheckPage });
 
@@ -38,9 +40,14 @@ function CheckInOutCard() {
   const qc = useQueryClient();
   const inFn = useServerFn(checkIn);
   const outFn = useServerFn(checkOut);
+  const devicesFn = useServerFn(listMyDevices);
+  const devQ = useQuery({ queryKey: ["my-devices"], queryFn: () => devicesFn() });
   const [busy, setBusy] = useState<"in" | "out" | null>(null);
   const [note, setNote] = useState("");
   const [branch, setBranch] = useState("HQ");
+
+  const currentDevice = devQ.data?.find((d: any) => d.id === getCurrentDeviceId());
+  const deviceApproved = currentDevice?.status === "approved";
 
   async function getCoords(): Promise<{ lat?: number; lng?: number; err?: string }> {
     if (typeof navigator === "undefined" || !navigator.geolocation) return { err: "Geolocation not supported" };
@@ -73,7 +80,7 @@ function CheckInOutCard() {
       if (coords.err) { toast.error(`Location error: ${coords.err}`); }
       const online = typeof navigator !== "undefined" ? navigator.onLine : true;
       const geo = coords.lat != null && coords.lng != null ? await reverseGeocode(coords.lat, coords.lng) : {};
-      const payload = { branch, lat: coords.lat, lng: coords.lng, network_ok: online, note: note.trim() || undefined, ...geo };
+      const payload = { branch, lat: coords.lat, lng: coords.lng, network_ok: online, note: note.trim() || undefined, device_id: getCurrentDeviceId(), ...geo };
       if (kind === "in") {
         const res: any = await inFn({ data: payload });
         if (res?.blocked) { toast.error(res.reason); return; }
@@ -102,12 +109,20 @@ function CheckInOutCard() {
       </div>
 
       <div className="flex gap-2">
-        <button disabled={busy !== null} onClick={() => go("in")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-brand py-3 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
-          <LogIn className="h-4 w-4" /> {busy === "in" ? "Checking in…" : "Check in"}
-        </button>
-        <button disabled={busy !== null} onClick={() => go("out")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-3 text-sm font-semibold disabled:opacity-60">
-          <LogOut className="h-4 w-4" /> {busy === "out" ? "Checking out…" : "Check out"}
-        </button>
+        {!deviceApproved ? (
+          <button disabled className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-black/5 py-3 text-sm font-semibold text-muted-foreground disabled:opacity-60">
+            <ShieldCheck className="h-4 w-4" /> Device Not Approved
+          </button>
+        ) : (
+          <>
+            <button disabled={busy !== null} onClick={() => go("in")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-brand py-3 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-60">
+              <LogIn className="h-4 w-4" /> {busy === "in" ? "Checking in…" : "Check in"}
+            </button>
+            <button disabled={busy !== null} onClick={() => go("out")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-3 text-sm font-semibold disabled:opacity-60">
+              <LogOut className="h-4 w-4" /> {busy === "out" ? "Checking out…" : "Check out"}
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
