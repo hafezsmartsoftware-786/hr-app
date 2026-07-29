@@ -654,7 +654,7 @@ export const listAdvanceInstallments = createServerFn({ method: "POST" })
 
 export const getAdvanceEligibility = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { employee_id?: string } | void) => d)
+  .inputValidator((d: { employee_id?: string } | void) => d)
   .handler(async ({ data, context }) => {
     const employeeId = (data as any)?.employee_id || context.userId;
 
@@ -731,7 +731,7 @@ export const getAdvanceEligibility = createServerFn({ method: "GET" })
 
 export const updateAnnualAdvanceLimit = createServerFn({ method: "POST" })
   .middleware([requireAdminAccess])
-  .validator((d: { employee_id: string; limit: number }) => d)
+  .inputValidator((d: { employee_id: string; limit: number }) => d)
   .handler(async ({ data }) => {
     const { error } = await (supabaseAdmin as any)
       .from("profiles")
