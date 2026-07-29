@@ -15,6 +15,7 @@ export const SmsConfigSchema = z.object({
   environment: z.enum(["1", "2"]),
   username: z.string().max(255),
   password: z.string().max(255).optional(),
+  api_key: z.string().max(512).optional(),
   sender: z.string().max(64),
   language: z.enum(["1", "2", "3"]).default("1"),
   enabled: z.boolean().default(false),
