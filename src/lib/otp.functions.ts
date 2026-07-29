@@ -70,12 +70,22 @@ export const requestMyOtp = createServerFn({ method: "POST" })
     const hash = await sha256Hex(`${context.userId}:${code}`);
     const expiresAt = now + OTP_TTL_MS;
 
-    // Send via SMS Misr + log to audit
     const { loadSmsConfig } = await import("@/backend/server/sms-config.server");
-    const { sendSmsMisr } = await import("@/backend/server/sms-client.server");
-    const { logSmsAudit } = await import("@/backend/server/sms-audit.server");
+    const { sendSmsEpush, validateSmsAuth, normalizeRecipients } = await import("@/backend/server/sms-client.server");
+    const { logSmsAudit, checkOtpRateLimit } = await import("@/backend/server/sms-audit.server");
     const cfg = await loadSmsConfig();
     const message = `Your verification code is ${code}`;
+
+    // Server-side per-mobile rate limit (defense in depth beyond the session cooldown).
+    const rec = normalizeRecipients(mobile);
+    if (rec.invalid.length) {
+      return { ok: false, error: `Invalid mobile number. Use 201XXXXXXXXX or 01XXXXXXXXX.` };
+    }
+    const rl = await checkOtpRateLimit(rec.mobile, { cooldownSec: 60, maxPerHour: 5 });
+    if (!rl.allowed) {
+      await logSmsAudit({ sent_by: context.userId, mobile: rec.mobile, message: "(rate-limited)", kind: "otp", ok: false, error: rl.reason });
+      return { ok: false, error: rl.reason, cooldown: rl.retryAfter };
+    }
 
     let ok = false;
     let error: string | null = null;
@@ -84,14 +94,19 @@ export const requestMyOtp = createServerFn({ method: "POST" })
     if (!cfg || !cfg.enabled) {
       error = "SMS is disabled or not configured";
     } else {
-      const res = await sendSmsMisr(
-        { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
-        { mobile, message, language: cfg.language },
-      );
-      ok = res.ok;
-      error = res.error ?? null;
-      smsId = res.smsId ?? null;
-      providerCode = res.code ?? null;
+      const authErr = validateSmsAuth({ username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender });
+      if (authErr) {
+        error = authErr;
+      } else {
+        const res = await sendSmsEpush(
+          { environment: cfg.environment, username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender },
+          { mobile, message, language: cfg.language },
+        );
+        ok = res.ok;
+        error = res.error ?? null;
+        smsId = res.smsId ?? null;
+        providerCode = res.code ?? null;
+      }
     }
     await logSmsAudit({
       sent_by: context.userId, mobile, message, kind: "otp",
