@@ -78,3 +78,46 @@ export async function loadRecentSmsAudit(opts: { kind?: string; limit?: number }
   }
   return (data as SmsAuditRow[]) ?? [];
 }
+
+/**
+ * Server-side rate limit for OTP sends. Enforces two rules per mobile number:
+ *   - Cooldown: no more than 1 OTP per `cooldownSec` seconds.
+ *   - Cap: no more than `maxPerHour` OTPs in the last 60 minutes.
+ * Returns { allowed: true } or { allowed: false, retryAfter, reason }.
+ */
+export async function checkOtpRateLimit(
+  mobile: string,
+  opts: { cooldownSec?: number; maxPerHour?: number } = {},
+): Promise<{ allowed: true } | { allowed: false; retryAfter: number; reason: string }> {
+  const cooldownSec = opts.cooldownSec ?? 60;
+  const maxPerHour = opts.maxPerHour ?? 5;
+  const sinceHour = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { data, error } = await (supabaseAdmin as any)
+    .from("sms_audit")
+    .select("created_at")
+    .eq("kind", "otp")
+    .eq("mobile", mobile)
+    .gte("created_at", sinceHour)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) {
+    // If the audit table is unavailable we fail open so OTPs still work.
+    console.warn("checkOtpRateLimit read failed", error.message);
+    return { allowed: true };
+  }
+  const rows = (data ?? []) as { created_at: string }[];
+  if (rows.length >= maxPerHour) {
+    const oldest = new Date(rows[rows.length - 1].created_at).getTime();
+    const retry = Math.max(1, Math.ceil((oldest + 60 * 60_000 - Date.now()) / 1000));
+    return { allowed: false, retryAfter: retry, reason: `Too many OTP requests. Try again in ${Math.ceil(retry / 60)} min.` };
+  }
+  if (rows.length > 0) {
+    const last = new Date(rows[0].created_at).getTime();
+    const elapsed = Math.floor((Date.now() - last) / 1000);
+    if (elapsed < cooldownSec) {
+      const retry = cooldownSec - elapsed;
+      return { allowed: false, retryAfter: retry, reason: `Please wait ${retry}s before requesting another OTP.` };
+    }
+  }
+  return { allowed: true };
+}
