@@ -959,6 +959,32 @@ function AdminSettings() {
                   </button>
                 </div>
               </Field>
+              <Field label={`API key${smsHasApiKey ? " (stored — leave blank to keep)" : ""}`}>
+                <div className="relative">
+                  <input
+                    type={showSmsApiKey ? "text" : "password"}
+                    value={smsDraft.apiKey}
+                    onChange={(e) => setSmsDraft({ ...smsDraft, apiKey: e.target.value })}
+                    className={`${inputCls} pr-10`}
+                    dir="ltr"
+                    placeholder={smsHasApiKey ? "••••••••••••••••" : "Paste your ePush API key"}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmsApiKey((v) => !v)}
+                    tabIndex={-1}
+                    className="absolute right-0 top-0 grid h-full w-10 place-items-center text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={showSmsApiKey ? "Hide API key" : "Show API key"}
+                  >
+                    {showSmsApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Stored encrypted at rest. The key is never sent back to the browser after saving.
+                </p>
+              </Field>
               <Field label="Sender token / ID">
                 <input
                   value={smsDraft.sender}
