@@ -901,9 +901,10 @@ function AdminSettings() {
           <div className="space-y-4">
             <div>
               <p className="text-xs text-muted-foreground">
-                SMS Misr HTTP API (<span className="font-mono">https://smsmisr.com/api/SMS/</span>). These credentials
-                are used by server-side <span className="font-mono">sendSms</span> / <span className="font-mono">sendOtpSms</span> to
-                deliver text messages and OTPs.
+                ePush HTTP API (<span className="font-mono">https://api.epusheg.com/api/v2/send_bulk</span>).
+                Credentials (password + API key) are stored securely server-side and never returned to the browser.
+                Mobile numbers must be in <span className="font-mono">201XXXXXXXXX</span> or <span className="font-mono">01XXXXXXXXX</span> format.
+                OTP sends are rate-limited to 1 every 60 seconds and 5 per hour per number.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
