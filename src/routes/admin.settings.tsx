@@ -98,15 +98,18 @@ function AdminSettings() {
     environment: "1" | "2";
     username: string;
     password: string; // draft only; blank means "keep stored value"
+    apiKey: string; // draft only; blank means "keep stored value"
     sender: string;
     language: "1" | "2" | "3";
     enabled: boolean;
   };
   const [smsDraft, setSmsDraft] = useState<SmsDraft>({
-    environment: "2", username: "", password: "", sender: "", language: "1", enabled: false,
+    environment: "2", username: "", password: "", apiKey: "", sender: "", language: "1", enabled: false,
   });
   const [smsHasPassword, setSmsHasPassword] = useState(false);
   const [showSmsPassword, setShowSmsPassword] = useState(false);
+  const [smsHasApiKey, setSmsHasApiKey] = useState(false);
+  const [showSmsApiKey, setShowSmsApiKey] = useState(false);
   const [smsSaving, setSmsSaving] = useState(false);
   const [smsSending, setSmsSending] = useState(false);
   const [smsTestMobile, setSmsTestMobile] = useState("");
@@ -194,11 +197,13 @@ function AdminSettings() {
           environment: remote.environment ?? "2",
           username: remote.username ?? "",
           password: "",
+          apiKey: "",
           sender: remote.sender ?? "",
           language: remote.language ?? "1",
           enabled: !!remote.enabled,
         });
         setSmsHasPassword(!!remote.has_password);
+        setSmsHasApiKey(!!remote.has_api_key);
       } catch (e) {
         console.warn("Failed to load SMS config", e);
       }
@@ -209,18 +214,31 @@ function AdminSettings() {
   async function persistSms() {
     setSmsSaving(true);
     try {
+      // Friendly client-side validation before hitting the server.
+      const problems: string[] = [];
+      if (!smsDraft.username.trim()) problems.push("Username");
+      if (!smsDraft.sender.trim()) problems.push("From / Sender");
+      if (!smsHasPassword && !smsDraft.password) problems.push("Password");
+      if (!smsHasApiKey && !smsDraft.apiKey) problems.push("API key");
+      if (problems.length) {
+        toast.error(`Please fill: ${problems.join(", ")}`);
+        setSmsSaving(false);
+        return;
+      }
       await saveSmsFn({
         data: {
           environment: smsDraft.environment,
           username: smsDraft.username.trim(),
           password: smsDraft.password ? smsDraft.password : undefined,
+          api_key: smsDraft.apiKey ? smsDraft.apiKey.trim() : undefined,
           sender: smsDraft.sender.trim(),
           language: smsDraft.language,
           enabled: !!smsDraft.enabled,
         },
       });
       if (smsDraft.password) setSmsHasPassword(true);
-      setSmsDraft((d) => ({ ...d, password: "" }));
+      if (smsDraft.apiKey) setSmsHasApiKey(true);
+      setSmsDraft((d) => ({ ...d, password: "", apiKey: "" }));
       toast.success("SMS settings saved");
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to save SMS settings");
