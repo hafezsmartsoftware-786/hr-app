@@ -8,7 +8,7 @@ export const getSmsConfig = createServerFn({ method: "GET" })
     const { loadSmsConfig } = await import("../server/sms-config.server");
     const cfg = await loadSmsConfig();
     if (!cfg) {
-      return { environment: "2" as const, username: "", sender: "", language: "1" as const, enabled: false, has_password: false };
+      return { environment: "2" as const, username: "", sender: "", language: "1" as const, enabled: false, has_password: false, has_api_key: false };
     }
     // Never return the password itself; UI shows whether one is stored.
     return {
@@ -18,6 +18,7 @@ export const getSmsConfig = createServerFn({ method: "GET" })
       language: cfg.language,
       enabled: cfg.enabled,
       has_password: cfg.password.length > 0,
+      has_api_key: cfg.api_key.length > 0,
     };
   });
 
@@ -35,7 +36,7 @@ export const sendSms = createServerFn({ method: "POST" })
   .inputValidator((input) => SmsSendSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { loadSmsConfig } = await import("../server/sms-config.server");
-    const { sendSmsMisr } = await import("../server/sms-client.server");
+    const { sendSmsEpush, validateSmsAuth } = await import("../server/sms-client.server");
     const { logSmsAudit } = await import("../server/sms-audit.server");
     const cfg = await loadSmsConfig();
     if (!cfg || !cfg.enabled) {
@@ -45,8 +46,13 @@ export const sendSms = createServerFn({ method: "POST" })
       });
       return { ok: false, error: "SMS is disabled or not configured" };
     }
-    const r = await sendSmsMisr(
-      { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
+    const authErr = cfg ? validateSmsAuth({ username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender }) : "SMS is not configured";
+    if (authErr) {
+      await logSmsAudit({ sent_by: context.userId, mobile: data.mobile, message: data.message, kind: "test", ok: false, error: authErr });
+      return { ok: false, error: authErr };
+    }
+    const r = await sendSmsEpush(
+      { environment: cfg.environment, username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender },
       { mobile: data.mobile, message: data.message, language: data.language ?? cfg.language, delayUntil: data.delayUntil },
     );
     await logSmsAudit({
@@ -84,7 +90,7 @@ export const sendOtpSms = createServerFn({ method: "POST" })
   .inputValidator((input) => {
     const o = (input ?? {}) as { mobile?: unknown; digits?: unknown; template?: unknown };
     const mobile = typeof o.mobile === "string" ? o.mobile.trim() : "";
-    if (!/^\+?\d{6,15}(,\s*\+?\d{6,15})*$/.test(mobile)) throw new Error("Invalid mobile");
+    if (!/^\+?\d{6,15}(,\s*\+?\d{6,15})*$/.test(mobile)) throw new Error("Invalid mobile number");
     const digits = typeof o.digits === "number" ? Math.min(8, Math.max(4, o.digits)) : 6;
     const template = typeof o.template === "string" && o.template.includes("{code}")
       ? o.template
@@ -92,11 +98,21 @@ export const sendOtpSms = createServerFn({ method: "POST" })
     return { mobile, digits, template };
   })
   .handler(async ({ data, context }) => {
-    const code = Array.from({ length: data.digits }, () => Math.floor(Math.random() * 10)).join("");
     const { loadSmsConfig } = await import("../server/sms-config.server");
-    const { sendSmsMisr } = await import("../server/sms-client.server");
-    const { logSmsAudit } = await import("../server/sms-audit.server");
+    const { sendSmsEpush, validateSmsAuth, normalizeRecipients } = await import("../server/sms-client.server");
+    const { logSmsAudit, checkOtpRateLimit } = await import("../server/sms-audit.server");
     const cfg = await loadSmsConfig();
+    // Rate-limit per (normalized) mobile so a bad UI can't spam OTPs.
+    const rec = normalizeRecipients(data.mobile);
+    if (rec.invalid.length) {
+      return { ok: false, error: `Invalid mobile: ${rec.invalid.join(", ")}. Use 201XXXXXXXXX or 01XXXXXXXXX.`, code: null };
+    }
+    const rl = await checkOtpRateLimit(rec.mobile, { cooldownSec: 60, maxPerHour: 5 });
+    if (!rl.allowed) {
+      await logSmsAudit({ sent_by: context.userId, mobile: rec.mobile, message: "(rate-limited)", kind: "otp", ok: false, error: rl.reason });
+      return { ok: false, error: rl.reason, retryAfter: rl.retryAfter, code: null };
+    }
+    const code = Array.from({ length: data.digits }, () => Math.floor(Math.random() * 10)).join("");
     const message = data.template.replace("{code}", code);
     if (!cfg || !cfg.enabled) {
       await logSmsAudit({
@@ -105,8 +121,13 @@ export const sendOtpSms = createServerFn({ method: "POST" })
       });
       return { ok: false, error: "SMS is disabled or not configured", code: null };
     }
-    const res = await sendSmsMisr(
-      { environment: cfg.environment, username: cfg.username, password: cfg.password, sender: cfg.sender },
+    const authErr = validateSmsAuth({ username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender });
+    if (authErr) {
+      await logSmsAudit({ sent_by: context.userId, mobile: data.mobile, message, kind: "otp", ok: false, error: authErr });
+      return { ok: false, error: authErr, code: null };
+    }
+    const res = await sendSmsEpush(
+      { environment: cfg.environment, username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender },
       { mobile: data.mobile, message, language: cfg.language },
     );
     await logSmsAudit({
