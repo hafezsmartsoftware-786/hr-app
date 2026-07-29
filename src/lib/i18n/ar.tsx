@@ -31,7 +31,13 @@ export const ui: Record<UiKey, string> = {
   networks: "الشبكات",
   holidays: "العطل الرسمية",
   reports: "التقارير",
-  audit: "سجل التدقيق",
+  audit: "سجل العمليات",
+  sms: "الرسائل النصية SMS",
+  smsBroadcast: "بث الرسائل النصية",
+  sendWelcomeSms: "إرسال رسالة الترحيب",
+  welcomeSmsSent: "تم إرسال رسالة الترحيب",
+  resendSms: "إعادة إرسال",
+  smsStatus: "حالة الرسالة",
 
   // Dashboard
   present: "حاضر",

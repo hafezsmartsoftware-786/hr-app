@@ -47,6 +47,7 @@ import { Route as EmployeeAttendanceRouteImport } from './routes/employee.attend
 import { Route as EmployeeAdvancesRouteImport } from './routes/employee.advances'
 import { Route as AdminTargetsOvertimeRouteImport } from './routes/admin.targets-overtime'
 import { Route as AdminStickyNotesRouteImport } from './routes/admin.sticky-notes'
+import { Route as AdminSmsRouteImport } from './routes/admin.sms'
 import { Route as AdminShiftsRouteImport } from './routes/admin.shifts'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
@@ -267,6 +268,11 @@ const AdminStickyNotesRoute = AdminStickyNotesRouteImport.update({
   path: '/sticky-notes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSmsRoute = AdminSmsRouteImport.update({
+  id: '/sms',
+  path: '/sms',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminShiftsRoute = AdminShiftsRouteImport.update({
   id: '/shifts',
   path: '/shifts',
@@ -447,6 +453,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sms': typeof AdminSmsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/advances': typeof EmployeeAdvancesRoute
@@ -510,6 +517,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sms': typeof AdminSmsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/advances': typeof EmployeeAdvancesRoute
@@ -580,6 +588,7 @@ export interface FileRoutesById {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shifts': typeof AdminShiftsRoute
+  '/admin/sms': typeof AdminSmsRoute
   '/admin/sticky-notes': typeof AdminStickyNotesRoute
   '/admin/targets-overtime': typeof AdminTargetsOvertimeRoute
   '/employee/advances': typeof EmployeeAdvancesRoute
@@ -651,6 +660,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sms'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/advances'
@@ -714,6 +724,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sms'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/advances'
@@ -783,6 +794,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/shifts'
+    | '/admin/sms'
     | '/admin/sticky-notes'
     | '/admin/targets-overtime'
     | '/employee/advances'
@@ -1100,6 +1112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStickyNotesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sms': {
+      id: '/admin/sms'
+      path: '/sms'
+      fullPath: '/admin/sms'
+      preLoaderRoute: typeof AdminSmsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/shifts': {
       id: '/admin/shifts'
       path: '/shifts'
@@ -1345,6 +1364,7 @@ interface AdminRouteChildren {
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShiftsRoute: typeof AdminShiftsRoute
+  AdminSmsRoute: typeof AdminSmsRoute
   AdminStickyNotesRoute: typeof AdminStickyNotesRoute
   AdminTargetsOvertimeRoute: typeof AdminTargetsOvertimeRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1377,6 +1397,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShiftsRoute: AdminShiftsRoute,
+  AdminSmsRoute: AdminSmsRoute,
   AdminStickyNotesRoute: AdminStickyNotesRoute,
   AdminTargetsOvertimeRoute: AdminTargetsOvertimeRoute,
   AdminIndexRoute: AdminIndexRoute,

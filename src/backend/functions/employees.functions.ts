@@ -702,7 +702,7 @@ export const importEmployeesAdmin = createServerFn({ method: "POST" })
         });
         results.push({ index, ok: true, id: String(newId), email });
 
-        // Best-effort welcome email; never blocks import.
+        // Best-effort welcome email and SMS; never blocks import.
         if (data.loginUrl && row.password.trim()) {
           void sendWelcomeEmail({
             to: email,
@@ -712,6 +712,18 @@ export const importEmployeesAdmin = createServerFn({ method: "POST" })
             loginUrl: data.loginUrl,
             appName: data.appName || undefined,
           });
+
+          if (row.phone.trim()) {
+            const { sendEmployeeWelcomeSms } = await import("./sms.functions");
+            void sendEmployeeWelcomeSms({
+              data: {
+                mobile: row.phone.trim(),
+                email: email,
+                password: row.password.trim(),
+                loginUrl: data.loginUrl,
+              },
+            }).catch((err) => console.warn("Import welcome SMS failed:", err));
+          }
         }
       } catch (e: any) {
         results.push({ index, ok: false, email, error: e?.message ?? "Import failed" });
@@ -754,6 +766,24 @@ export const createEmployeeAdmin = createServerFn({ method: "POST" })
     if (!created?.accountCreated || !created?.profileCreated) {
       throw new Error(created?.error || created?.warning || "Employee account creation failed");
     }
+
+    // Automatically send Welcome SMS with email & password provided in Add Employee form
+    if (data.phone && data.password) {
+      try {
+        const { sendEmployeeWelcomeSms } = await import("./sms.functions");
+        await sendEmployeeWelcomeSms({
+          data: {
+            mobile: data.phone,
+            email: data.email,
+            password: data.password,
+            loginUrl: data.loginUrl,
+          },
+        });
+      } catch (smsErr) {
+        console.warn("Automatic welcome SMS failed:", smsErr);
+      }
+    }
+
     return created;
   });
 

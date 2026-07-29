@@ -32,7 +32,12 @@ export const ui = {
   holidays: "Holidays",
   reports: "Reports",
   audit: "Audit Log",
-
+  sms: "SMS",
+  smsBroadcast: "SMS Broadcast",
+  sendWelcomeSms: "Send Welcome SMS",
+  welcomeSmsSent: "Welcome SMS Sent",
+  resendSms: "Resend SMS",
+  smsStatus: "SMS Status",
   // Dashboard
   present: "Present",
   absent: "Absent",

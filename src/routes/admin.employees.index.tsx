@@ -663,6 +663,78 @@ function EditEmployeeDrawer({
 type CityOpt = { id: string; name_en: string };
 type DistrictOpt = { id: string; city_id: string; name_en: string };
 
+function DateInput({
+  value,
+  onChange,
+  onBlur,
+  className,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onBlur?: () => void;
+  className?: string;
+}) {
+  // Convert internal YYYY-MM-DD to display DD/MM/YYYY
+  const toDisplay = (iso: string) => {
+    if (!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return y && m && d ? `${d}/${m}/${y}` : iso;
+  };
+
+  const [displayText, setDisplayText] = useState(() => toDisplay(value));
+
+  useEffect(() => {
+    setDisplayText(toDisplay(value));
+  }, [value]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setDisplayText(raw);
+    // If user types complete dd/mm/yyyy or d/m/yyyy
+    const parts = raw.split("/");
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, "0");
+      const month = parts[1].padStart(2, "0");
+      const year = parts[2];
+      if (year.length === 4 && !isNaN(Number(year)) && !isNaN(Number(month)) && !isNaN(Number(day))) {
+        const iso = `${year}-${month}-${day}`;
+        if (!isNaN(Date.parse(iso))) {
+          onChange(iso);
+        }
+      }
+    } else if (raw === "") {
+      onChange("");
+    }
+  };
+
+  return (
+    <div className="relative flex w-full items-center">
+      <input
+        type="text"
+        placeholder="dd/mm/yyyy"
+        value={displayText}
+        onChange={handleTextChange}
+        onBlur={onBlur}
+        className={className + " pe-9"}
+      />
+      <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <input
+        type="date"
+        value={value || ""}
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
+        className="absolute inset-0 cursor-pointer opacity-0"
+        tabIndex={-1}
+      />
+    </div>
+  );
+}
+
 function AddEmployeeModal({ departments, positions, cities, districts, managers, onClose }: { departments: { id: string; name: string }[]; positions: { id: string; name: string }[]; cities: CityOpt[]; districts: DistrictOpt[]; managers: { id: string; name: string }[]; onClose: () => void }) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -1042,19 +1114,27 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
               {fieldErrors.nationalId && <p className="mt-1 text-[11px] text-destructive">{fieldErrors.nationalId}</p>}
             </label>
             <Field label="ID Issue Date">
-              <input type="date" value={form.idIssueDate} onChange={(e) => {
-                const d = e.target.value;
-                upd("idIssueDate", d);
-                if (d) {
-                  const exp = new Date(d);
-                  exp.setFullYear(exp.getFullYear() + 7);
-                  exp.setDate(exp.getDate() - 1);
-                  upd("nationalIdExpiry", exp.toISOString().slice(0, 10));
-                }
-              }} className={inputCls + " font-mono"} />
+              <DateInput
+                value={form.idIssueDate}
+                onChange={(d) => {
+                  upd("idIssueDate", d);
+                  if (d) {
+                    const exp = new Date(d);
+                    exp.setFullYear(exp.getFullYear() + 7);
+                    exp.setDate(exp.getDate() - 1);
+                    upd("nationalIdExpiry", exp.toISOString().slice(0, 10));
+                  }
+                }}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <Field label="ID Expiry Date" error={fieldErrors.nationalIdExpiry}>
-              <input type="date" value={form.nationalIdExpiry} onChange={(e) => upd("nationalIdExpiry", e.target.value)} onBlur={() => handleBlur("nationalIdExpiry")} className={inputCls + " font-mono"} />
+              <DateInput
+                value={form.nationalIdExpiry}
+                onChange={(d) => upd("nationalIdExpiry", d)}
+                onBlur={() => handleBlur("nationalIdExpiry")}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <Field label="Address on ID">
               <input value={form.idCardAddress} onChange={(e) => upd("idCardAddress", e.target.value)} maxLength={200} placeholder="As written on national ID" className={inputCls} />
@@ -1069,10 +1149,18 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
               </select>
             </Field>
             <Field label="Contract Start Date">
-              <input type="date" value={contractStartDate} onChange={(e) => setContractStartDate(e.target.value)} className={inputCls + " font-mono"} />
+              <DateInput
+                value={contractStartDate}
+                onChange={setContractStartDate}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <Field label="Contract End Date">
-              <input type="date" value={contractEndDate} onChange={(e) => setContractEndDate(e.target.value)} className={inputCls + " font-mono"} />
+              <DateInput
+                value={contractEndDate}
+                onChange={setContractEndDate}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <label className="hidden items-center gap-2 text-xs text-muted-foreground md:col-span-1">
               <input type="checkbox" className="h-4 w-4 accent-brand" checked={contractCancelled} onChange={(e) => setContractCancelled(e.target.checked)} />
@@ -1082,10 +1170,18 @@ function AddEmployeeModal({ departments, positions, cities, districts, managers,
             <Field label="Medical Insurance Details"><input value={form.medicalInsuranceDetails} onChange={(e) => upd("medicalInsuranceDetails", e.target.value)} className={inputCls} /></Field>
 
             <Field label="Social Insurance Date">
-              <input type="date" value={form.socialInsuranceDate} onChange={(e) => upd("socialInsuranceDate", e.target.value)} className={inputCls + " font-mono"} />
+              <DateInput
+                value={form.socialInsuranceDate}
+                onChange={(d) => upd("socialInsuranceDate", d)}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <Field label="Military Expire Date">
-              <input type="date" value={form.militaryExpireDate} onChange={(e) => upd("militaryExpireDate", e.target.value)} className={inputCls + " font-mono"} />
+              <DateInput
+                value={form.militaryExpireDate}
+                onChange={(d) => upd("militaryExpireDate", d)}
+                className={inputCls + " font-mono"}
+              />
             </Field>
             <div className="md:col-span-4 space-y-3">
               <div className="flex items-center justify-between">

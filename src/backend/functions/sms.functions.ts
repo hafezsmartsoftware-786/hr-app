@@ -144,3 +144,150 @@ export const sendOtpSms = createServerFn({ method: "POST" })
       code: res.ok ? code : null,
     };
   });
+
+export const listEmployeesWithWelcomeSmsStatus = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => {
+    const o = (input ?? {}) as { q?: unknown; statusFilter?: unknown; page?: unknown; pageSize?: unknown };
+    return {
+      q: typeof o.q === "string" ? o.q.trim().toLowerCase() : "",
+      statusFilter: typeof o.statusFilter === "string" ? o.statusFilter : "",
+      page: typeof o.page === "number" ? Math.max(1, o.page) : 1,
+      pageSize: typeof o.pageSize === "number" ? Math.min(200, Math.max(1, o.pageSize)) : 25,
+    };
+  })
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { loadWelcomeSmsAudits } = await import("../server/sms-audit.server");
+    const { normalizeEpushMobile } = await import("../server/sms-client.server");
+
+    // Load profiles
+    const { data: profiles, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone, avatar_url, emp_code, status")
+      .order("full_name", { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    const auditsByMobile = await loadWelcomeSmsAudits();
+
+    const items = (profiles ?? []).map((p: any) => {
+      const rawPhone = p.phone || "";
+      const normalizedPhone = normalizeEpushMobile(rawPhone);
+      const audit = normalizedPhone ? auditsByMobile[normalizedPhone] : null;
+
+      let smsStatus: "sent" | "failed" | "not_sent" = "not_sent";
+      if (audit) {
+        smsStatus = audit.ok ? "sent" : "failed";
+      }
+
+      return {
+        id: p.id,
+        full_name: p.full_name || "—",
+        email: p.email || "—",
+        phone: rawPhone,
+        normalizedPhone,
+        emp_code: p.emp_code || null,
+        avatar_url: p.avatar_url || null,
+        status: p.status || "Active",
+        smsStatus,
+        lastSentAt: audit ? audit.created_at : null,
+        lastError: audit && !audit.ok ? audit.error : null,
+        lastSmsId: audit?.sms_id || null,
+      };
+    });
+
+    // Filter
+    let filtered = items;
+    if (data.q) {
+      filtered = filtered.filter(
+        (item) =>
+          item.full_name.toLowerCase().includes(data.q) ||
+          item.email.toLowerCase().includes(data.q) ||
+          item.phone.toLowerCase().includes(data.q) ||
+          (item.emp_code && item.emp_code.toLowerCase().includes(data.q))
+      );
+    }
+    if (data.statusFilter) {
+      filtered = filtered.filter((item) => item.smsStatus === data.statusFilter);
+    }
+
+    const total = filtered.length;
+    const start = (data.page - 1) * data.pageSize;
+    const paginated = filtered.slice(start, start + data.pageSize);
+
+    return { rows: paginated, total, grandTotal: items.length, page: data.page, pageSize: data.pageSize };
+  });
+
+export const sendEmployeeWelcomeSms = createServerFn({ method: "POST" })
+  .middleware([requireAdminAccess])
+  .inputValidator((input) => {
+    const o = (input ?? {}) as { mobile?: unknown; email?: unknown; password?: unknown; loginUrl?: unknown; customMessage?: unknown };
+    const mobile = typeof o.mobile === "string" ? o.mobile.trim() : "";
+    const email = typeof o.email === "string" ? o.email.trim() : "";
+    const password = typeof o.password === "string" ? o.password.trim() : "";
+    const loginUrl = typeof o.loginUrl === "string" && o.loginUrl.trim() ? o.loginUrl.trim() : typeof window !== "undefined" ? window.location.origin : "";
+    const customMessage = typeof o.customMessage === "string" ? o.customMessage.trim() : "";
+    if (!mobile) throw new Error("Mobile number is required");
+    return { mobile, email, password, loginUrl, customMessage };
+  })
+  .handler(async ({ data, context }) => {
+    const { loadSmsConfig } = await import("../server/sms-config.server");
+    const { sendSmsEpush, validateSmsAuth, normalizeRecipients } = await import("../server/sms-client.server");
+    const { logSmsAudit } = await import("../server/sms-audit.server");
+
+    const cfg = await loadSmsConfig();
+
+    const rec = normalizeRecipients(data.mobile);
+    if (!rec.ok || rec.invalid.length > 0) {
+      return { ok: false, error: `Invalid mobile number: ${data.mobile}. Must be Egyptian format (e.g. 01XXXXXXXXX).` };
+    }
+
+    const defaultMsg = data.password
+      ? `welcome to Integrated technics your user name is ${data.email} and password ${data.password} and ${data.loginUrl} , thanks\nHR department`
+      : `welcome to Integrated technics your user name is ${data.email} and ${data.loginUrl} , thanks\nHR department`;
+    const message = data.customMessage || defaultMsg;
+
+    if (!cfg || !cfg.enabled) {
+      await logSmsAudit({
+        sent_by: context.userId,
+        mobile: rec.mobile,
+        message,
+        kind: "welcome",
+        ok: false,
+        error: "SMS service is disabled or not configured in Settings -> SMS",
+      });
+      return { ok: false, error: "SMS service is disabled or not configured in Settings -> SMS" };
+    }
+
+    const authErr = validateSmsAuth({ username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender });
+    if (authErr) {
+      await logSmsAudit({ sent_by: context.userId, mobile: rec.mobile, message, kind: "welcome", ok: false, error: authErr });
+      return { ok: false, error: authErr };
+    }
+
+    const res = await sendSmsEpush(
+      { environment: cfg.environment, username: cfg.username, password: cfg.password, apiKey: cfg.api_key, sender: cfg.sender },
+      { mobile: rec.mobile, message, language: cfg.language }
+    );
+
+    await logSmsAudit({
+      sent_by: context.userId,
+      mobile: rec.mobile,
+      message,
+      kind: "welcome",
+      ok: res.ok,
+      provider_code: res.code ?? null,
+      sms_id: res.smsId ?? null,
+      cost: res.cost ?? null,
+      error: res.error ?? null,
+    });
+
+    return {
+      ok: res.ok,
+      providerCode: res.code ?? null,
+      smsId: res.smsId ?? null,
+      cost: res.cost ?? null,
+      error: res.error ?? null,
+    };
+  });

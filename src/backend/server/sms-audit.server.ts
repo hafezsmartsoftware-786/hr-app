@@ -23,7 +23,7 @@ export async function logSmsAudit(input: {
   sent_by?: string | null;
   mobile: string;
   message: string;
-  kind?: "test" | "otp" | "notification" | "other";
+  kind?: "test" | "otp" | "notification" | "welcome" | "other";
   ok: boolean;
   provider_code?: string | null;
   sms_id?: string | null;
@@ -121,3 +121,28 @@ export async function checkOtpRateLimit(
   }
   return { allowed: true };
 }
+
+/**
+ * Load the latest welcome SMS audit entry for each mobile number.
+ */
+export async function loadWelcomeSmsAudits(): Promise<Record<string, SmsAuditRow>> {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("sms_audit")
+    .select("id, created_at, sent_by, mobile, message, kind, ok, provider_code, sms_id, cost, error")
+    .eq("kind", "welcome")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("loadWelcomeSmsAudits read failed", error.message);
+    return {};
+  }
+
+  const map: Record<string, SmsAuditRow> = {};
+  for (const row of (data as SmsAuditRow[] ?? [])) {
+    // Keeps the latest row per mobile number
+    if (!map[row.mobile]) {
+      map[row.mobile] = row;
+    }
+  }
+  return map;
+}
