@@ -72,6 +72,59 @@ function emptySchedule(): ExportSchedule {
   };
 }
 
+/** Collapsed/expanded panel state persisted per signed-in admin user. */
+function usePersistedPanel(
+  key: string,
+  initial: boolean,
+): [boolean, (v: boolean | ((p: boolean) => boolean)) => void] {
+  const session = useSupabaseSession();
+  const userId = session?.user?.id ?? null;
+  const storageKey = userId ? `admin.settings.sms.${key}.${userId}` : null;
+  const [open, setOpen] = useState(initial);
+
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw === "1" || raw === "0") setOpen(raw === "1");
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  const set = useCallback(
+    (v: boolean | ((p: boolean) => boolean)) => {
+      setOpen((prev) => {
+        const next = typeof v === "function" ? (v as (p: boolean) => boolean)(prev) : v;
+        if (storageKey && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(storageKey, next ? "1" : "0");
+          } catch {
+            /* ignore */
+          }
+        }
+        return next;
+      });
+    },
+    [storageKey],
+  );
+
+  return [open, set];
+}
+
+function emptyScheduleUnused(): ExportSchedule {
+  return {
+    id: "",
+    name: "",
+    enabled: true,
+    employeeIds: [],
+    rangeKind: "yesterday",
+    format: "csv",
+    sendTime: "08:00",
+    recipients: [],
+  };
+}
+
 function AdminSettings() {
   const { t, lang } = useI18n();
   const policy = useStore((s) => s.policy);
