@@ -131,8 +131,8 @@ function AdminSettings() {
   };
   const [recentOtps, setRecentOtps] = useState<OtpAuditRow[]>([]);
   const [recentOtpsLoading, setRecentOtpsLoading] = useState(false);
-  const [recentOtpsOpen, setRecentOtpsOpen] = useState(false);
-  const [lastSmsOpen, setLastSmsOpen] = useState(false);
+  const [recentOtpsOpen, setRecentOtpsOpen] = usePersistedPanel("recentOtps", false);
+  const [lastSmsOpen, setLastSmsOpen] = usePersistedPanel("lastSms", false);
   const refreshRecentOtps = useCallback(async () => {
     setRecentOtpsLoading(true);
     try {
