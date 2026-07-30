@@ -7,6 +7,7 @@ import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/function
 import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit, listRecentOtpAudits } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { useSupabaseSession } from "@/lib/supabase-session";
 import {
   useStore,
   updatePolicy,
@@ -72,6 +73,46 @@ function emptySchedule(): ExportSchedule {
   };
 }
 
+/** Collapsed/expanded panel state persisted per signed-in admin user. */
+function usePersistedPanel(
+  key: string,
+  initial: boolean,
+): [boolean, (v: boolean | ((p: boolean) => boolean)) => void] {
+  const session = useSupabaseSession();
+  const userId = session?.user?.id ?? null;
+  const storageKey = userId ? `admin.settings.sms.${key}.${userId}` : null;
+  const [open, setOpen] = useState(initial);
+
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw === "1" || raw === "0") setOpen(raw === "1");
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  const set = useCallback(
+    (v: boolean | ((p: boolean) => boolean)) => {
+      setOpen((prev) => {
+        const next = typeof v === "function" ? (v as (p: boolean) => boolean)(prev) : v;
+        if (storageKey && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(storageKey, next ? "1" : "0");
+          } catch {
+            /* ignore */
+          }
+        }
+        return next;
+      });
+    },
+    [storageKey],
+  );
+
+  return [open, set];
+}
+
 function AdminSettings() {
   const { t, lang } = useI18n();
   const policy = useStore((s) => s.policy);
@@ -131,8 +172,8 @@ function AdminSettings() {
   };
   const [recentOtps, setRecentOtps] = useState<OtpAuditRow[]>([]);
   const [recentOtpsLoading, setRecentOtpsLoading] = useState(false);
-  const [recentOtpsOpen, setRecentOtpsOpen] = useState(false);
-  const [lastSmsOpen, setLastSmsOpen] = useState(false);
+  const [recentOtpsOpen, setRecentOtpsOpen] = usePersistedPanel("recentOtps", false);
+  const [lastSmsOpen, setLastSmsOpen] = usePersistedPanel("lastSms", false);
   const refreshRecentOtps = useCallback(async () => {
     setRecentOtpsLoading(true);
     try {
