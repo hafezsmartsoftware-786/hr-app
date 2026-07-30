@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useState, useRef, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare, UserCog } from "lucide-react";
+import { Save, RotateCcw, Plus, Trash2, Clock, Wallet, Target, AlertTriangle, Gauge, CalendarDays, Sparkles, Pencil, X, Check, Wifi, Building2, Briefcase, MapPin, Mail, Bell, BellRing, Send, CalendarClock, Play, Timer, Coins, Tag, ChevronRight, ChevronDown, Shield, Eye, EyeOff, Copy, KeyRound, MessageSquare, UserCog } from "lucide-react";
 import { getVapidStatus } from "@/backend/functions/vapid-status.functions";
 import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/functions/smtp.functions";
 import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit, listRecentOtpAudits } from "@/backend/functions/sms.functions";
@@ -131,6 +131,8 @@ function AdminSettings() {
   };
   const [recentOtps, setRecentOtps] = useState<OtpAuditRow[]>([]);
   const [recentOtpsLoading, setRecentOtpsLoading] = useState(false);
+  const [recentOtpsOpen, setRecentOtpsOpen] = useState(false);
+  const [lastSmsOpen, setLastSmsOpen] = useState(false);
   const refreshRecentOtps = useCallback(async () => {
     setRecentOtpsLoading(true);
     try {
@@ -1106,103 +1108,120 @@ function AdminSettings() {
             </div>
 
             <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
+              <button
+                type="button"
+                onClick={() => setRecentOtpsOpen((v) => !v)}
+                className="flex w-full items-center justify-between"
+              >
+                <div className="text-start">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent OTP attempts</h3>
                   <p className="text-[11px] text-muted-foreground">Latest 20 entries from sms_audit where kind = otp.</p>
                 </div>
-                <button
-                  onClick={refreshRecentOtps}
-                  disabled={recentOtpsLoading}
-                  className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium disabled:opacity-60"
-                >
-                  {recentOtpsLoading ? "Loading…" : "Refresh"}
-                </button>
-              </div>
-              {recentOtps.length === 0 ? (
-                <p className="text-[12px] text-muted-foreground">
-                  No OTP attempts recorded yet. If the table is missing, run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[12px]">
-                    <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      <tr className="border-b border-border/60">
-                        <th className="py-1.5 pe-3 text-start font-medium">Timestamp</th>
-                        <th className="py-1.5 pe-3 text-start font-medium">Mobile</th>
-                        <th className="py-1.5 pe-3 text-start font-medium">Status</th>
-                        <th className="py-1.5 text-start font-medium">Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentOtps.map((r) => (
-                        <tr key={r.id} className="border-b border-border/40 last:border-b-0">
-                          <td className="py-1.5 pe-3 font-mono whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
-                          <td className="py-1.5 pe-3 font-mono break-all" dir="ltr">{r.mobile}</td>
-                          <td className="py-1.5 pe-3">
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.ok ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
-                              {r.ok ? "Delivered" : "Failed"}
-                            </span>
-                          </td>
-                          <td className="py-1.5 text-muted-foreground">
-                            {r.ok
-                              ? (r.sms_id ? `SMSID ${r.sms_id}` : "—")
-                              : (r.error ?? (r.provider_code ? `Code ${r.provider_code}` : "—"))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex items-center gap-2">
+                  <span
+                    onClick={(e) => { e.stopPropagation(); refreshRecentOtps(); }}
+                    className={`rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium ${recentOtpsLoading ? "opacity-60" : "cursor-pointer hover:bg-accent"}`}
+                  >
+                    {recentOtpsLoading ? "Loading…" : "Refresh"}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${recentOtpsOpen ? "rotate-180" : ""}`} />
                 </div>
+              </button>
+              {recentOtpsOpen && (
+                recentOtps.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground">
+                    No OTP attempts recorded yet. If the table is missing, run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <tr className="border-b border-border/60">
+                          <th className="py-1.5 pe-3 text-start font-medium">Timestamp</th>
+                          <th className="py-1.5 pe-3 text-start font-medium">Mobile</th>
+                          <th className="py-1.5 pe-3 text-start font-medium">Status</th>
+                          <th className="py-1.5 text-start font-medium">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentOtps.map((r) => (
+                          <tr key={r.id} className="border-b border-border/40 last:border-b-0">
+                            <td className="py-1.5 pe-3 font-mono whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                            <td className="py-1.5 pe-3 font-mono break-all" dir="ltr">{r.mobile}</td>
+                            <td className="py-1.5 pe-3">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.ok ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+                                {r.ok ? "Delivered" : "Failed"}
+                              </span>
+                            </td>
+                            <td className="py-1.5 text-muted-foreground">
+                              {r.ok
+                                ? (r.sms_id ? `SMSID ${r.sms_id}` : "—")
+                                : (r.error ?? (r.provider_code ? `Code ${r.provider_code}` : "—"))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               )}
             </div>
 
             <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-2">
-              <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setLastSmsOpen((v) => !v)}
+                className="flex w-full items-center justify-between"
+              >
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last test SMS</h3>
-                <button
-                  onClick={refreshLastSms}
-                  className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium"
-                >
-                  Refresh
-                </button>
-              </div>
-              {!lastSms ? (
-                <p className="text-[12px] text-muted-foreground">No SMS has been sent yet, or the audit table has not been created. Run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.</p>
-              ) : (
-                <div className="grid gap-2 text-[12px] md:grid-cols-2">
-                  <div>
-                    <div className="text-muted-foreground">Status</div>
-                    <div className={`font-semibold ${lastSms.ok ? "text-success" : "text-destructive"}`}>
-                      {lastSms.ok ? "Delivered to provider" : "Failed"}
-                      {lastSms.error ? ` — ${lastSms.error}` : ""}
+                <div className="flex items-center gap-2">
+                  <span
+                    onClick={(e) => { e.stopPropagation(); refreshLastSms(); }}
+                    className="cursor-pointer rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                  >
+                    Refresh
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lastSmsOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+              {lastSmsOpen && (
+                !lastSms ? (
+                  <p className="text-[12px] text-muted-foreground">No SMS has been sent yet, or the audit table has not been created. Run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.</p>
+                ) : (
+                  <div className="grid gap-2 text-[12px] md:grid-cols-2">
+                    <div>
+                      <div className="text-muted-foreground">Status</div>
+                      <div className={`font-semibold ${lastSms.ok ? "text-success" : "text-destructive"}`}>
+                        {lastSms.ok ? "Delivered to provider" : "Failed"}
+                        {lastSms.error ? ` — ${lastSms.error}` : ""}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Timestamp</div>
+                      <div className="font-mono">{new Date(lastSms.created_at).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Provider code</div>
+                      <div className="font-mono">{lastSms.provider_code ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">SMSID</div>
+                      <div className="font-mono break-all">{lastSms.sms_id ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Cost</div>
+                      <div className="font-mono">{lastSms.cost ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Mobile</div>
+                      <div className="font-mono break-all" dir="ltr">{lastSms.mobile}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-muted-foreground">Message</div>
+                      <div className="whitespace-pre-wrap break-words">{lastSms.message}</div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-muted-foreground">Timestamp</div>
-                    <div className="font-mono">{new Date(lastSms.created_at).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Provider code</div>
-                    <div className="font-mono">{lastSms.provider_code ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">SMSID</div>
-                    <div className="font-mono break-all">{lastSms.sms_id ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Cost</div>
-                    <div className="font-mono">{lastSms.cost ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Mobile</div>
-                    <div className="font-mono break-all" dir="ltr">{lastSms.mobile}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-muted-foreground">Message</div>
-                    <div className="whitespace-pre-wrap break-words">{lastSms.message}</div>
-                  </div>
-                </div>
+                )
               )}
             </div>
           </div>
