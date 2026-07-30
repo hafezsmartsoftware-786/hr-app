@@ -1168,51 +1168,60 @@ function AdminSettings() {
             </div>
 
             <div className="rounded-2xl border border-border bg-background/40 p-4 space-y-2">
-              <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setLastSmsOpen((v) => !v)}
+                className="flex w-full items-center justify-between"
+              >
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last test SMS</h3>
-                <button
-                  onClick={refreshLastSms}
-                  className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium"
-                >
-                  Refresh
-                </button>
-              </div>
-              {!lastSms ? (
-                <p className="text-[12px] text-muted-foreground">No SMS has been sent yet, or the audit table has not been created. Run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.</p>
-              ) : (
-                <div className="grid gap-2 text-[12px] md:grid-cols-2">
-                  <div>
-                    <div className="text-muted-foreground">Status</div>
-                    <div className={`font-semibold ${lastSms.ok ? "text-success" : "text-destructive"}`}>
-                      {lastSms.ok ? "Delivered to provider" : "Failed"}
-                      {lastSms.error ? ` — ${lastSms.error}` : ""}
+                <div className="flex items-center gap-2">
+                  <span
+                    onClick={(e) => { e.stopPropagation(); refreshLastSms(); }}
+                    className="cursor-pointer rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                  >
+                    Refresh
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lastSmsOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+              {lastSmsOpen && (
+                !lastSms ? (
+                  <p className="text-[12px] text-muted-foreground">No SMS has been sent yet, or the audit table has not been created. Run <span className="font-mono">docs/migrations/sms-audit.sql</span> in the Supabase SQL editor.</p>
+                ) : (
+                  <div className="grid gap-2 text-[12px] md:grid-cols-2">
+                    <div>
+                      <div className="text-muted-foreground">Status</div>
+                      <div className={`font-semibold ${lastSms.ok ? "text-success" : "text-destructive"}`}>
+                        {lastSms.ok ? "Delivered to provider" : "Failed"}
+                        {lastSms.error ? ` — ${lastSms.error}` : ""}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Timestamp</div>
+                      <div className="font-mono">{new Date(lastSms.created_at).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Provider code</div>
+                      <div className="font-mono">{lastSms.provider_code ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">SMSID</div>
+                      <div className="font-mono break-all">{lastSms.sms_id ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Cost</div>
+                      <div className="font-mono">{lastSms.cost ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Mobile</div>
+                      <div className="font-mono break-all" dir="ltr">{lastSms.mobile}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-muted-foreground">Message</div>
+                      <div className="whitespace-pre-wrap break-words">{lastSms.message}</div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-muted-foreground">Timestamp</div>
-                    <div className="font-mono">{new Date(lastSms.created_at).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Provider code</div>
-                    <div className="font-mono">{lastSms.provider_code ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">SMSID</div>
-                    <div className="font-mono break-all">{lastSms.sms_id ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Cost</div>
-                    <div className="font-mono">{lastSms.cost ?? "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Mobile</div>
-                    <div className="font-mono break-all" dir="ltr">{lastSms.mobile}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-muted-foreground">Message</div>
-                    <div className="whitespace-pre-wrap break-words">{lastSms.message}</div>
-                  </div>
-                </div>
+                )
               )}
             </div>
           </div>
