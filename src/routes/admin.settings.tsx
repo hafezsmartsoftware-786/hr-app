@@ -7,6 +7,7 @@ import { getSmtpConfig, saveSmtpConfig, sendTestEmail } from "@/backend/function
 import { getSmsConfig, saveSmsConfig, sendSms, sendOtpSms, getLastSmsAudit, listRecentOtpAudits } from "@/backend/functions/sms.functions";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { useSupabaseSession } from "@/lib/supabase-session";
 import {
   useStore,
   updatePolicy,
@@ -110,19 +111,6 @@ function usePersistedPanel(
   );
 
   return [open, set];
-}
-
-function emptyScheduleUnused(): ExportSchedule {
-  return {
-    id: "",
-    name: "",
-    enabled: true,
-    employeeIds: [],
-    rangeKind: "yesterday",
-    format: "csv",
-    sendTime: "08:00",
-    recipients: [],
-  };
 }
 
 function AdminSettings() {
