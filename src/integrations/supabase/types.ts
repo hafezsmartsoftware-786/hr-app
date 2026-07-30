@@ -2788,6 +2788,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_config: {
+        Row: {
+          api_key: string | null
+          enabled: boolean
+          environment: string
+          id: number
+          language: string
+          password: string
+          sender: string
+          updated_at: string
+          updated_by: string | null
+          username: string
+        }
+        Insert: {
+          api_key?: string | null
+          enabled?: boolean
+          environment?: string
+          id?: number
+          language?: string
+          password?: string
+          sender?: string
+          updated_at?: string
+          updated_by?: string | null
+          username?: string
+        }
+        Update: {
+          api_key?: string | null
+          enabled?: boolean
+          environment?: string
+          id?: number
+          language?: string
+          password?: string
+          sender?: string
+          updated_at?: string
+          updated_by?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       smtp_config: {
         Row: {
           from_email: string
