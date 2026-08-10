@@ -111,22 +111,22 @@ async function buildLookups(admin: any, rows: Row[]) {
     Array.from(new Set(rows.map((r) => r[key]).filter(Boolean).map(String)));
   const [depts, sections, positions, managers] = await Promise.all([
     ids("department_id").length
-      ? admin.from("departments").select("id,name").in("id", ids("department_id"))
+      ? admin.from("departments").select("id,name_en,name_ar").in("id", ids("department_id"))
       : { data: [] },
     ids("section_id").length
-      ? admin.from("sections").select("id,name").in("id", ids("section_id"))
+      ? admin.from("sections").select("id,name_en,name_ar").in("id", ids("section_id"))
       : { data: [] },
     ids("position_id").length
-      ? admin.from("positions").select("id,title").in("id", ids("position_id"))
+      ? admin.from("positions").select("id,name_en,name_ar").in("id", ids("position_id"))
       : { data: [] },
     ids("manager_id").length
       ? admin.from("profiles").select("id,full_name,email").in("id", ids("manager_id"))
       : { data: [] },
   ]);
   return {
-    departments: new Map<string, string>((depts.data ?? []).map((d: any) => [d.id, d.name])),
-    sections: new Map<string, string>((sections.data ?? []).map((s: any) => [s.id, s.name])),
-    positions: new Map<string, string>((positions.data ?? []).map((p: any) => [p.id, p.title])),
+    departments: new Map<string, string>((depts.data ?? []).map((d: any) => [d.id, d.name_en ?? d.name_ar])),
+    sections: new Map<string, string>((sections.data ?? []).map((s: any) => [s.id, s.name_en ?? s.name_ar])),
+    positions: new Map<string, string>((positions.data ?? []).map((p: any) => [p.id, p.name_en ?? p.name_ar])),
     managers: new Map((managers.data ?? []).map((m: any) => [m.id, m])),
   };
 }
