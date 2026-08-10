@@ -23,6 +23,10 @@ const DocSchema = z.object({
     "docCriminalFront",
     "docMilitaryFront",
     "docMilitaryBack",
+    "docBirthCertificate",
+    "docSkillsCert",
+    "docMedicalInsurance",
+    "docSocialInsurance",
     "personalPhone",
   ]).optional(),
 });

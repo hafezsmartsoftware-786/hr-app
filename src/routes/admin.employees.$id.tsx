@@ -97,6 +97,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Pencil, Save } from "lucide-react";
 import { EmployeeAssignmentsPicker } from "@/components/EmployeeAssignmentsPicker";
 import { Target } from "lucide-react";
+import { Package } from "lucide-react";
 
 
 export const Route = createFileRoute("/admin/employees/$id")({
@@ -394,7 +395,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
   const upd = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const districtsForCity = (locs?.districts ?? []).filter((d) => !form.city_id || d.city_id === form.city_id);
   const sectionsForDept = (locs?.sections ?? []).filter((s: any) => !form.department_id || s.department_id === form.department_id);
-  type SideTab = "overview" | "employment" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "advances" | "status" | "offboarding" | "trips";
+  type SideTab = "overview" | "employment" | "assignments" | "attendance" | "leaves" | "documents" | "devices" | "notes" | "advances" | "status" | "offboarding" | "trips" | "custody";
   const [sideTab, setSideTab] = useState<SideTab>("overview");
   const sideNav: { id: SideTab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: UserIcon },
@@ -403,11 +404,12 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
     { id: "attendance", label: "Attendance", icon: CalendarDays },
     { id: "leaves", label: "Leaves", icon: Plane },
     { id: "documents", label: "Documents", icon: FileText },
-    { id: "devices", label: "Devices", icon: Smartphone },
+    { id: "devices", label: "Allowed devices", icon: Smartphone },
     { id: "notes", label: "Notes", icon: StickyNoteIcon },
     { id: "advances", label: "Advances", icon: Banknote },
     { id: "status", label: "Status history", icon: Clock },
     { id: "trips", label: t("tripAllowance" as any) ?? "Trip Allowance", icon: MapPin },
+    { id: "custody", label: "Custody", icon: Package },
     { id: "offboarding", label: "Offboarding", icon: Plane },
   ];
 
@@ -1014,6 +1016,10 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
             {sideTab === "trips" && (
               <EmployeeTripsPanel employeeId={detail.id} />
             )}
+
+            {sideTab === "custody" && (
+              <EmployeeCustodyPanel employeeId={detail.id} />
+            )}
           </div>
         </div>
       )}
@@ -1224,6 +1230,8 @@ const DOC_KIND_LABELS: Record<string, string> = {
   docCriminalFront: "Criminal Record",
   docMilitaryFront: "Military — Front",
   docMilitaryBack: "Military — Back",
+  docMedicalInsurance: "Medical Insurance",
+  docSocialInsurance: "Social Insurance",
   docOther: "Other",
 };
 
@@ -2488,6 +2496,8 @@ const DOC_KEYS = [
   "docMilitaryBack",
   "docBirthCertificate",
   "docSkillsCert",
+  "docMedicalInsurance",
+  "docSocialInsurance",
 ] as const;
 
 type StoredDoc = { name: string; type: string; size: number; dataUrl: string };

@@ -10,11 +10,13 @@ import {
   CUSTODY_CATEGORIES,
   type CustodyItem,
 } from "@/backend/functions/custody.functions";
+import { useI18n } from "@/lib/i18n";
 
 const inputCls = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm";
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const listFn = useServerFn(listEmployeeCustody);
   const addFn = useServerFn(addEmployeeCustody);
@@ -29,7 +31,7 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
   const addMut = useMutation({
     mutationFn: (v: any) => addFn({ data: { profileId: employeeId, ...v } }),
     onSuccess: () => {
-      toast.success("Custody item added");
+      toast.success(t("addCustodyItem" as any));
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] });
     },
@@ -48,14 +50,14 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold">Custody</h2>
-          <p className="text-sm text-muted-foreground">Assets and equipment assigned to this employee.</p>
+          <h2 className="font-display text-lg font-semibold">{t("custody" as any)}</h2>
+          <p className="text-sm text-muted-foreground">{t("custodySubtitle" as any)}</p>
         </div>
         <button
           onClick={() => setOpen(true)}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand"
         >
-          <Plus className="h-4 w-4" /> Add custody
+          <Plus className="h-4 w-4" /> {t("addCustody" as any)}
         </button>
       </div>
 
@@ -67,18 +69,18 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
         ) : items.length === 0 ? (
           <div className="grid place-items-center gap-2 py-12 text-center text-sm text-muted-foreground">
             <Package className="h-6 w-6" />
-            No custody items yet.
+            {t("noCustodyItems" as any)}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-start">Date</th>
-                  <th className="px-4 py-3 text-start">Name</th>
-                  <th className="px-4 py-3 text-start">Serial number</th>
-                  <th className="px-4 py-3 text-start">Model</th>
-                  <th className="px-4 py-3 text-start">Category</th>
+                  <th className="px-4 py-3 text-start">{t("custodyDate" as any)}</th>
+                  <th className="px-4 py-3 text-start">{t("custodyName" as any)}</th>
+                  <th className="px-4 py-3 text-start">{t("custodySerial" as any)}</th>
+                  <th className="px-4 py-3 text-start">{t("custodyModel" as any)}</th>
+                  <th className="px-4 py-3 text-start">{t("custodyCategory" as any)}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -91,7 +93,9 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                     <td className="px-4 py-3">{it.model ?? "—"}</td>
                     <td className="px-4 py-3">
                       {it.category ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{it.category}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                          {t(`cat.${it.category}` as any) ?? it.category}
+                        </span>
                       ) : (
                         "—"
                       )}
@@ -100,7 +104,7 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                       <button
                         disabled={delMut.isPending}
                         onClick={() => {
-                          if (confirm(`Remove "${it.name}" from custody?`)) delMut.mutate(it.id);
+                          if (confirm(t("removeCustodyConfirm" as any))) delMut.mutate(it.id);
                         }}
                         className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                         aria-label="Delete custody item"
@@ -130,6 +134,7 @@ function AddCustodyModal({
   onSubmit: (v: any) => void;
   pending: boolean;
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState({
     custody_date: today(),
     name: "",
@@ -144,7 +149,7 @@ function AddCustodyModal({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-lg font-semibold">Add custody item</h3>
+          <h3 className="font-display text-lg font-semibold">{t("addCustodyItem" as any)}</h3>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-muted" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
@@ -153,49 +158,51 @@ function AddCustodyModal({
           className="grid gap-3 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!form.name.trim()) return toast.error("Name is required");
+            if (!form.name.trim()) return toast.error(t("custodyName" as any) + " is required");
             onSubmit(form);
           }}
         >
           <label className="space-y-1 text-sm">
-            <span className="text-xs font-semibold text-muted-foreground">Date</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyDate" as any)}</span>
             <input type="date" value={form.custody_date} onChange={(e) => upd("custody_date", e.target.value)} className={inputCls} />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-xs font-semibold text-muted-foreground">Name</span>
-            <input value={form.name} onChange={(e) => upd("name", e.target.value)} placeholder="Dell Latitude laptop" className={inputCls} />
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyName" as any)}</span>
+            <input value={form.name} onChange={(e) => upd("name", e.target.value)} placeholder={t("custodyNamePlaceholder" as any)} className={inputCls} />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-xs font-semibold text-muted-foreground">Serial number</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodySerial" as any)}</span>
             <input value={form.serial_number} onChange={(e) => upd("serial_number", e.target.value)} className={inputCls + " font-mono"} />
           </label>
           <label className="space-y-1 text-sm">
-            <span className="text-xs font-semibold text-muted-foreground">Model</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyModel" as any)}</span>
             <input value={form.model} onChange={(e) => upd("model", e.target.value)} className={inputCls} />
           </label>
           <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="text-xs font-semibold text-muted-foreground">Category</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyCategory" as any)}</span>
             <select value={form.category} onChange={(e) => upd("category", e.target.value)} className={inputCls}>
               <option value="">—</option>
               {CUSTODY_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {t(`cat.${c}` as any) ?? c}
+                </option>
               ))}
             </select>
           </label>
           <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="text-xs font-semibold text-muted-foreground">Notes</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyNotes" as any)}</span>
             <textarea value={form.notes} onChange={(e) => upd("notes", e.target.value)} rows={2} className={inputCls} />
           </label>
           <div className="sm:col-span-2 mt-1 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm font-semibold">
-              Cancel
+              {t("cancel")}
             </button>
             <button
               type="submit"
               disabled={pending}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-50"
             >
-              {pending && <Loader2 className="h-4 w-4 animate-spin" />} Save
+              {pending && <Loader2 className="h-4 w-4 animate-spin" />} {t("save")}
             </button>
           </div>
         </form>

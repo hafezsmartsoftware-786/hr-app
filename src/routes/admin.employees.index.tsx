@@ -1343,6 +1343,7 @@ const ADD_DOC_KEYS = [
   "docIdFront", "docIdBack", "docContract",
   "docCriminalFront", "docMilitaryFront", "docMilitaryBack",
   "docBirthCertificate", "docSkillsCert",
+  "docMedicalInsurance", "docSocialInsurance",
 ] as const;
 
 const inputCls = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm";

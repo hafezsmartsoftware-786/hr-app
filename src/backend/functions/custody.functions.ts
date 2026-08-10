@@ -15,13 +15,47 @@ export type CustodyItem = {
 };
 
 export const CUSTODY_CATEGORIES = [
+  // IT & Electronics
   "Laptop",
   "Desktop",
+  "Tablet",
   "Mobile",
   "SIM Card",
-  "Vehicle",
+  "Printer",
+  "Scanner",
+  "External Hard Drive",
+  "Flash Drive",
+  "Monitor",
+  "Keyboard & Mouse",
+  "Headset",
+  "Camera",
+  "Projector",
+  "Router / Network Device",
+  // Vehicles & Transport
+  "Car",
+  "Motorcycle",
+  "Fuel Card",
+  "Vehicle Tools Kit",
+  // Office & Furniture
+  "Desk",
+  "Chair",
+  "Cabinet / Safe",
+  "ID Badge",
+  "Access Card",
+  "Office Keys",
+  "Stamp / Seal",
+  // Uniforms & PPE
+  "Uniform",
+  "Safety Equipment",
+  "Protective Gear",
+  // Field & Tools
   "Tools",
-  "Furniture",
+  "Measuring Equipment",
+  "Walkie-Talkie",
+  // Financial
+  "Petty Cash Box",
+  "Credit Card",
+  // Other
   "Other",
 ] as const;
 
