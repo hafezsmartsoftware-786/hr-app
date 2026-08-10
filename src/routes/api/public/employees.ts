@@ -127,7 +127,7 @@ async function buildLookups(admin: any, rows: Row[]) {
     departments: new Map<string, string>((depts.data ?? []).map((d: any) => [d.id, d.name_en ?? d.name_ar])),
     sections: new Map<string, string>((sections.data ?? []).map((s: any) => [s.id, s.name_en ?? s.name_ar])),
     positions: new Map<string, string>((positions.data ?? []).map((p: any) => [p.id, p.name_en ?? p.name_ar])),
-    managers: new Map((managers.data ?? []).map((m: any) => [m.id, m])),
+    managers: new Map<string, { id: string; full_name: string | null; email: string | null }>((managers.data ?? []).map((m: any) => [m.id as string, m])),
   };
 }
 
