@@ -291,7 +291,7 @@ function AdminLeaves() {
                 <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "rejected", name: l.employee_name })} className="flex-1 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50">{t("reject")}</button>
                 <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="flex-1 rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">{t("cancel") || "Cancel"}</button>
               </div>
-            ) : l.status === "approved" ? (
+            ) : l.status === "approved" && l.end_date >= new Date().toISOString().slice(0, 10) ? (
               <div className="mt-3">
                 <button disabled={mut.isPending} onClick={() => mut.mutate({ id: l.id, status: "cancelled", name: l.employee_name })} className="w-full rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50">{t("cancelApproval") || "Cancel approval"}</button>
               </div>
