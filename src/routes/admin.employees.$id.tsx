@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployeeAvatar } from "@/components/EmployeeAvatar";
 import { EmployeeTripsPanel } from "@/components/employee/EmployeeTripsPanel";
+import { EmployeeCustodyPanel } from "@/components/admin/EmployeeCustodyPanel";
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -102,7 +103,7 @@ export const Route = createFileRoute("/admin/employees/$id")({
   component: EmployeeDetail,
 });
 
-type Tab = "info" | "attendance" | "leaves" | "devices" | "trips";
+type Tab = "info" | "attendance" | "leaves" | "devices" | "trips" | "custody";
 
 function EmployeeDetail() {
   const { id } = Route.useParams();
@@ -195,14 +196,14 @@ function EmployeeDetail() {
       />
 
       <div className="flex gap-1 rounded-full border border-border bg-card p-1 text-sm overflow-x-auto whitespace-nowrap">
-        {(["info", "attendance", "leaves", "devices", "trips"] as Tab[]).map((k) => (
+        {(["info", "attendance", "leaves", "devices", "trips", "custody"] as Tab[]).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`px-4 py-2 rounded-full font-medium capitalize transition-colors ${tab === k ? "bg-gradient-brand text-brand-foreground shadow-brand" : "text-muted-foreground hover:text-foreground"
               }`}
           >
-            {k === "trips" ? (t("tripAllowance") ?? "Trip Allowance") : t(k)}
+            {k === "trips" ? (t("tripAllowance") ?? "Trip Allowance") : k === "custody" ? "Custody" : t(k)}
           </button>
         ))}
       </div>
@@ -212,6 +213,7 @@ function EmployeeDetail() {
       {tab === "leaves" && <LeavesTab leaves={leaves} />}
       {tab === "devices" && <DevicesTab devices={devices} />}
       {tab === "trips" && <EmployeeTripsPanel employeeId={employee.id} />}
+      {tab === "custody" && <EmployeeCustodyPanel employeeId={employee.id} />}
     </div>
   );
 }
