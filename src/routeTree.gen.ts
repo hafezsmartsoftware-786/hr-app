@@ -73,6 +73,7 @@ import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAllowancesRouteImport } from './routes/admin.allowances'
 import { Route as AdminAdvancesRouteImport } from './routes/admin.advances'
 import { Route as AdminEmployeesIndexRouteImport } from './routes/admin.employees.index'
+import { Route as ApiPublicEmployeesRouteImport } from './routes/api/public/employees'
 import { Route as AdminSettingsRolesRouteImport } from './routes/admin.settings_.roles'
 import { Route as AdminEmployeesIdRouteImport } from './routes/admin.employees.$id'
 import { Route as AdminActivityTimelineIdRouteImport } from './routes/admin.activity-timeline.$id'
@@ -399,6 +400,11 @@ const AdminEmployeesIndexRoute = AdminEmployeesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminEmployeesRoute,
 } as any)
+const ApiPublicEmployeesRoute = ApiPublicEmployeesRouteImport.update({
+  id: '/api/public/employees',
+  path: '/api/public/employees',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSettingsRolesRoute = AdminSettingsRolesRouteImport.update({
   id: '/settings_/roles',
   path: '/settings/roles',
@@ -488,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/settings/roles': typeof AdminSettingsRolesRoute
+  '/api/public/employees': typeof ApiPublicEmployeesRoute
   '/admin/employees/': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
 }
@@ -552,6 +559,7 @@ export interface FileRoutesByTo {
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/settings/roles': typeof AdminSettingsRolesRoute
+  '/api/public/employees': typeof ApiPublicEmployeesRoute
   '/admin/employees': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
 }
@@ -623,6 +631,7 @@ export interface FileRoutesById {
   '/admin/activity-timeline/$id': typeof AdminActivityTimelineIdRoute
   '/admin/employees/$id': typeof AdminEmployeesIdRoute
   '/admin/settings_/roles': typeof AdminSettingsRolesRoute
+  '/api/public/employees': typeof ApiPublicEmployeesRoute
   '/admin/employees/': typeof AdminEmployeesIndexRoute
   '/api/public/cron/run-schedules': typeof ApiPublicCronRunSchedulesRoute
 }
@@ -695,6 +704,7 @@ export interface FileRouteTypes {
     | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/settings/roles'
+    | '/api/public/employees'
     | '/admin/employees/'
     | '/api/public/cron/run-schedules'
   fileRoutesByTo: FileRoutesByTo
@@ -759,6 +769,7 @@ export interface FileRouteTypes {
     | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/settings/roles'
+    | '/api/public/employees'
     | '/admin/employees'
     | '/api/public/cron/run-schedules'
   id:
@@ -829,6 +840,7 @@ export interface FileRouteTypes {
     | '/admin/activity-timeline/$id'
     | '/admin/employees/$id'
     | '/admin/settings_/roles'
+    | '/api/public/employees'
     | '/admin/employees/'
     | '/api/public/cron/run-schedules'
   fileRoutesById: FileRoutesById
@@ -841,6 +853,7 @@ export interface RootRouteChildren {
   FinanceRoute: typeof FinanceRouteWithChildren
   ManagerRoute: typeof ManagerRouteWithChildren
   StaffRoute: typeof StaffRouteWithChildren
+  ApiPublicEmployeesRoute: typeof ApiPublicEmployeesRoute
   ApiPublicCronRunSchedulesRoute: typeof ApiPublicCronRunSchedulesRoute
 }
 
@@ -1294,6 +1307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmployeesIndexRouteImport
       parentRoute: typeof AdminEmployeesRoute
     }
+    '/api/public/employees': {
+      id: '/api/public/employees'
+      path: '/api/public/employees'
+      fullPath: '/api/public/employees'
+      preLoaderRoute: typeof ApiPublicEmployeesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/settings_/roles': {
       id: '/admin/settings_/roles'
       path: '/settings/roles'
@@ -1507,6 +1527,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceRoute: FinanceRouteWithChildren,
   ManagerRoute: ManagerRouteWithChildren,
   StaffRoute: StaffRouteWithChildren,
+  ApiPublicEmployeesRoute: ApiPublicEmployeesRoute,
   ApiPublicCronRunSchedulesRoute: ApiPublicCronRunSchedulesRoute,
 }
 export const routeTree = rootRouteImport
