@@ -781,6 +781,13 @@ export const ui: Record<UiKey, string> = {
   custodyNotes: "ملاحظات",
   custodyNamePlaceholder: "مثال: لابتوب Dell Latitude",
   removeCustodyConfirm: "هل تريد إزالة هذه العهدة؟",
+  returnCustody: "إرجاع العهدة",
+  returnDate: "تاريخ الإرجاع",
+  returnNotes: "ملاحظات الإرجاع",
+  statusActive: "نشط",
+  statusReturned: "مرتجع",
+  markAsReturned: "تحديد كمرتجع",
+  custodyReturnSuccess: "تم تحديد العهدة كمرتجع",
   // Custody categories
   "cat.Laptop": "لابتوب",
   "cat.Desktop": "كمبيوتر مكتبي",

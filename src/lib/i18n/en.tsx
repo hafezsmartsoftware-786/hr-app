@@ -790,6 +790,13 @@ export const ui = {
   custodyNotes: "Notes",
   custodyNamePlaceholder: "Dell Latitude laptop",
   removeCustodyConfirm: "Remove from custody?",
+  returnCustody: "Return custody",
+  returnDate: "Return date",
+  returnNotes: "Return notes",
+  statusActive: "Active",
+  statusReturned: "Returned",
+  markAsReturned: "Mark as returned",
+  custodyReturnSuccess: "Custody item marked as returned",
   // Custody categories
   "cat.Laptop": "Laptop",
   "cat.Desktop": "Desktop",

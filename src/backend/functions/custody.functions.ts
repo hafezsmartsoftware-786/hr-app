@@ -11,6 +11,8 @@ export type CustodyItem = {
   model: string | null;
   category: string | null;
   notes: string | null;
+  return_date: string | null;
+  return_notes: string | null;
   created_at: string;
 };
 
@@ -117,4 +119,29 @@ export const deleteEmployeeCustody = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const returnEmployeeCustody = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        return_date: z.string().min(1),
+        return_notes: z.string().max(2000).optional().nullable(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await (context.supabase as any)
+      .from("employee_custody")
+      .update({
+        return_date: data.return_date,
+        return_notes: data.return_notes || null,
+      })
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as CustodyItem;
   });

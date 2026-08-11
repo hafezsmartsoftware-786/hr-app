@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Package, Trash2, Loader2, X, CornerDownLeft } from "lucide-react";
 import {
   listEmployeeCustody,
   addEmployeeCustody,
   deleteEmployeeCustody,
+  returnEmployeeCustody,
   CUSTODY_CATEGORIES,
   type CustodyItem,
 } from "@/backend/functions/custody.functions";
@@ -14,6 +15,14 @@ import { useI18n } from "@/lib/i18n";
 
 const inputCls = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm";
 const today = () => new Date().toISOString().slice(0, 10);
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return "";
+  const parts = dateString.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return dateString;
+};
 
 export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
   const { t } = useI18n();
@@ -21,7 +30,10 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
   const listFn = useServerFn(listEmployeeCustody);
   const addFn = useServerFn(addEmployeeCustody);
   const delFn = useServerFn(deleteEmployeeCustody);
-  const [open, setOpen] = useState(false);
+  const retFn = useServerFn(returnEmployeeCustody);
+
+  const [openAdd, setOpenAdd] = useState(false);
+  const [returnItem, setReturnItem] = useState<CustodyItem | null>(null);
 
   const q = useQuery({
     queryKey: ["employee-custody", employeeId],
@@ -32,7 +44,7 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
     mutationFn: (v: any) => addFn({ data: { profileId: employeeId, ...v } }),
     onSuccess: () => {
       toast.success(t("addCustodyItem" as any));
-      setOpen(false);
+      setOpenAdd(false);
       qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to add"),
@@ -42,6 +54,16 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
     mutationFn: (id: string) => delFn({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] }),
     onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
+
+  const retMut = useMutation({
+    mutationFn: (v: any) => retFn({ data: { id: returnItem!.id, ...v } }),
+    onSuccess: () => {
+      toast.success(t("custodyReturnSuccess" as any));
+      setReturnItem(null);
+      qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to return custody"),
   });
 
   const items = (q.data ?? []) as CustodyItem[];
@@ -54,7 +76,7 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
           <p className="text-sm text-muted-foreground">{t("custodySubtitle" as any)}</p>
         </div>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => setOpenAdd(true)}
           className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand"
         >
           <Plus className="h-4 w-4" /> {t("addCustody" as any)}
@@ -79,48 +101,79 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                   <th className="px-4 py-3 text-start">{t("custodyDate" as any)}</th>
                   <th className="px-4 py-3 text-start">{t("custodyName" as any)}</th>
                   <th className="px-4 py-3 text-start">{t("custodySerial" as any)}</th>
-                  <th className="px-4 py-3 text-start">{t("custodyModel" as any)}</th>
                   <th className="px-4 py-3 text-start">{t("custodyCategory" as any)}</th>
+                  <th className="px-4 py-3 text-start">{t("status" as any)}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((it) => (
-                  <tr key={it.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono text-xs">{it.custody_date}</td>
-                    <td className="px-4 py-3 font-medium">{it.name}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{it.serial_number ?? "—"}</td>
-                    <td className="px-4 py-3">{it.model ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {it.category ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
-                          {t(`cat.${it.category}` as any) ?? it.category}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      <button
-                        disabled={delMut.isPending}
-                        onClick={() => {
-                          if (confirm(t("removeCustodyConfirm" as any))) delMut.mutate(it.id);
-                        }}
-                        className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                        aria-label="Delete custody item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((it) => {
+                  const isReturned = !!it.return_date;
+                  return (
+                    <tr key={it.id} className={`hover:bg-muted/30 ${isReturned ? "opacity-60 grayscale-[0.5]" : ""}`}>
+                      <td className="px-4 py-3 font-mono text-xs">{formatDate(it.custody_date)}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {it.name}
+                        {it.model && <div className="text-[11px] text-muted-foreground">{it.model}</div>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">{it.serial_number ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        {it.category ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                            {t(`cat.${it.category}` as any) ?? it.category}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isReturned ? (
+                          <div>
+                            <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success uppercase">
+                              {t("statusReturned" as any)}
+                            </span>
+                            <div className="mt-1 text-[11px] font-mono text-muted-foreground">{formatDate(it.return_date)}</div>
+                          </div>
+                        ) : (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase">
+                            {t("statusActive" as any)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        <div className="flex items-center justify-end gap-1">
+                          {!isReturned && (
+                            <button
+                              onClick={() => setReturnItem(it)}
+                              className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              title={t("returnCustody" as any)}
+                            >
+                              <CornerDownLeft className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button
+                            disabled={delMut.isPending}
+                            onClick={() => {
+                              if (confirm(t("removeCustodyConfirm" as any))) delMut.mutate(it.id);
+                            }}
+                            className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                            title={t("delete" as any)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {open && <AddCustodyModal onClose={() => setOpen(false)} onSubmit={(v) => addMut.mutate(v)} pending={addMut.isPending} />}
+      {openAdd && <AddCustodyModal onClose={() => setOpenAdd(false)} onSubmit={(v) => addMut.mutate(v)} pending={addMut.isPending} />}
+      {returnItem && <ReturnCustodyModal item={returnItem} onClose={() => setReturnItem(null)} onSubmit={(v) => retMut.mutate(v)} pending={retMut.isPending} />}
     </div>
   );
 }
@@ -203,6 +256,64 @@ function AddCustodyModal({
               className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand disabled:opacity-50"
             >
               {pending && <Loader2 className="h-4 w-4 animate-spin" />} {t("save")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ReturnCustodyModal({
+  item,
+  onClose,
+  onSubmit,
+  pending,
+}: {
+  item: CustodyItem;
+  onClose: () => void;
+  onSubmit: (v: any) => void;
+  pending: boolean;
+}) {
+  const { t } = useI18n();
+  const [date, setDate] = useState(today());
+  const [notes, setNotes] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
+      <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-lg font-semibold">{t("returnCustody" as any)}</h3>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-muted" aria-label="Close">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-4 text-sm font-medium">{item.name}</p>
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit({ return_date: date, return_notes: notes });
+          }}
+        >
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("returnDate" as any)}</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} required />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("returnNotes" as any)}</span>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
+          </label>
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm font-semibold">
+              {t("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex items-center gap-2 rounded-full bg-success px-4 py-2 text-sm font-semibold text-success-foreground disabled:opacity-50"
+            >
+              {pending && <Loader2 className="h-4 w-4 animate-spin" />} {t("markAsReturned" as any)}
             </button>
           </div>
         </form>
