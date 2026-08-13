@@ -154,18 +154,6 @@ export const updateEmployeeCustody = createServerFn({ method: "POST" })
     return row as CustodyItem;
   });
 
-const _deprecatedDelete = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase as any)
-      .from("employee_custody")
-      .delete()
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
 export const returnEmployeeCustody = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
