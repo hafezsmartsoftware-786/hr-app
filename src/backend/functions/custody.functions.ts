@@ -121,6 +121,39 @@ export const deleteEmployeeCustody = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateEmployeeCustody = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        custody_date: z.string().min(1),
+        name: z.string().min(1).max(200),
+        serial_number: z.string().max(120).optional().nullable(),
+        model: z.string().max(120).optional().nullable(),
+        category: z.string().max(60).optional().nullable(),
+        notes: z.string().max(2000).optional().nullable(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await (context.supabase as any)
+      .from("employee_custody")
+      .update({
+        custody_date: data.custody_date,
+        name: data.name,
+        serial_number: data.serial_number || null,
+        model: data.model || null,
+        category: data.category || null,
+        notes: data.notes || null,
+      })
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as CustodyItem;
+  });
+
 export const returnEmployeeCustody = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>

@@ -739,6 +739,62 @@ export type Database = {
           },
         ]
       }
+      employee_custody: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          custody_date: string
+          id: string
+          model: string | null
+          name: string
+          notes: string | null
+          profile_id: string
+          return_date: string | null
+          return_notes: string | null
+          serial_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          custody_date?: string
+          id?: string
+          model?: string | null
+          name: string
+          notes?: string | null
+          profile_id: string
+          return_date?: string | null
+          return_notes?: string | null
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          custody_date?: string
+          id?: string
+          model?: string | null
+          name?: string
+          notes?: string | null
+          profile_id?: string
+          return_date?: string | null
+          return_notes?: string | null
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_custody_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_devices: {
         Row: {
           created_at: string
