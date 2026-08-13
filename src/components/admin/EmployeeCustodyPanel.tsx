@@ -263,37 +263,86 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
         )}
       </div>
 
-      {openAdd && <AddCustodyModal onClose={() => setOpenAdd(false)} onSubmit={(v) => addMut.mutate(v)} pending={addMut.isPending} />}
+      {openAdd && <CustodyFormModal onClose={() => setOpenAdd(false)} onSubmit={(v) => addMut.mutate(v)} pending={addMut.isPending} />}
+      {editItem && (
+        <CustodyFormModal
+          item={editItem}
+          onClose={() => setEditItem(null)}
+          onSubmit={(v) => updMut.mutate(v)}
+          pending={updMut.isPending}
+        />
+      )}
+      <AlertDialog open={!!deleteItem} onOpenChange={(o) => !o && setDeleteItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("delete" as any)}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("removeCustodyConfirm" as any)} {deleteItem ? `— ${deleteItem.name}` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteItem) delMut.mutate(deleteItem.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("delete" as any)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {returnItem && <ReturnCustodyModal item={returnItem} onClose={() => setReturnItem(null)} onSubmit={(v) => retMut.mutate(v)} pending={retMut.isPending} />}
     </div>
   );
 }
 
-function AddCustodyModal({
+function CustodyFormModal({
+  item,
   onClose,
   onSubmit,
   pending,
 }: {
+  item?: CustodyItem;
   onClose: () => void;
   onSubmit: (v: any) => void;
   pending: boolean;
 }) {
   const { t } = useI18n();
   const [form, setForm] = useState({
-    custody_date: today(),
-    name: "",
-    serial_number: "",
-    model: "",
-    category: "",
-    notes: "",
+    custody_date: item?.custody_date ?? today(),
+    name: item?.name ?? "",
+    serial_number: item?.serial_number ?? "",
+    model: item?.model ?? "",
+    category: item?.category ?? "",
+    notes: item?.notes ?? "",
   });
-  const upd = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const upd = (k: string, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setErrors((e) => ({ ...e, [k]: "" }));
+  };
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.custody_date) e.custody_date = t("required" as any) ?? "Required";
+    if (!form.name.trim()) e.name = t("required" as any) ?? "Required";
+    else if (form.name.trim().length > 200) e.name = "Max 200 characters";
+    if (form.serial_number.length > 120) e.serial_number = "Max 120 characters";
+    if (form.model.length > 120) e.model = "Max 120 characters";
+    if (form.notes.length > 2000) e.notes = "Max 2000 characters";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-lg font-semibold">{t("addCustodyItem" as any)}</h3>
+          <h3 className="font-display text-lg font-semibold">
+            {item ? t("edit" as any) : t("addCustodyItem" as any)}
+          </h3>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-muted" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
@@ -302,25 +351,29 @@ function AddCustodyModal({
           className="grid gap-3 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!form.name.trim()) return toast.error(t("custodyName" as any) + " is required");
-            onSubmit(form);
+            if (!validate()) return;
+            onSubmit({ ...form, name: form.name.trim() });
           }}
         >
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("custodyDate" as any)}</span>
             <input type="date" value={form.custody_date} onChange={(e) => upd("custody_date", e.target.value)} className={inputCls} />
+            {errors.custody_date && <p className="text-xs text-destructive">{errors.custody_date}</p>}
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("custodyName" as any)}</span>
             <input value={form.name} onChange={(e) => upd("name", e.target.value)} placeholder={t("custodyNamePlaceholder" as any)} className={inputCls} />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("custodySerial" as any)}</span>
             <input value={form.serial_number} onChange={(e) => upd("serial_number", e.target.value)} className={inputCls + " font-mono"} />
+            {errors.serial_number && <p className="text-xs text-destructive">{errors.serial_number}</p>}
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("custodyModel" as any)}</span>
             <input value={form.model} onChange={(e) => upd("model", e.target.value)} className={inputCls} />
+            {errors.model && <p className="text-xs text-destructive">{errors.model}</p>}
           </label>
           <label className="space-y-1 text-sm sm:col-span-2">
             <span className="text-xs font-semibold text-muted-foreground">{t("custodyCategory" as any)}</span>
