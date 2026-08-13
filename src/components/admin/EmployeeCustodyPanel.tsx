@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Loader2, X, CornerDownLeft } from "lucide-react";
+import { Plus, Package, Trash2, Loader2, X, CornerDownLeft, Pencil, Filter } from "lucide-react";
 import {
   listEmployeeCustody,
   addEmployeeCustody,
   deleteEmployeeCustody,
+  updateEmployeeCustody,
   returnEmployeeCustody,
   CUSTODY_CATEGORIES,
   type CustodyItem,
 } from "@/backend/functions/custody.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 
 const inputCls = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm";
@@ -30,10 +41,15 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
   const listFn = useServerFn(listEmployeeCustody);
   const addFn = useServerFn(addEmployeeCustody);
   const delFn = useServerFn(deleteEmployeeCustody);
+  const updFn = useServerFn(updateEmployeeCustody);
   const retFn = useServerFn(returnEmployeeCustody);
 
   const [openAdd, setOpenAdd] = useState(false);
+  const [editItem, setEditItem] = useState<CustodyItem | null>(null);
+  const [deleteItem, setDeleteItem] = useState<CustodyItem | null>(null);
   const [returnItem, setReturnItem] = useState<CustodyItem | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ from: "", to: "", category: "", model: "" });
 
   const q = useQuery({
     queryKey: ["employee-custody", employeeId],
@@ -52,8 +68,21 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
 
   const delMut = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] }),
+    onSuccess: () => {
+      setDeleteItem(null);
+      qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] });
+    },
     onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
+  });
+
+  const updMut = useMutation({
+    mutationFn: (v: any) => updFn({ data: { id: editItem!.id, ...v } }),
+    onSuccess: () => {
+      toast.success(t("save" as any));
+      setEditItem(null);
+      qc.invalidateQueries({ queryKey: ["employee-custody", employeeId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update"),
   });
 
   const retMut = useMutation({
@@ -66,7 +95,19 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
     onError: (e: any) => toast.error(e?.message ?? "Failed to return custody"),
   });
 
-  const items = (q.data ?? []) as CustodyItem[];
+  const allItems = (q.data ?? []) as CustodyItem[];
+  const items = useMemo(
+    () =>
+      allItems.filter((it) => {
+        if (filters.from && (it.custody_date ?? "") < filters.from) return false;
+        if (filters.to && (it.custody_date ?? "") > filters.to) return false;
+        if (filters.category && it.category !== filters.category) return false;
+        if (filters.model && !(it.model ?? "").toLowerCase().includes(filters.model.toLowerCase())) return false;
+        return true;
+      }),
+    [allItems, filters],
+  );
+  const activeFilters = Object.values(filters).filter(Boolean).length;
 
   return (
     <div className="space-y-4">
@@ -75,13 +116,58 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
           <h2 className="font-display text-lg font-semibold">{t("custody" as any)}</h2>
           <p className="text-sm text-muted-foreground">{t("custodySubtitle" as any)}</p>
         </div>
-        <button
-          onClick={() => setOpenAdd(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand"
-        >
-          <Plus className="h-4 w-4" /> {t("addCustody" as any)}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
+          >
+            <Filter className="h-4 w-4" /> {t("filters" as any) ?? "Filters"}
+            {activeFilters > 0 && (
+              <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{activeFilters}</span>
+            )}
+          </button>
+          <button
+            onClick={() => setOpenAdd(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-brand"
+          >
+            <Plus className="h-4 w-4" /> {t("addCustody" as any)}
+          </button>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-4">
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("from" as any) ?? "From"}</span>
+            <input type="date" value={filters.from} onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} className={inputCls} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("to" as any) ?? "To"}</span>
+            <input type="date" value={filters.to} onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} className={inputCls} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyCategory" as any)}</span>
+            <select value={filters.category} onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))} className={inputCls}>
+              <option value="">—</option>
+              {CUSTODY_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{t(`cat.${c}` as any) ?? c}</option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("custodyModel" as any)}</span>
+            <input value={filters.model} onChange={(e) => setFilters((f) => ({ ...f, model: e.target.value }))} className={inputCls} />
+          </label>
+          <div className="sm:col-span-4 flex justify-end">
+            <button
+              onClick={() => setFilters({ from: "", to: "", category: "", model: "" })}
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold hover:bg-muted"
+            >
+              {t("clear" as any) ?? "Clear"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-3xl border border-border bg-card">
         {q.isLoading ? (
@@ -152,10 +238,15 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                             </button>
                           )}
                           <button
+                            onClick={() => setEditItem(it)}
+                            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            title={t("edit" as any)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
                             disabled={delMut.isPending}
-                            onClick={() => {
-                              if (confirm(t("removeCustodyConfirm" as any))) delMut.mutate(it.id);
-                            }}
+                            onClick={() => setDeleteItem(it)}
                             className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                             title={t("delete" as any)}
                           >
