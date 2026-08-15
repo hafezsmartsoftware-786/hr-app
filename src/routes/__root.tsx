@@ -76,21 +76,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "INT-HR App — Employee Attendance Management" },
+      { title: "Staff Link — Employee Attendance Management" },
       { name: "description", content: "Secure mobile attendance with GPS geo-fencing, authorized network validation, leave management, and real-time reporting." },
-      { name: "author", content: "INT-HR App" },
-      { property: "og:title", content: "INT-HR App — Employee Attendance Management" },
+      { name: "author", content: "Staff Link" },
+      { property: "og:title", content: "Staff Link — Employee Attendance Management" },
       { property: "og:description", content: "Secure mobile attendance with GPS geo-fencing and authorized network validation." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       // Chrome / Android
       { name: "theme-color", content: "#EA7A2C" },
       { name: "mobile-web-app-capable", content: "yes" },
-      { name: "application-name", content: "INT-HR" },
+      { name: "application-name", content: "Staff Link" },
       // Safari / iOS
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "INT-HR" },
+      { name: "apple-mobile-web-app-title", content: "Staff Link" },
       // Windows / Edge
       { name: "msapplication-TileColor", content: "#EA7A2C" },
       { name: "msapplication-TileImage", content: "/android-chrome-192x192.png" },

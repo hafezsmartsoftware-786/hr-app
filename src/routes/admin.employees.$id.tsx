@@ -258,7 +258,7 @@ function EmployeeTransferModal({ detail, close }: { detail: EmployeeDetailRow, c
     }
   }
 
-  const editInputCls = "w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand";
+  const editInputCls = "w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm shadow-sm outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-slate-700 dark:bg-slate-900";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
@@ -564,7 +564,7 @@ function RealEmployeeView({ detail, canEdit }: { detail: EmployeeDetailRow; canE
       {transferModalOpen && <EmployeeTransferModal detail={detail} close={() => setTransferModalOpen(false)} />}
 
       {editing ? (
-        <div className="overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="overflow-hidden rounded-3xl border border-border bg-slate-50/50 dark:bg-slate-900/50">
           {isDirty && (
             <div className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700">
               <AlertCircle className="h-3.5 w-3.5" /> You have unsaved changes.
@@ -1147,7 +1147,7 @@ function AdminOffboarding({ employeeId, resignationDate }: { employeeId: string;
   );
 }
 
-const editInputCls = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+const editInputCls = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:border-brand focus:ring-1 focus:ring-brand dark:border-slate-700 dark:bg-slate-900";
 
 function EditField({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
@@ -1917,7 +1917,7 @@ function AttendanceHistoryPanel({ employeeId }: { employeeId: string }) {
                       />
                     ) : null}
                   </td>
-                  <td className="px-3 py-3 font-mono text-[13px] tabular-nums">{r.date}</td>
+                  <td className="px-3 py-3 font-mono text-[13px] tabular-nums">{r.date.split("-").reverse().join("-")}</td>
                   <td className="px-3 py-3 text-muted-foreground">
                     {r.dayLabel}
                     {r.holiday && <span className="ms-2 text-[11px] font-medium text-violet-600">· {r.holiday.name}</span>}

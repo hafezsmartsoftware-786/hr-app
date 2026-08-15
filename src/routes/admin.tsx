@@ -61,7 +61,7 @@ function AdminLayout() {
       {/* Sidebar (desktop) */}
       <aside className="fixed inset-y-0 start-0 z-30 hidden w-64 flex-col bg-sidebar text-sidebar-foreground lg:flex">
         <div className="px-5 py-5">
-          <Link to="/"><AppLogo size={26} tone="light" /></Link>
+          <Link to="/"><AppLogo width="100%" tone="light" /></Link>
         </div>
         <nav className="flex-1 space-y-0.5 px-3">
           {nav.map((n) => {
@@ -96,7 +96,9 @@ function AdminLayout() {
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 start-0 w-72 bg-sidebar p-4 text-sidebar-foreground">
             <div className="mb-4 flex items-center justify-between">
-              <AppLogo size={24} tone="light" />
+              <div className="w-48">
+                <AppLogo width="100%" tone="light" />
+              </div>
               <button onClick={() => setOpen(false)} className="rounded-full p-1 text-sidebar-foreground/80"><X className="h-5 w-5" /></button>
             </div>
             <nav className="space-y-0.5">

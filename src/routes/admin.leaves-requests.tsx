@@ -9,7 +9,7 @@ export const Route = createFileRoute("/admin/leaves-requests")({ component: Leav
 
 const tone: Record<string, string> = {
   approved: "bg-success/15 text-success",
-  pending: "bg-warning/20 text-warning-foreground",
+  pending: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
   rejected: "bg-destructive/15 text-destructive",
   cancelled: "bg-muted text-muted-foreground",
 };
@@ -52,8 +52,8 @@ function LeaveRequests() {
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone[l.status] ?? "bg-muted"}`}>{l.status}</span>
             </div>
             <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs">
-              <div className="flex justify-between"><span className="text-muted-foreground">From</span><span className="font-medium">{l.start_date}</span></div>
-              <div className="mt-1 flex justify-between"><span className="text-muted-foreground">To</span><span className="font-medium">{l.end_date}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">From</span><span className="font-medium">{l.start_date.split("-").reverse().join("-")}</span></div>
+              <div className="mt-1 flex justify-between"><span className="text-muted-foreground">To</span><span className="font-medium">{l.end_date.split("-").reverse().join("-")}</span></div>
               <div className="mt-1 flex justify-between"><span className="text-muted-foreground">Days</span><span className="font-medium">{l.days}</span></div>
               {l.reason && <p className="mt-2 italic text-muted-foreground">"{l.reason}"</p>}
             </div>

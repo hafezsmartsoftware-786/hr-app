@@ -110,7 +110,7 @@ export const getAdminAlerts = createServerFn({ method: "GET" })
         kind: "pending_leave",
         severity: "warning",
         title: `${r.profiles?.full_name ?? "Employee"} requested ${r.leave_type_name ?? "leave"}`,
-        description: `${r.start_date} → ${r.end_date}`,
+        description: `${r.start_date.split("-").reverse().join("-")} → ${r.end_date.split("-").reverse().join("-")}`,
         ts: r.created_at,
         link: "/admin/leaves-requests",
       });

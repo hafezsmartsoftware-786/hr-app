@@ -3,7 +3,7 @@
 // will throw a console warning at startup if any key is missing.
 
 export const ui = {
-  appName: "INT-HR App",
+  appName: "Staff Link",
   tagline: "Smart attendance, locked to your locations and networks.",
   signIn: "Sign in",
   email: "Email",

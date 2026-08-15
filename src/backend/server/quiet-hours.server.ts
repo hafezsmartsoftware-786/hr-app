@@ -17,7 +17,7 @@ export function isQuietNow(
   let hhmm: string;
   try {
     const fmt = new Intl.DateTimeFormat("en-GB", {
-      timeZone: timezone || "UTC", hour: "2-digit", minute: "2-digit", hour12: false,
+      timeZone: timezone || "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: false,
     });
     hhmm = fmt.format(now);
   } catch {

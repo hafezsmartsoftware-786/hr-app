@@ -181,7 +181,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     let q = supabase
       .from("profiles")
       .select(
-        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, inactive_reason, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
+        "id, emp_code, full_name, email, phone, department_id, position_id, city, district, status, avatar_url, created_at, contract_start_date, contract_end_date, contract_cancelled",
         { count: "exact" },
       );
 
@@ -197,7 +197,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     if (data.departmentId) q = q.eq("department_id", data.departmentId);
     if (data.positionId) q = q.eq("position_id", data.positionId);
     if (data.status) q = q.eq("status", data.status);
-    if (data.inactiveReason) q = q.eq("inactive_reason", data.inactiveReason);
+    // if (data.inactiveReason) q = q.eq("inactive_reason", data.inactiveReason);
     if (roleUserIds) q = q.in("id", roleUserIds);
 
     const sortCol = data.sort === "contract_remaining" ? "contract_end_date" : data.sort;
@@ -1033,7 +1033,7 @@ export const getEmployeeDetail = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: p, error } = await supabase
       .from("profiles")
-      .select("id, emp_code, full_name, email, phone, gender, department_id, position_id, city_id, district_id, city, district, status, inactive_reason, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, job_grade, extra_email, medical_insurance_details, is_insured, military_expire_date, is_five_percent, social_insurance_date, custom_field, last_action_date, created_at, updated_at, insurance_salary, emergency_fund")
+      .select("id, emp_code, full_name, email, phone, gender, department_id, position_id, city_id, district_id, city, district, status, avatar_url, manager_id, locale, national_id, id_issue_date, id_expiry_date, salary_mode, salary_gross, salary_net, allowance, target_value, target_duration, contract_type, contract_start_date, contract_end_date, contract_cancelled, job_grade, extra_email, medical_insurance_details, is_insured, military_expire_date, is_five_percent, social_insurance_date, custom_field, last_action_date, created_at, updated_at, insurance_salary, emergency_fund")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);

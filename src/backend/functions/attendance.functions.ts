@@ -3,8 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { AttendanceCheckSchema, AdminAttendanceSchema } from "../schemas";
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function getCairoTime() {
+  const d = new Date();
+  const year = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric" }).format(d);
+  const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", month: "2-digit" }).format(d);
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", day: "2-digit" }).format(d);
+  const today = `${year}-${month}-${day}`;
+  const dow = new Date(today + "T00:00:00Z").getUTCDay();
+  return { now: d.toISOString(), today, dow };
 }
 
 // Haversine distance in meters between two lat/lng points
@@ -24,9 +30,7 @@ export const checkIn = createServerFn({ method: "POST" })
   .inputValidator((i) => AttendanceCheckSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const now = new Date().toISOString();
-    const today = now.slice(0, 10);
-    const dow = new Date(today + "T00:00:00Z").getUTCDay(); // 0 Sun … 6 Sat
+    const { now, today, dow } = getCairoTime();
     const isWeekend = dow === 5 || dow === 6; // Fri / Sat
 
     // 0. One check-in per day
@@ -207,8 +211,7 @@ export const checkOut = createServerFn({ method: "POST" })
   .inputValidator((i) => AttendanceCheckSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const now = new Date().toISOString();
-    const today = now.slice(0, 10);
+    const { now, today } = getCairoTime();
     const { data: row } = await supabase
       .from("attendance")
       .select("id, in_time, out_time")
@@ -250,7 +253,7 @@ export const checkOut = createServerFn({ method: "POST" })
       };
     }
 
-    const dow = new Date(today + "T00:00:00Z").getUTCDay();
+    const { dow } = getCairoTime();
     const isWeekend = dow === 5 || dow === 6;
     const [{ data: leaveRow }, { data: holidayRow }, { data: profileRow }] = await Promise.all([
       supabase
@@ -426,7 +429,7 @@ export const adminReverseGeocode = createServerFn({ method: "POST" })
         const j: any = await r.json();
         const admin: any[] = j.localityInfo?.administrative ?? [];
         const city = j.city || admin.find((a) => a.adminLevel === 4)?.name || "";
-        const locality = j.locality || admin.find((a) => a.adminLevel >= 7)?.name || "";
+        const locality = j.locality || admin.find((a) => a.adminLevel >= 6)?.name || "";
         const street = [j.streetNumber, j.streetName].filter(Boolean).join(" ");
         const label = dedupeLocationParts([street, locality, city]);
         if (label) return label;

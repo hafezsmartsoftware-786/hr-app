@@ -107,7 +107,10 @@ export function EmployeeDashboard() {
   const leaves: any[] = (lvQ.data as any[]) ?? [];
   const holidaysData: any[] = (holQ.data as any[]) ?? [];
 
-  const today = now.toISOString().slice(0, 10);
+  const year = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric" }).format(now);
+  const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", month: "2-digit" }).format(now);
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", day: "2-digit" }).format(now);
+  const today = `${year}-${month}-${day}`;
   const todayRow = attendance.find((a) => a.date === today);
   const isCheckedIn = !!todayRow?.in_time && !todayRow?.out_time;
   const dayComplete = !!todayRow?.in_time && !!todayRow?.out_time;
@@ -147,8 +150,8 @@ export function EmployeeDashboard() {
       if (!r.ok) return {};
       const j: any = await r.json();
       return {
-        city: j.city || j.locality || j.principalSubdivision || undefined,
-        district: j.localityInfo?.administrative?.find((a: any) => a.adminLevel >= 6)?.name || undefined,
+        city: j.city || j.principalSubdivision || undefined,
+        district: j.locality || j.localityInfo?.administrative?.find((a: any) => a.adminLevel >= 6)?.name || undefined,
         street: [j.streetNumber, j.streetName].filter(Boolean).join(" ") || undefined,
       };
     } catch { return {}; }
@@ -320,7 +323,7 @@ export function EmployeeDashboard() {
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-4 w-4 text-success" />
                   <div>
-                    <p className="text-sm font-medium">{a.date}</p>
+                    <p className="text-sm font-medium">{a.date.split("-").reverse().join("-")}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {a.in_time ? new Date(a.in_time).toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" }) : "—"}
                       {" → "}
@@ -352,7 +355,7 @@ export function EmployeeDashboard() {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm font-medium">{tHoliday(h.name)}</p>
                 </div>
-                <span className="text-xs font-semibold tabular-nums">{h.date}</span>
+                <span className="text-xs font-semibold tabular-nums">{h.date.split("-").reverse().join("-")}</span>
               </li>
             ))}
           </ul>

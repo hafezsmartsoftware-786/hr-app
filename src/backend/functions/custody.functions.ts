@@ -14,6 +14,7 @@ export type CustodyItem = {
   return_date: string | null;
   return_notes: string | null;
   returned_by: string | null;
+  returned_by_name?: string;
   created_at: string;
 };
 
@@ -73,6 +74,21 @@ export const listEmployeeCustody = createServerFn({ method: "GET" })
       .order("custody_date", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
+
+    const userIds = [...new Set((rows ?? []).map((r: any) => r.returned_by).filter(Boolean))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await (context.supabase as any)
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      const map = Object.fromEntries((profiles || []).map((p: any) => [p.id, p.full_name]));
+      rows?.forEach((r: any) => {
+        if (r.returned_by && map[r.returned_by]) {
+          r.returned_by_name = map[r.returned_by];
+        }
+      });
+    }
+
     return (rows ?? []) as CustodyItem[];
   });
 
@@ -162,7 +178,6 @@ export const returnEmployeeCustody = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid(),
         return_date: z.string().min(1),
-        returned_by: z.string().trim().min(1, "Returned by is required").max(200),
         return_notes: z.string().max(2000).optional().nullable(),
       })
       .parse(i),
@@ -172,7 +187,7 @@ export const returnEmployeeCustody = createServerFn({ method: "POST" })
       .from("employee_custody")
       .update({
         return_date: data.return_date,
-        returned_by: data.returned_by,
+        returned_by: context.userId,
         return_notes: data.return_notes || null,
       })
       .eq("id", data.id)

@@ -59,7 +59,7 @@ function InstallBanner() {
           <Smartphone className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-base font-semibold">Install INT-HR App</h2>
+          <h2 className="font-display text-base font-semibold">Install Staff Link</h2>
           <p className="text-xs text-muted-foreground">
             Faster access, offline-ready, and full-screen experience.
           </p>
@@ -83,14 +83,14 @@ function InstallBanner() {
             </>
           ) : platform === "android" ? (
             <>
-              <Step n={1} icon={<MoreVertical className="h-3.5 w-3.5" />}>Open Chrome menu (⋮).</Step>
+              <Step n={1} icon={<MoreVertical className="h-3.5 w-3.5" />}>Open Chrome menu (â‹®).</Step>
               <Step n={2} icon={<Download className="h-3.5 w-3.5" />}>Tap <strong>Install app</strong>.</Step>
               <Step n={3}>Confirm to add to home screen.</Step>
             </>
           ) : (
             <>
               <Step n={1}>Tap <strong>Install app</strong> above.</Step>
-              <Step n={2}>Or use your browser menu → <strong>Install</strong>.</Step>
+              <Step n={2}>Or use your browser menu â†’ <strong>Install</strong>.</Step>
             </>
           )}
         </ol>

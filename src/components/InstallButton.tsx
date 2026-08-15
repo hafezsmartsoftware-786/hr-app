@@ -43,7 +43,7 @@ export function InstallButton({ className = "", variant = "solid" }: { className
       if (outcome === "accepted") setInstalled(true);
       setDeferred(null);
     } catch {
-      // prompt cancelled or failed — no guidance toast needed
+      // prompt cancelled or failed â€” no guidance toast needed
     }
   }
 
@@ -53,7 +53,7 @@ export function InstallButton({ className = "", variant = "solid" }: { className
       : "inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground hover:bg-muted";
 
   return (
-    <button onClick={handleClick} className={`${base} ${className}`} aria-label="Install INT-HR App">
+    <button onClick={handleClick} className={`${base} ${className}`} aria-label="Install Staff Link">
       <Download className="h-4 w-4" />
       Install app
     </button>

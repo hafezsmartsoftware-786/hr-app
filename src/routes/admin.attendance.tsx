@@ -220,7 +220,7 @@ type FormState = {
 
 const blankForm = (): FormState => ({
   employee_id: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Africa/Cairo' }).format(new Date()),
   in_time: "",
   out_time: "",
   branch: "",
@@ -303,7 +303,7 @@ function AdminAttendance() {
   const empFn = useServerFn(listEmployeesForAttendance);
   const reverseGeocodeFn = useServerFn(adminReverseGeocode);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Africa/Cairo' }).format(new Date());
   const [dateFilter, setDateFilter] = useState(todayIso);
   const [empFilter, setEmpFilter] = useState<string>("all");
 
@@ -603,7 +603,7 @@ function AdminAttendance() {
                         {row.employee_name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono tabular-nums">{row.date}</td>
+                    <td className="px-4 py-3 font-mono tabular-nums">{row.date.split("-").reverse().join("-")}</td>
                     <td className="px-4 py-3 font-mono tabular-nums align-top">
                       <div className="flex flex-col">
                         <span>{format12H(row.in_time)}</span>
@@ -614,7 +614,7 @@ function AdminAttendance() {
                         )}
                         {row.in_time && (
                           row.free_check
-                            ? <span className="mt-0.5 inline-flex w-fit rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-warning-foreground">Free check-in</span>
+                            ? <span className="mt-0.5 inline-flex w-fit rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">Free check-in</span>
                             : <FenceBadge check={nearestFence(row.lat, row.lng, fences)} />
                         )}
                       </div>
@@ -629,7 +629,7 @@ function AdminAttendance() {
                         )}
                         {row.out_time && (
                           row.free_check
-                            ? <span className="mt-0.5 inline-flex w-fit rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-warning-foreground">Free check-out</span>
+                            ? <span className="mt-0.5 inline-flex w-fit rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">Free check-out</span>
                             : <FenceBadge check={nearestFence(row.out_lat, row.out_lng, fences)} />
                         )}
                       </div>
@@ -666,7 +666,7 @@ function AdminAttendance() {
           </div>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" /> Inside fence / authorized</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" /> Free check-in</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Free check-in</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border-2 border-[#ea580c]" /> Geofence</span>
           </div>
         </header>

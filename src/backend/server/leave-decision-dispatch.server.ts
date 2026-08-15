@@ -72,8 +72,8 @@ export async function dispatchLeaveDecision(input: DispatchLeaveDecision) {
     .select("push_enabled, email_enabled, inapp_enabled, quiet_start, quiet_end, timezone")
     .eq("user_id", input.employeeId)
     .maybeSingle();
-  const p = pref ?? { push_enabled: true, email_enabled: true, inapp_enabled: true, quiet_start: null, quiet_end: null, timezone: "UTC" };
-  const quiet = isQuietNow(p.quiet_start as any, p.quiet_end as any, (p.timezone as any) ?? "UTC");
+  const p = pref ?? { push_enabled: true, email_enabled: true, inapp_enabled: true, quiet_start: null, quiet_end: null, timezone: "Africa/Cairo" };
+  const quiet = isQuietNow(p.quiet_start as any, p.quiet_end as any, (p.timezone as any) ?? "Africa/Cairo");
 
   const { subject, html, text, verb } = render(input, profile.full_name ?? null);
   const payload = {

@@ -56,12 +56,12 @@ export function PwaInstallBanner() {
     <div
       role="banner"
       className="fixed bottom-4 left-1/2 z-[9999] flex w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 sm:bottom-6"
-      aria-label="Install INT-HR App"
+      aria-label="Install Staff Link"
     >
       {/* App icon */}
       <img
         src="/icon-192.png"
-        alt="INT-HR App icon"
+        alt="Staff Link icon"
         width={44}
         height={44}
         className="shrink-0 rounded-xl"
@@ -69,7 +69,7 @@ export function PwaInstallBanner() {
 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold leading-snug text-foreground">
-          Install INT-HR App
+          Install Staff Link
         </p>
 
         {ios ? (

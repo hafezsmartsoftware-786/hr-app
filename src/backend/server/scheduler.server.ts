@@ -16,7 +16,7 @@ export type RunSummary = {
 function nowHHMMIn(tz: string, now: Date): string {
   try {
     return new Intl.DateTimeFormat("en-GB", {
-      timeZone: tz || "UTC", hour: "2-digit", minute: "2-digit", hour12: false,
+      timeZone: tz || "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: false,
     }).format(now);
   } catch {
     return now.toISOString().slice(11, 16);
@@ -26,7 +26,7 @@ function nowHHMMIn(tz: string, now: Date): string {
 function todayInTz(tz: string, now: Date): string {
   try {
     return new Intl.DateTimeFormat("en-CA", {
-      timeZone: tz || "UTC", year: "numeric", month: "2-digit", day: "2-digit",
+      timeZone: tz || "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit",
     }).format(now);
   } catch {
     return now.toISOString().slice(0, 10);
@@ -115,7 +115,7 @@ export async function runDueSchedules(now: Date = new Date()): Promise<RunSummar
   const smtp = await loadSmtpConfig();
 
   for (const sch of schedules ?? []) {
-    const tz = sch.timezone || "UTC";
+    const tz = sch.timezone || "Africa/Cairo";
     const todayLocal = todayInTz(tz, now);
     const nowHHMM = nowHHMMIn(tz, now);
 

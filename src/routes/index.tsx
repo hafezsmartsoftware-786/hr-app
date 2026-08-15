@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { ArrowRight, MapPin, Wifi, ShieldCheck, Smartphone } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { InstallButton } from "@/components/InstallButton";
@@ -7,20 +8,58 @@ import { LanguageToggle, useI18n } from "@/lib/i18n";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "INT-HR App — Secure Employee Attendance" },
+      { title: "Staff Link — Secure Employee Attendance" },
       { name: "description", content: "GPS geo-fencing, authorized network validation, leave management, and real-time reporting for modern workforces." },
     ],
   }),
   component: Index,
 });
 
+function Slider() {
+  const [current, setCurrent] = useState(0);
+  const images = ["/slider1.png", "/slider2.png"];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent((c) => (c + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative mx-auto w-full overflow-hidden rounded-[2.25rem] border border-border bg-card shadow-brand">
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt={`Slide ${i + 1}`}
+          className={`w-full object-cover transition-opacity duration-1000 ${
+            i === current ? "opacity-100" : "opacity-0 absolute inset-0 h-full"
+          }`}
+        />
+      ))}
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+        {images.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className={`h-2 rounded-full transition-all ${
+              i === current ? "w-6 bg-brand" : "w-2 bg-brand/30"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Index() {
-  const { t, dir } = useI18n();
+  const { t } = useI18n();
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <AppLogo />
+      <header className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5">
+        <AppLogo width={320} />
         <div className="flex items-center gap-2">
           <InstallButton variant="ghost" />
           <LanguageToggle />
@@ -28,8 +67,8 @@ function Index() {
       </header>
 
       {/* Hero */}
-      <main className="mx-auto max-w-6xl px-6 pb-20 pt-8">
-        <section className="grid items-center gap-10 lg:grid-cols-2">
+      <main className="mx-auto max-w-[1400px] px-6 pb-20 pt-8">
+        <section className="grid items-center gap-10 lg:grid-cols-[2fr_3fr]">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -75,50 +114,14 @@ function Index() {
             </ul>
           </div>
 
-          {/* Phone mock */}
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-brand opacity-20 blur-3xl" />
-            <div className="rounded-[2.25rem] border border-border bg-gradient-dark p-3 shadow-brand">
-              <div className="rounded-[1.75rem] bg-background p-5" dir={dir}>
-                <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground">
-                  <span>09:41</span>
-                  <span>•••</span>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs text-muted-foreground">Welcome back</p>
-                  <p className="font-display text-lg font-semibold">Integrated Technics</p>
-                </div>
-                <div className="mt-4 rounded-2xl bg-gradient-brand p-5 text-brand-foreground shadow-brand">
-                  <p className="text-xs opacity-90">{t("workingHours")}</p>
-                  <p className="font-display text-3xl font-semibold tabular-nums">08:32 — 17:18</p>
-                  <p className="mt-1 text-xs opacity-90">Cairo HQ • INT-Cairo-Secure</p>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl border border-border p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <MapPin className="h-3 w-3 text-success" /> {t("gpsStatus")}
-                    </div>
-                    <p className="mt-0.5 text-xs font-semibold text-success">{t("insideZone")}</p>
-                  </div>
-                  <div className="rounded-xl border border-border p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <Wifi className="h-3 w-3 text-success" /> {t("networkStatus")}
-                    </div>
-                    <p className="mt-0.5 text-xs font-semibold text-success">{t("connected")}</p>
-                  </div>
-                </div>
-                <button className="mt-4 w-full rounded-xl bg-foreground py-3 text-sm font-semibold text-background">
-                  {t("checkOut")}
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Image Slider */}
+          <Slider />
         </section>
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 text-xs text-muted-foreground">
-          <span>© 2026 INT-HR App Developer : Mr.Hafez Rahim</span>
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5 text-xs text-muted-foreground">
+          <span>© 2026 Staff Link Developer : Mr.Hafez Rahim</span>
           <span>v1.0 • Built for mobile, tablet, and web</span>
         </div>
       </footer>

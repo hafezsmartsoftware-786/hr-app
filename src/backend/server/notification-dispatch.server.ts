@@ -44,7 +44,7 @@ export async function dispatchTaskNotification(input: DispatchTaskNotif) {
     const pref = prefMap.get(prof.id) ?? {
       user_id: prof.id,
       push_enabled: true, email_enabled: true, inapp_enabled: true,
-      quiet_start: null, quiet_end: null, timezone: "UTC",
+      quiet_start: null, quiet_end: null, timezone: "Africa/Cairo",
     };
     const quiet = isQuietNow(pref.quiet_start, pref.quiet_end, pref.timezone);
 

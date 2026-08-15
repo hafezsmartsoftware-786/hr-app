@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Plus, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import {
   listHolidays,
@@ -390,30 +390,40 @@ function HolidayCard({
   onDelete: () => void;
   typeStyle: Record<string, string>;
 }) {
+  const d = new Date(h.date);
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+  const day = d.getDate();
+  const year = d.getFullYear();
+
   return (
-    <div className="group relative rounded-3xl border border-border bg-card p-5">
-      <div className="flex items-start justify-between">
-        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent text-accent-foreground">
-          <Sparkles className="h-5 w-5" />
-        </span>
-        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button onClick={onEdit} className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground hover:text-foreground" aria-label="Edit">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onDelete} className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground hover:text-destructive" aria-label="Delete">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+    <div className="group flex items-center justify-between rounded-3xl border border-border bg-card p-4 transition-all hover:border-brand/30 hover:shadow-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand/10 text-brand">
+          <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">{month}</span>
+          <span className="font-display text-xl font-bold leading-none">{day}</span>
+        </div>
+        
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-base font-semibold leading-tight text-foreground">{h.name}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+             <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${typeStyle[h.type] ?? "bg-muted text-muted-foreground"}`}>
+               {h.type}
+             </span>
+             {h.recurring && <span className="text-[10px] text-muted-foreground">Recurring</span>}
+             <span className="text-[10px] font-mono text-muted-foreground">· {year}</span>
+          </div>
         </div>
       </div>
-      <p className="mt-4 font-display text-lg font-semibold">{h.name}</p>
-      <div className="mt-1 flex items-center gap-2">
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${typeStyle[h.type] ?? "bg-muted text-muted-foreground"}`}>
-          {h.type}
-        </span>
-        {h.recurring && <span className="text-[10px] text-muted-foreground">Recurring</span>}
+
+      <div className="ml-2 flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <button onClick={onEdit} className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Edit">
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={onDelete} className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Delete">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
-      <p className="mt-3 font-mono text-sm font-semibold tabular-nums text-brand">{h.date}</p>
-      {h.notes && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{h.notes}</p>}
+      {h.notes && <div className="absolute -bottom-8 left-0 right-0 opacity-0 transition-opacity group-hover:opacity-100 z-10 p-2 rounded-lg bg-popover text-popover-foreground text-xs shadow-md border border-border line-clamp-2">{h.notes}</div>}
     </div>
   );
 }

@@ -91,13 +91,13 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       id: r.id,
       name: r.profiles?.full_name ?? "—",
       type: r.leave_type_name ?? "Leave",
-      start: r.start_date,
-      end: r.end_date,
+      start: r.start_date.split("-").reverse().join("-"),
+      end: r.end_date.split("-").reverse().join("-"),
     }));
     const upcomingHolidays: UpcomingHoliday[] = (hol.data ?? []).map((r: any) => ({
       id: r.id,
       name: r.name,
-      date: r.date,
+      date: r.date.split("-").reverse().join("-"),
       type: r.type,
     }));
     return { activity, pendingLeaves, upcomingHolidays };

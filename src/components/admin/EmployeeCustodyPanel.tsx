@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
+import { useSession } from "@/lib/auth";
 
 const inputCls = "w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -221,7 +222,7 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                             <div className="mt-1 text-[11px] font-mono text-muted-foreground">{formatDate(it.return_date)}</div>
                             {it.returned_by && (
                               <div className="mt-0.5 text-[11px] text-muted-foreground">
-                                {t("returnedBy" as any)}: {it.returned_by}
+                                {t("returnedBy" as any)}: {it.returned_by_name || it.returned_by}
                               </div>
                             )}
                           </div>
@@ -244,15 +245,16 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                           )}
                           <button
                             onClick={() => setEditItem(it)}
-                            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            disabled={isReturned}
+                            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
                             title={t("edit" as any)}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
-                            disabled={delMut.isPending}
+                            disabled={delMut.isPending || isReturned}
                             onClick={() => setDeleteItem(it)}
-                            className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                            className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:pointer-events-none"
                             title={t("delete" as any)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -425,10 +427,10 @@ function ReturnCustodyModal({
   pending: boolean;
 }) {
   const { t } = useI18n();
+  const session = useSession();
   const [date, setDate] = useState(today());
   const [notes, setNotes] = useState("");
-  const [returnedBy, setReturnedBy] = useState("");
-  const [err, setErr] = useState<string | null>(null);
+  const returnedBy = session?.name || "Admin";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
@@ -444,12 +446,7 @@ function ReturnCustodyModal({
           className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!returnedBy.trim()) {
-              setErr(t("returnedByRequired" as any) || "Returned by is required");
-              return;
-            }
-            setErr(null);
-            onSubmit({ return_date: date, returned_by: returnedBy.trim(), return_notes: notes });
+            onSubmit({ return_date: date, return_notes: notes });
           }}
         >
           <label className="space-y-1 text-sm">
@@ -460,15 +457,9 @@ function ReturnCustodyModal({
             <span className="text-xs font-semibold text-muted-foreground">{t("returnedBy" as any)}</span>
             <input
               value={returnedBy}
-              onChange={(e) => {
-                setReturnedBy(e.target.value);
-                if (err) setErr(null);
-              }}
-              maxLength={200}
-              className={inputCls}
-              required
+              className={`${inputCls} opacity-60 cursor-not-allowed`}
+              disabled
             />
-            {err && <span className="text-[11px] font-semibold text-destructive">{err}</span>}
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("returnNotes" as any)}</span>

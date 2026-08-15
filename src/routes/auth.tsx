@@ -131,8 +131,8 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen place-items-center bg-muted/40 px-4">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-soft">
-        <div className="mb-6 flex items-center justify-between">
-          <Link to="/"><AppLogo size={26} /></Link>
+        <div className="mb-8 flex items-center justify-center">
+          <Link to="/"><AppLogo width={320} /></Link>
         </div>
 
         <h1 className="font-display text-2xl font-semibold tracking-tight">Welcome back</h1>

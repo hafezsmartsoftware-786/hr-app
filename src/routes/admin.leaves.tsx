@@ -14,7 +14,7 @@ import { HolidaysManager } from "@/components/HolidaysManager";
 
 const tone: Record<string, string> = {
   approved: "bg-success/15 text-success",
-  pending: "bg-warning/20 text-warning-foreground",
+  pending: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
   rejected: "bg-destructive/15 text-destructive",
   cancelled: "bg-muted text-muted-foreground",
 };
@@ -270,8 +270,8 @@ function AdminLeaves() {
               </span>
             </div>
             <div className="mt-4 rounded-xl bg-muted/60 p-3 text-xs">
-              <div className="flex justify-between"><span className="text-muted-foreground">{t("fromWord")}</span><span className="font-medium">{l.start_date}</span></div>
-              <div className="mt-1 flex justify-between"><span className="text-muted-foreground">{t("toWord")}</span><span className="font-medium">{l.end_date}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("fromWord")}</span><span className="font-medium">{l.start_date.split("-").reverse().join("-")}</span></div>
+              <div className="mt-1 flex justify-between"><span className="text-muted-foreground">{t("toWord")}</span><span className="font-medium">{l.end_date.split("-").reverse().join("-")}</span></div>
               {l.reason && <p className="mt-2 text-[11px] italic text-muted-foreground">"{l.reason}"</p>}
             </div>
             {(l as any).proof_url && (

@@ -147,7 +147,7 @@ function Page() {
               <div className="rounded-3xl border border-border bg-card p-4">
                 <p className="font-display text-lg font-semibold">{selectedEmp?.name}</p>
                 {!hasAnyAccess && !assignedNetsQ.isLoading && !assignedGeosQ.isLoading && (
-                  <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-2.5 py-1 text-[11px] font-semibold text-warning-foreground">
+                  <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
                     <AlertTriangle className="h-3 w-3" /> Free check-in (no constraints assigned)
                   </p>
                 )}

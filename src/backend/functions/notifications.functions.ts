@@ -14,7 +14,7 @@ export const getMyPreferences = createServerFn({ method: "GET" })
     return data ?? {
       user_id: userId,
       push_enabled: true, email_enabled: true, inapp_enabled: true,
-      quiet_start: null, quiet_end: null, timezone: "UTC",
+      quiet_start: null, quiet_end: null, timezone: "Africa/Cairo",
     };
   });
 
