@@ -100,14 +100,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/app.webmanifest" },
       // Favicons
       { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
-      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
-      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
-      { rel: "icon", type: "image/png", sizes: "192x192", href: "/android-chrome-192x192.png" },
-      { rel: "icon", type: "image/png", sizes: "512x512", href: "/android-chrome-512x512.png" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
       // Apple touch icons for iOS Safari
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      { rel: "apple-touch-icon", sizes: "192x192", href: "/android-chrome-192x192.png" },
-      { rel: "apple-touch-icon", sizes: "512x512", href: "/android-chrome-512x512.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       // Fonts
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

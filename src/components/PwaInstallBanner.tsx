@@ -60,7 +60,7 @@ export function PwaInstallBanner() {
     >
       {/* App icon */}
       <img
-        src="/icon-192.png"
+        src="/favicon.png"
         alt="Staff Link icon"
         width={44}
         height={44}
