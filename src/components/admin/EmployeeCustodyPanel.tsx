@@ -219,6 +219,11 @@ export function EmployeeCustodyPanel({ employeeId }: { employeeId: string }) {
                               {t("statusReturned" as any)}
                             </span>
                             <div className="mt-1 text-[11px] font-mono text-muted-foreground">{formatDate(it.return_date)}</div>
+                            {it.returned_by && (
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                {t("returnedBy" as any)}: {it.returned_by}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase">
