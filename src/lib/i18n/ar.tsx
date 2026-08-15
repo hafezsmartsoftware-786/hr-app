@@ -784,6 +784,8 @@ export const ui: Record<UiKey, string> = {
   returnCustody: "إرجاع العهدة",
   returnDate: "تاريخ الإرجاع",
   returnNotes: "ملاحظات الإرجاع",
+  returnedBy: "تم الإرجاع بواسطة",
+  returnedByRequired: "حقل تم الإرجاع بواسطة مطلوب",
   statusActive: "نشط",
   statusReturned: "مرتجع",
   markAsReturned: "تحديد كمرتجع",

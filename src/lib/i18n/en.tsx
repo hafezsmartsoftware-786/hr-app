@@ -793,6 +793,8 @@ export const ui = {
   returnCustody: "Return custody",
   returnDate: "Return date",
   returnNotes: "Return notes",
+  returnedBy: "Returned by",
+  returnedByRequired: "Returned by is required",
   statusActive: "Active",
   statusReturned: "Returned",
   markAsReturned: "Mark as returned",

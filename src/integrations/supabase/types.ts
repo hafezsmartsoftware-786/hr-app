@@ -752,6 +752,7 @@ export type Database = {
           profile_id: string
           return_date: string | null
           return_notes: string | null
+          returned_by: string | null
           serial_number: string | null
           updated_at: string
         }
@@ -767,6 +768,7 @@ export type Database = {
           profile_id: string
           return_date?: string | null
           return_notes?: string | null
+          returned_by?: string | null
           serial_number?: string | null
           updated_at?: string
         }
@@ -782,6 +784,7 @@ export type Database = {
           profile_id?: string
           return_date?: string | null
           return_notes?: string | null
+          returned_by?: string | null
           serial_number?: string | null
           updated_at?: string
         }
