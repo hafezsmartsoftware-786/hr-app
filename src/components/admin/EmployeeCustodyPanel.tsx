@@ -427,6 +427,8 @@ function ReturnCustodyModal({
   const { t } = useI18n();
   const [date, setDate] = useState(today());
   const [notes, setNotes] = useState("");
+  const [returnedBy, setReturnedBy] = useState("");
+  const [err, setErr] = useState<string | null>(null);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
@@ -442,12 +444,31 @@ function ReturnCustodyModal({
           className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            onSubmit({ return_date: date, return_notes: notes });
+            if (!returnedBy.trim()) {
+              setErr(t("returnedByRequired" as any) || "Returned by is required");
+              return;
+            }
+            setErr(null);
+            onSubmit({ return_date: date, returned_by: returnedBy.trim(), return_notes: notes });
           }}
         >
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("returnDate" as any)}</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} required />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs font-semibold text-muted-foreground">{t("returnedBy" as any)}</span>
+            <input
+              value={returnedBy}
+              onChange={(e) => {
+                setReturnedBy(e.target.value);
+                if (err) setErr(null);
+              }}
+              maxLength={200}
+              className={inputCls}
+              required
+            />
+            {err && <span className="text-[11px] font-semibold text-destructive">{err}</span>}
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-semibold text-muted-foreground">{t("returnNotes" as any)}</span>
