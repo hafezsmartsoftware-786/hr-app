@@ -1,3 +1,10 @@
+<IfModule mod_mime.c>
+  AddType text/javascript .js
+  AddType text/javascript .mjs
+  AddType application/json .json
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
