@@ -6,7 +6,7 @@
  * - Forwards push notifications (merged from sw-push.js)
  */
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `int-hr-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `int-hr-assets-${CACHE_VERSION}`;
 
@@ -16,12 +16,8 @@ const SHELL_URLS = [
   "/app.webmanifest",
   "/icon-192.png",
   "/icon-512.png",
-  "/android-chrome-192x192.png",
-  "/android-chrome-512x512.png",
-  "/apple-touch-icon.png",
   "/favicon.ico",
-  "/favicon-16x16.png",
-  "/favicon-32x32.png",
+  "/favicon.png",
 ];
 
 // ─── Install ───────────────────────────────────────────────────────────────
