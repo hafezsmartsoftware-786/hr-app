@@ -1,9 +1,11 @@
+// Cache bust 1
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 // Boot with dynamic imports so any module-level error surfaces in the console
 // rather than silently killing the page.
 async function boot() {
+  console.log("CACHE BUST 2");
   try {
     const [{ RouterProvider }, { getRouter }, { StrictMode, createElement }, { installPerfProfiler }] = await Promise.all([
       import("@tanstack/react-router"),
